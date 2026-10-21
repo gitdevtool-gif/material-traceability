@@ -11,5 +11,6 @@ build/
 # Generated / local-only
 release/
 release.zip
+.git-token
 backend/public/
 .claude/
