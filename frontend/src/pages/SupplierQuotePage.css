@@ -1,0 +1,423 @@
+/* ================================================================
+   Supplier Quote (public RFQ) page — mobile-first responsive styles
+   Prefix: .sq-
+   ================================================================ */
+
+.sq-page {
+  min-height: 100vh;
+  background: #f4f4f5;
+  display: flex;
+  justify-content: center;
+  padding: 24px 12px;
+  box-sizing: border-box;
+}
+
+.sq-card {
+  background: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 960px;
+  align-self: flex-start;
+}
+
+/* ── Header ── */
+.sq-header {
+  background: #1e3a5f;
+  padding: 18px 24px;
+  color: #fff;
+}
+.sq-header-title { font-size: 20px; font-weight: 700; margin: 0; }
+.sq-header-sub   { font-size: 13px; opacity: 0.85; margin-top: 4px; }
+
+/* ── Body ── */
+.sq-body { padding: 22px 28px; }
+
+.sq-greeting {
+  font-size: 15px;
+  color: #374151;
+  margin: 0 0 14px;
+}
+
+/* ── Callouts ── */
+.sq-callout {
+  padding: 10px 14px;
+  border-radius: 4px;
+  margin-bottom: 18px;
+  font-size: 13px;
+}
+.sq-callout-warn {
+  background: #fef3c7;
+  border-left: 4px solid #f59e0b;
+  color: #78350f;
+}
+.sq-callout-info {
+  background: #eff6ff;
+  border-left: 4px solid #3b82f6;
+  color: #1e40af;
+}
+
+/* ── Form primitives ── */
+.sq-form-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 14px;
+  min-width: 0;
+}
+.sq-label {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: #374151;
+}
+.sq-input {
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+  font-family: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.sq-input:focus {
+  border-color: #1a73e8;
+  box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.15);
+}
+.sq-input-sm {
+  padding: 6px 8px;
+  font-size: 13px;
+}
+.sq-textarea {
+  min-height: 78px;
+  resize: vertical;
+}
+
+/* ── Terms grid (Valid Until / Lead Time / Payment Terms) ── */
+.sq-terms-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 2fr;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.sq-terms-wide { grid-column: span 1; }
+
+/* ── Desktop items table ── */
+.sq-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 18px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+}
+.sq-table {
+  width: 100%;
+  min-width: 900px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.sq-table thead tr {
+  background: #1e3a5f;
+  color: #fff;
+}
+.sq-table th {
+  padding: 10px 12px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 12px;
+  border-bottom: 1px solid #1e3a5f;
+  white-space: nowrap;
+}
+.sq-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #e5e7eb;
+  vertical-align: middle;
+}
+.sq-table .sq-row-alt { background: #f9fafb; }
+.sq-total-row {
+  background: #f3f4f6;
+  font-weight: 700;
+}
+.sq-total-row td {
+  padding: 12px;
+  border-bottom: none;
+}
+
+.sq-category-pill {
+  display: inline-block;
+  margin-left: 6px;
+  background: #dbeafe;
+  color: #1e40af;
+  border-radius: 10px;
+  padding: 1px 7px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+/* ── "Not available" per-item toggle ── */
+.sq-not-available-toggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #991b1b;
+  margin-top: 4px;
+  cursor: pointer;
+  user-select: none;
+}
+.sq-not-available-toggle input[type="checkbox"] {
+  cursor: pointer;
+  accent-color: #dc2626;
+}
+
+/* ── Photo picker / thumbnail (used in both table cell and mobile card) ── */
+.sq-photo-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.sq-photo-upload-btn {
+  display: inline-block;
+  border: 1px dashed #9ca3af;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: #374151;
+  cursor: pointer;
+  text-align: center;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s;
+}
+.sq-photo-upload-btn:hover {
+  background: #f3f4f6;
+  border-color: #1a73e8;
+}
+.sq-photo-error {
+  font-size: 11px;
+  color: #dc2626;
+}
+.sq-photo-preview {
+  position: relative;
+  display: inline-block;
+  width: 48px;
+  height: 48px;
+}
+.sq-photo-thumb {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  display: block;
+}
+.sq-photo-remove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ef4444;
+  color: #fff;
+  border: 2px solid #fff;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+/* ── Mobile item card list (hidden on desktop) ── */
+.sq-mobile-only { display: none; }
+.sq-desktop-only { display: block; }
+
+.sq-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.sq-item-card {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+.sq-item-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.sq-item-num {
+  background: #1e3a5f;
+  color: #fff;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.sq-item-name {
+  font-size: 14px;
+  color: #111827;
+  word-break: break-word;
+}
+.sq-item-meta {
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 10px;
+}
+.sq-item-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.sq-item-total {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed #d1d5db;
+  font-size: 13px;
+  color: #374151;
+  text-align: right;
+}
+.sq-item-total strong { color: #1e3a5f; }
+
+.sq-grand-total {
+  background: #1e3a5f;
+  color: #fff;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 15px;
+  text-align: right;
+  margin-top: 4px;
+}
+.sq-grand-total strong { color: #fbbf24; }
+
+/* ── Submit / state ── */
+.sq-submit-btn {
+  background: #1a73e8;
+  color: #fff;
+  border: none;
+  padding: 13px 24px;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+.sq-submit-btn:not(:disabled):hover {
+  background: #1557b0;
+  box-shadow: 0 4px 12px rgba(26, 115, 232, 0.3);
+}
+.sq-submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.sq-error {
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  color: #dc2626;
+  font-size: 13px;
+}
+
+.sq-footer {
+  font-size: 11px;
+  color: #9ca3af;
+  margin: 22px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid #f3f4f6;
+  text-align: center;
+  line-height: 1.6;
+}
+
+.sq-state { padding: 32px 24px; text-align: center; }
+.sq-state-icon { font-size: 40px; margin-bottom: 12px; }
+.sq-state-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+.sq-state-sub {
+  color: #6b7280;
+  font-size: 14px;
+  margin: 0;
+  line-height: 1.5;
+}
+.sq-state-hint {
+  color: #9ca3af;
+  font-size: 12px;
+  margin: 14px 0 0;
+}
+
+/* ================================================================
+   Tablet — <= 900px
+   ================================================================ */
+@media (max-width: 900px) {
+  .sq-terms-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .sq-terms-wide { grid-column: 1 / -1; }
+}
+
+/* ================================================================
+   Mobile — <= 640px
+   ================================================================ */
+@media (max-width: 640px) {
+  .sq-page { padding: 12px 8px; }
+
+  .sq-header {
+    padding: 14px 16px;
+  }
+  .sq-header-title { font-size: 17px; }
+  .sq-header-sub   { font-size: 12px; }
+
+  .sq-body { padding: 16px 14px; }
+
+  .sq-greeting { font-size: 14px; }
+
+  .sq-terms-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  /* Swap table for card list */
+  .sq-desktop-only { display: none; }
+  .sq-mobile-only  { display: block; }
+
+  .sq-input,
+  .sq-input-sm {
+    font-size: 16px; /* prevent iOS zoom on focus */
+    padding: 10px 12px;
+  }
+
+  .sq-submit-btn {
+    padding: 14px 20px;
+    font-size: 15px;
+    position: sticky;
+    bottom: 8px;
+  }
+
+  .sq-footer { font-size: 10px; }
+
+  .sq-state { padding: 24px 14px; }
+  .sq-state-icon { font-size: 36px; }
+}
+
+/* ================================================================
+   Very small phones — <= 380px
+   ================================================================ */
+@media (max-width: 380px) {
+  .sq-item-grid {
+    grid-template-columns: 1fr;
+  }
+  .sq-header-title { font-size: 16px; }
+}

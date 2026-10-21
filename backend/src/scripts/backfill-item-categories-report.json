@@ -1,0 +1,1749 @@
+{
+  "generatedAt": "2026-07-11T08:54:38.410Z",
+  "mode": "apply",
+  "summary": {
+    "totalLocalItems": 289,
+    "alreadyCorrect": 0,
+    "proposedUpdates": 288,
+    "noErpMapping": 1,
+    "skippedAmbiguous": 0
+  },
+  "proposedUpdates": [
+    {
+      "RequisitionItemId": 1,
+      "itemName": "Eggs",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 2,
+      "itemName": "Whole egg powder",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 3,
+      "itemName": "stapler small",
+      "oldCategory": null,
+      "newCategory": "STATIONERY"
+    },
+    {
+      "RequisitionItemId": 4,
+      "itemName": "Hand Washing Cream",
+      "oldCategory": null,
+      "newCategory": "CLEANING & CLOAK"
+    },
+    {
+      "RequisitionItemId": 5,
+      "itemName": "Local Sugar",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 6,
+      "itemName": "Glacial Acetic Acid",
+      "oldCategory": null,
+      "newCategory": "CENTRAL STORES FINISHED GOODS"
+    },
+    {
+      "RequisitionItemId": 7,
+      "itemName": "Pectin Powder - Rapid set",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 8,
+      "itemName": "Food Colour - Sunset yellow",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 9,
+      "itemName": "Flavour-Red plum",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 10,
+      "itemName": "Calcium Hypochlorite 65%  Chlorine",
+      "oldCategory": null,
+      "newCategory": "CLEANING & CLOAK"
+    },
+    {
+      "RequisitionItemId": 11,
+      "itemName": "HAND TOWELS-MEDIUM",
+      "oldCategory": null,
+      "newCategory": "CLEANING & CLOAK"
+    },
+    {
+      "RequisitionItemId": 12,
+      "itemName": "Woolen gloves",
+      "oldCategory": null,
+      "newCategory": "Protective Clothing"
+    },
+    {
+      "RequisitionItemId": 13,
+      "itemName": "MUFFIN CASES",
+      "oldCategory": null,
+      "newCategory": "BAKERY PRODUCT"
+    },
+    {
+      "RequisitionItemId": 14,
+      "itemName": "CARTONS-456*306*116mm 1M 24 Pack",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 15,
+      "itemName": "Label-Kol Mixed Fruit Jam Can 500Gms",
+      "oldCategory": null,
+      "newCategory": "labels"
+    },
+    {
+      "RequisitionItemId": 16,
+      "itemName": "Plastic Jar-J036",
+      "oldCategory": null,
+      "newCategory": "PACKING CANS"
+    },
+    {
+      "RequisitionItemId": 17,
+      "itemName": "Ropp cap  60mm blue",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 18,
+      "itemName": "Ropp cap  60mm yellow",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 19,
+      "itemName": "Lids KOL End closure 73mm clear",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 20,
+      "itemName": "Lids End closure 73mm Clear Plain",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 21,
+      "itemName": "Polythene Roll 26\"(660mm)x350G Printed",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 22,
+      "itemName": "Polythene Roll 24\"(610mm)x350G Printed",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 23,
+      "itemName": "Polythene Roll-19\"(483mm)x350G Printed",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 24,
+      "itemName": "Label-Kol Mixed Fruit Jam 900G",
+      "oldCategory": null,
+      "newCategory": "labels"
+    },
+    {
+      "RequisitionItemId": 25,
+      "itemName": "Paint - Green emerald s/gloss",
+      "oldCategory": null,
+      "newCategory": "BUILDING ITEMS"
+    },
+    {
+      "RequisitionItemId": 26,
+      "itemName": "Standard Thinner",
+      "oldCategory": null,
+      "newCategory": "VEHICLE MAINTENANCE"
+    },
+    {
+      "RequisitionItemId": 27,
+      "itemName": "Trays- Size 310*230*50mm 1M 12Pack",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 28,
+      "itemName": "Local Sugar",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 29,
+      "itemName": "Cooking oil - sunflower RINSUN",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 30,
+      "itemName": "Cans-1M Plain NE (Orange powder)/lids",
+      "oldCategory": null,
+      "newCategory": "PACKING CANS"
+    },
+    {
+      "RequisitionItemId": 31,
+      "itemName": "603x700 2KPC 2KQW Cans /Lids (A10 3.3kg)",
+      "oldCategory": null,
+      "newCategory": "PACKING CANS"
+    },
+    {
+      "RequisitionItemId": 32,
+      "itemName": "603x510 2KPC 2KQW Cans/ Lids(A10 3Kg)",
+      "oldCategory": null,
+      "newCategory": "PACKING CANS"
+    },
+    {
+      "RequisitionItemId": 33,
+      "itemName": "300x212 2KTN EOE -275g T/Paste Cans/Lids",
+      "oldCategory": null,
+      "newCategory": "PACKING CANS"
+    },
+    {
+      "RequisitionItemId": 34,
+      "itemName": "Petrol",
+      "oldCategory": null,
+      "newCategory": "MOTOR VEHICLE FUEL"
+    },
+    {
+      "RequisitionItemId": 35,
+      "itemName": "Petrol Engine Oil 20W50",
+      "oldCategory": null,
+      "newCategory": "VEHICLE MAINTENANCE"
+    },
+    {
+      "RequisitionItemId": 36,
+      "itemName": "Engine Oil-2 Stroke",
+      "oldCategory": null,
+      "newCategory": "VEHICLE MAINTENANCE"
+    },
+    {
+      "RequisitionItemId": 37,
+      "itemName": "Ing-0127",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 38,
+      "itemName": "ING-0164",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 39,
+      "itemName": "Distilled Monoglyceride(DMG)",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 40,
+      "itemName": "Ing-0178",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 41,
+      "itemName": "ing-0028",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 42,
+      "itemName": "Cooking oil - sunflower RINSUN",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 43,
+      "itemName": "Sorbital 70% solution",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 44,
+      "itemName": "Pure Patent Flour",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 45,
+      "itemName": "Marker Pen Ink",
+      "oldCategory": null,
+      "newCategory": "STATIONERY"
+    },
+    {
+      "RequisitionItemId": 46,
+      "itemName": "Computer paper 2part",
+      "oldCategory": null,
+      "newCategory": "STATIONERY"
+    },
+    {
+      "RequisitionItemId": 47,
+      "itemName": "staple pins 73/12",
+      "oldCategory": null,
+      "newCategory": "STATIONERY"
+    },
+    {
+      "RequisitionItemId": 48,
+      "itemName": "Imported Sugar",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 49,
+      "itemName": "Plastic Pallet Air Freight",
+      "oldCategory": null,
+      "newCategory": "General"
+    },
+    {
+      "RequisitionItemId": 50,
+      "itemName": "Video Jet 1280 Make Up 7206 750ml",
+      "oldCategory": null,
+      "newCategory": "ENGINEERING ITEMS"
+    },
+    {
+      "RequisitionItemId": 51,
+      "itemName": "Heat Gun",
+      "oldCategory": null,
+      "newCategory": "ENGINEERING ITEMS"
+    },
+    {
+      "RequisitionItemId": 52,
+      "itemName": "Bottles- 700ml Vinegar",
+      "oldCategory": null,
+      "newCategory": "PACKING CANS"
+    },
+    {
+      "RequisitionItemId": 53,
+      "itemName": "Ropp Caps 28mm WHITE",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 54,
+      "itemName": "Imported Sugar",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 55,
+      "itemName": "Citric Acid Anhydrous",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 56,
+      "itemName": "Imported Sugar",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 57,
+      "itemName": "Steam strainer 4\"",
+      "oldCategory": null,
+      "newCategory": "PLUMBING ITEMS"
+    },
+    {
+      "RequisitionItemId": 58,
+      "itemName": "S.S. Barrel Nipple 2\"",
+      "oldCategory": null,
+      "newCategory": "PLUMBING ITEMS"
+    },
+    {
+      "RequisitionItemId": 59,
+      "itemName": "S.S. Union 2\" Threaded",
+      "oldCategory": null,
+      "newCategory": "PLUMBING ITEMS"
+    },
+    {
+      "RequisitionItemId": 60,
+      "itemName": "S.S.Ball Valve 2\"",
+      "oldCategory": null,
+      "newCategory": "PLUMBING ITEMS"
+    },
+    {
+      "RequisitionItemId": 61,
+      "itemName": "PVC Ball Valve 11/2\"",
+      "oldCategory": null,
+      "newCategory": "PLUMBING ITEMS"
+    },
+    {
+      "RequisitionItemId": 62,
+      "itemName": "S.S. Barrel Nipple 1 1/2\"",
+      "oldCategory": null,
+      "newCategory": "PLUMBING ITEMS"
+    },
+    {
+      "RequisitionItemId": 63,
+      "itemName": "Steam Pipe 11/2\"",
+      "oldCategory": null,
+      "newCategory": "PLUMBING ITEMS"
+    },
+    {
+      "RequisitionItemId": 64,
+      "itemName": "Steam Union 11/2\"",
+      "oldCategory": null,
+      "newCategory": "PLUMBING ITEMS"
+    },
+    {
+      "RequisitionItemId": 65,
+      "itemName": "Steam Barrel Nipple 11/2\"",
+      "oldCategory": null,
+      "newCategory": "PLUMBING ITEMS"
+    },
+    {
+      "RequisitionItemId": 66,
+      "itemName": "S.S Elbow 2\" Threaded",
+      "oldCategory": null,
+      "newCategory": "PLUMBING ITEMS"
+    },
+    {
+      "RequisitionItemId": 67,
+      "itemName": "Sillicon Dioxide Powder",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 68,
+      "itemName": "Carton 24x50g Royco Blackpepper Unilever",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 69,
+      "itemName": "Carton 24x50g Royco Garlic Spice Unileve",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 70,
+      "itemName": "Carton 24x50g Royco Spice Wet & Dry Fry",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 71,
+      "itemName": "Carton 12x100g Royco Spice Dry & Wet Fry",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 72,
+      "itemName": "Label- Royco Spice For Wet & Dry Fry 50G",
+      "oldCategory": null,
+      "newCategory": "labels"
+    },
+    {
+      "RequisitionItemId": 73,
+      "itemName": "Label-Ukl Royco Garlic Spice 50G",
+      "oldCategory": null,
+      "newCategory": "labels"
+    },
+    {
+      "RequisitionItemId": 74,
+      "itemName": "Bearing-32209 Tappered",
+      "oldCategory": null,
+      "newCategory": "ENGINEERING ITEMS"
+    },
+    {
+      "RequisitionItemId": 75,
+      "itemName": "White spirit",
+      "oldCategory": null,
+      "newCategory": "BUILDING ITEMS"
+    },
+    {
+      "RequisitionItemId": 76,
+      "itemName": "Label-Kol Golden Syrup 470G",
+      "oldCategory": null,
+      "newCategory": "labels"
+    },
+    {
+      "RequisitionItemId": 77,
+      "itemName": "Label-Kol Classic Mayonnaise Back 350G",
+      "oldCategory": null,
+      "newCategory": "labels"
+    },
+    {
+      "RequisitionItemId": 78,
+      "itemName": "Label-Kol Classic Mayannoise Front 350G",
+      "oldCategory": null,
+      "newCategory": "labels"
+    },
+    {
+      "RequisitionItemId": 79,
+      "itemName": "Label-American Gourmet T/Ketchup 5Kg",
+      "oldCategory": null,
+      "newCategory": "labels"
+    },
+    {
+      "RequisitionItemId": 80,
+      "itemName": "300*405 2KPN 2KTW EOE Cans/Lids-1M(T/Pas",
+      "oldCategory": null,
+      "newCategory": "PACKING CANS"
+    },
+    {
+      "RequisitionItemId": 81,
+      "itemName": "A21/2 401x411 EOT Lacquered Can/Lid-T/Pa",
+      "oldCategory": null,
+      "newCategory": "PACKING CANS"
+    },
+    {
+      "RequisitionItemId": 82,
+      "itemName": "Glass Jar 212ml 63mm",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 83,
+      "itemName": "Caps 63mm Golden for 212ml jar",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 84,
+      "itemName": "5ltr Jerrycan Red",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 85,
+      "itemName": "Cap for 5lt Jerrycan RED with Wad",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 86,
+      "itemName": "Re-winding wire 19.5 Gauge",
+      "oldCategory": null,
+      "newCategory": "ELECTRICAL ITEMS"
+    },
+    {
+      "RequisitionItemId": 87,
+      "itemName": "Re-Winding Paper 0.19mm",
+      "oldCategory": null,
+      "newCategory": "ELECTRICAL ITEMS"
+    },
+    {
+      "RequisitionItemId": 88,
+      "itemName": "Hand Scrubbing Brush",
+      "oldCategory": null,
+      "newCategory": "CLEANING & CLOAK"
+    },
+    {
+      "RequisitionItemId": 89,
+      "itemName": "Cooking oil - sunflower RINSUN",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 90,
+      "itemName": "Eggs",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 91,
+      "itemName": "Local Sugar",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 92,
+      "itemName": "Orange Flavour",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 93,
+      "itemName": "Cooking oil - sunflower RINSUN",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 94,
+      "itemName": "Vanilla Dark Brown Flavour",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 95,
+      "itemName": "Sodium Stearoyl Lactylate - SSL",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 96,
+      "itemName": "ing-0028",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 97,
+      "itemName": "Cooking Fat",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 98,
+      "itemName": "Caramel liquid- Double Strength",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 99,
+      "itemName": "Glucose Syrup",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 100,
+      "itemName": "A10 3.3kgs Lacquered Cans/Lids",
+      "oldCategory": null,
+      "newCategory": "PACKING CANS"
+    },
+    {
+      "RequisitionItemId": 101,
+      "itemName": "Cans-1M Plain NE (Orange powder)/lids",
+      "oldCategory": null,
+      "newCategory": "PACKING CANS"
+    },
+    {
+      "RequisitionItemId": 102,
+      "itemName": "900g Multipurpose Hex Jar - Jam",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 103,
+      "itemName": "Screw Cap 90mm Red for 900g Hex Jar",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 104,
+      "itemName": "Induction Wads 90mm",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 105,
+      "itemName": "300g Multipurpose Hex Jar  -Jam",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 106,
+      "itemName": "Screw Cap 60mm for 300/450g Hex Jar",
+      "oldCategory": "Bolts and Nuts",
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 107,
+      "itemName": "Induction Wads 60mm for 300g/450g Hex",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 108,
+      "itemName": "A10 3.0kg Lacquered Cans/Lids",
+      "oldCategory": null,
+      "newCategory": "PACKING CANS"
+    },
+    {
+      "RequisitionItemId": 109,
+      "itemName": "Label-Gv Baked Beans In T/Sauce 420G",
+      "oldCategory": null,
+      "newCategory": "labels"
+    },
+    {
+      "RequisitionItemId": 110,
+      "itemName": "Cans-1M EOT-Lacquered/Lids",
+      "oldCategory": null,
+      "newCategory": "PACKING CANS"
+    },
+    {
+      "RequisitionItemId": 111,
+      "itemName": "Bearing 6006 ZZ",
+      "oldCategory": null,
+      "newCategory": "ENGINEERING ITEMS"
+    },
+    {
+      "RequisitionItemId": 112,
+      "itemName": "Gear Oil No.90",
+      "oldCategory": null,
+      "newCategory": "Lubricants"
+    },
+    {
+      "RequisitionItemId": 113,
+      "itemName": "Oil Can",
+      "oldCategory": null,
+      "newCategory": "MOTOR VEHICLE FUEL"
+    },
+    {
+      "RequisitionItemId": 114,
+      "itemName": "GREASE GUN",
+      "oldCategory": null,
+      "newCategory": "ENGINEERING ITEMS"
+    },
+    {
+      "RequisitionItemId": 115,
+      "itemName": "Clear Perspex 8x4x3mm",
+      "oldCategory": null,
+      "newCategory": "BUILDING ITEMS"
+    },
+    {
+      "RequisitionItemId": 116,
+      "itemName": "Pressure Gauge 0-10 Bars 4\" Dia.",
+      "oldCategory": null,
+      "newCategory": "ENGINEERING ITEMS"
+    },
+    {
+      "RequisitionItemId": 117,
+      "itemName": "PVC Door Flap 200mm x 2mm x 50mts",
+      "oldCategory": null,
+      "newCategory": "ENGINEERING ITEMS"
+    },
+    {
+      "RequisitionItemId": 118,
+      "itemName": "Cable Ties",
+      "oldCategory": null,
+      "newCategory": "ELECTRICAL ITEMS"
+    },
+    {
+      "RequisitionItemId": 119,
+      "itemName": "Insulating Tape - Black",
+      "oldCategory": null,
+      "newCategory": "ELECTRICAL ITEMS"
+    },
+    {
+      "RequisitionItemId": 120,
+      "itemName": "Strip Connector 32A",
+      "oldCategory": null,
+      "newCategory": "ELECTRICAL ITEMS"
+    },
+    {
+      "RequisitionItemId": 121,
+      "itemName": "Instant Dry Yeast",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 122,
+      "itemName": "Modified Starch CBA-8866 Tapioca",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 123,
+      "itemName": "Label-Santa Baked Beans In T/Sauce400G",
+      "oldCategory": null,
+      "newCategory": "labels"
+    },
+    {
+      "RequisitionItemId": 124,
+      "itemName": "Super Paper Glue - Paper to Can",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 125,
+      "itemName": "Label-Kol Baked Beans In T/Sauce420Gms",
+      "oldCategory": null,
+      "newCategory": "labels"
+    },
+    {
+      "RequisitionItemId": 126,
+      "itemName": "Label-gv sweet corn 420g",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 127,
+      "itemName": "CARTONS-456*306*116mm 1M 24 Pack",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 128,
+      "itemName": "Label-Gv -Njor Milk Label 400Ml",
+      "oldCategory": null,
+      "newCategory": "labels"
+    },
+    {
+      "RequisitionItemId": 129,
+      "itemName": "Nut-M12 M.S.",
+      "oldCategory": null,
+      "newCategory": "ENGINEERING ITEMS"
+    },
+    {
+      "RequisitionItemId": 130,
+      "itemName": "Switch socket extention cable",
+      "oldCategory": null,
+      "newCategory": "ELECTRICAL ITEMS"
+    },
+    {
+      "RequisitionItemId": 131,
+      "itemName": "Allan Cap Screw-M24*50mm (Tikki)-Briq.",
+      "oldCategory": null,
+      "newCategory": "ENGINEERING ITEMS"
+    },
+    {
+      "RequisitionItemId": 132,
+      "itemName": "Allan Cup Screw-M12*75MM 1/2 thread M.S.",
+      "oldCategory": null,
+      "newCategory": "ENGINEERING ITEMS"
+    },
+    {
+      "RequisitionItemId": 133,
+      "itemName": "Inkjet Make Up FJ270M",
+      "oldCategory": null,
+      "newCategory": "ENGINEERING ITEMS"
+    },
+    {
+      "RequisitionItemId": 134,
+      "itemName": "Linx Solvent 1505",
+      "oldCategory": null,
+      "newCategory": "ENGINEERING ITEMS"
+    },
+    {
+      "RequisitionItemId": 135,
+      "itemName": "Cooking oil - sunflower RINSUN",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 136,
+      "itemName": "Pure Patent Flour",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 137,
+      "itemName": "Distilled Monoglyceride(DMG)",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 138,
+      "itemName": "Soya lecithin powder",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 139,
+      "itemName": "ING-0158",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 140,
+      "itemName": "ing-0028",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 141,
+      "itemName": "ing-0050",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 142,
+      "itemName": "Sodium Stearoyl Lactylate - SSL",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 143,
+      "itemName": "Ing-0217",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 144,
+      "itemName": "Bearing no 2206 (Roller bearing)",
+      "oldCategory": null,
+      "newCategory": "ENGINEERING ITEMS"
+    },
+    {
+      "RequisitionItemId": 145,
+      "itemName": "General Cleaner Liquid Detergent",
+      "oldCategory": null,
+      "newCategory": "CLEANING & CLOAK"
+    },
+    {
+      "RequisitionItemId": 146,
+      "itemName": "Hand Washing Cream",
+      "oldCategory": null,
+      "newCategory": "CLEANING & CLOAK"
+    },
+    {
+      "RequisitionItemId": 147,
+      "itemName": "Electric Cable 1.5mm X 5 Core Flex.",
+      "oldCategory": null,
+      "newCategory": "ELECTRICAL ITEMS"
+    },
+    {
+      "RequisitionItemId": 148,
+      "itemName": "Emergency Stop Switch  With Enclosure",
+      "oldCategory": null,
+      "newCategory": "ELECTRICAL ITEMS"
+    },
+    {
+      "RequisitionItemId": 149,
+      "itemName": "Remote Switch Enclosure",
+      "oldCategory": null,
+      "newCategory": "ELECTRICAL ITEMS"
+    },
+    {
+      "RequisitionItemId": 150,
+      "itemName": "Pressure Gauge 0-10 Bars 1/2-6\"",
+      "oldCategory": null,
+      "newCategory": "ENGINEERING ITEMS"
+    },
+    {
+      "RequisitionItemId": 151,
+      "itemName": "M.S. Plate 8x4x16G",
+      "oldCategory": null,
+      "newCategory": "BUILDING ITEMS"
+    },
+    {
+      "RequisitionItemId": 152,
+      "itemName": "Boiler Fire Bar",
+      "oldCategory": null,
+      "newCategory": "ENGINEERING ITEMS"
+    },
+    {
+      "RequisitionItemId": 153,
+      "itemName": "Masonry Cutting Blade",
+      "oldCategory": null,
+      "newCategory": "ENGINEERING ITEMS"
+    },
+    {
+      "RequisitionItemId": 154,
+      "itemName": "Picking Glue- LP 2741/LT",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 155,
+      "itemName": "Carton Facial  Glue",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 156,
+      "itemName": "Org Plant & Machinery",
+      "oldCategory": null,
+      "newCategory": "SERVICE ITEMS"
+    },
+    {
+      "RequisitionItemId": 157,
+      "itemName": "Comp-Hard disk",
+      "oldCategory": null,
+      "newCategory": "STATIONERY"
+    },
+    {
+      "RequisitionItemId": 158,
+      "itemName": "Comp - Laptop Charger/Adaptor",
+      "oldCategory": null,
+      "newCategory": "General"
+    },
+    {
+      "RequisitionItemId": 159,
+      "itemName": "Picking Glue- LP 2741/LT",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 160,
+      "itemName": "Carton Facial  Glue",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 161,
+      "itemName": "Label-Kol Barbeque Sauce Backupdn 425G",
+      "oldCategory": null,
+      "newCategory": "labels"
+    },
+    {
+      "RequisitionItemId": 162,
+      "itemName": "Label-Kol Tomato Paste 275G",
+      "oldCategory": null,
+      "newCategory": "labels"
+    },
+    {
+      "RequisitionItemId": 163,
+      "itemName": "Label - Kol Red Plum Jam 300G",
+      "oldCategory": null,
+      "newCategory": "labels"
+    },
+    {
+      "RequisitionItemId": 164,
+      "itemName": "White bucket 4lts-Elgon Kenya",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 165,
+      "itemName": "White Lids for 4lt Bucket - Elgon Kenya",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 166,
+      "itemName": "TRAYS-980g jam - 380*285*50mm",
+      "oldCategory": null,
+      "newCategory": "General"
+    },
+    {
+      "RequisitionItemId": 167,
+      "itemName": "Tray-225x190x40mm 250g T/Sauce Updown",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 168,
+      "itemName": "Tray 230*215*40MM 400G Upside Down",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 169,
+      "itemName": "Label-Bnt-Njor Neutral Glaze 5Kg",
+      "oldCategory": null,
+      "newCategory": "labels"
+    },
+    {
+      "RequisitionItemId": 170,
+      "itemName": "Label - Kol Mayonnaise 1kg Njor",
+      "oldCategory": null,
+      "newCategory": "labels"
+    },
+    {
+      "RequisitionItemId": 171,
+      "itemName": "Seam - Chuck 307(83mm) Friendship",
+      "oldCategory": null,
+      "newCategory": "Seamer Parts"
+    },
+    {
+      "RequisitionItemId": 172,
+      "itemName": "Seam - Chuck 307(83mm) Friendship",
+      "oldCategory": null,
+      "newCategory": "Seamer Parts"
+    },
+    {
+      "RequisitionItemId": 173,
+      "itemName": "Local Sugar",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 174,
+      "itemName": "Padlock #263",
+      "oldCategory": null,
+      "newCategory": "BUILDING ITEMS"
+    },
+    {
+      "RequisitionItemId": 175,
+      "itemName": "Label-Kol Brown Vinegar 700Ml",
+      "oldCategory": null,
+      "newCategory": "labels"
+    },
+    {
+      "RequisitionItemId": 176,
+      "itemName": "Mustard Seeds Peeled",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 177,
+      "itemName": "Flavour - Strawberry",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 178,
+      "itemName": "Eggs",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 179,
+      "itemName": "Americano Plastic Bottles 700g T/Sauce",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 180,
+      "itemName": "Caps 35mm Flip Top White-Americano Bottl",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 181,
+      "itemName": "Tomato Sauce Bottles 400gms",
+      "oldCategory": null,
+      "newCategory": "PACKING CANS"
+    },
+    {
+      "RequisitionItemId": 182,
+      "itemName": "Caps 35mm flip top- Red with Induction W",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 183,
+      "itemName": "Lotion Bottle-65ML (Aroma) white",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 184,
+      "itemName": "Press cap-24mm white (Lotion bottle)",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 185,
+      "itemName": "Label-Kol Tomato Sauce 700G",
+      "oldCategory": null,
+      "newCategory": "labels"
+    },
+    {
+      "RequisitionItemId": 186,
+      "itemName": "Label-Tomchi Tomato Sauce 250G",
+      "oldCategory": null,
+      "newCategory": "labels"
+    },
+    {
+      "RequisitionItemId": 187,
+      "itemName": "Glucose Syrup",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 188,
+      "itemName": "Nylon Sacks Ptd Njoro Canning- 75x116mm",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 189,
+      "itemName": "Inkjet Ink 750ml-DC 401-CF",
+      "oldCategory": null,
+      "newCategory": "ENGINEERING ITEMS"
+    },
+    {
+      "RequisitionItemId": 190,
+      "itemName": "Standard Thinner",
+      "oldCategory": null,
+      "newCategory": "VEHICLE MAINTENANCE"
+    },
+    {
+      "RequisitionItemId": 191,
+      "itemName": "Label- Kol Spice Cinnamon New 100G",
+      "oldCategory": null,
+      "newCategory": "labels"
+    },
+    {
+      "RequisitionItemId": 192,
+      "itemName": "Video jet Cleaning solution V901-Q",
+      "oldCategory": null,
+      "newCategory": "ENGINEERING ITEMS"
+    },
+    {
+      "RequisitionItemId": 193,
+      "itemName": "Bearing No. 1209K(Y)",
+      "oldCategory": null,
+      "newCategory": "ENGINEERING ITEMS"
+    },
+    {
+      "RequisitionItemId": 194,
+      "itemName": "Glue- ZYNTAC 420 {Paper to Plastic}",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 195,
+      "itemName": "2lts Jerrycans Oval",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 196,
+      "itemName": "Cap 2lt jerrycan White",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 197,
+      "itemName": "Caps-2lts jerrycan (Yellow)",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 198,
+      "itemName": "plug for 2lt Jerrycan",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 199,
+      "itemName": "Welding rods-M.S 3.25mm",
+      "oldCategory": null,
+      "newCategory": "ENGINEERING ITEMS"
+    },
+    {
+      "RequisitionItemId": 200,
+      "itemName": "Flap disc G80",
+      "oldCategory": null,
+      "newCategory": "BUILDING ITEMS"
+    },
+    {
+      "RequisitionItemId": 201,
+      "itemName": "Multi Fold Hand Paper Towels",
+      "oldCategory": null,
+      "newCategory": "CLEANING & CLOAK"
+    },
+    {
+      "RequisitionItemId": 202,
+      "itemName": "Toilet Tissue Paper-Roll",
+      "oldCategory": null,
+      "newCategory": "CLEANING & CLOAK"
+    },
+    {
+      "RequisitionItemId": 203,
+      "itemName": "Overload Relay 1.8-3.2A",
+      "oldCategory": null,
+      "newCategory": "ELECTRICAL ITEMS"
+    },
+    {
+      "RequisitionItemId": 204,
+      "itemName": "Voltage & Current Protector",
+      "oldCategory": null,
+      "newCategory": "ELECTRICAL ITEMS"
+    },
+    {
+      "RequisitionItemId": 205,
+      "itemName": "Contactor - 25A 240V",
+      "oldCategory": null,
+      "newCategory": "ELECTRICAL ITEMS"
+    },
+    {
+      "RequisitionItemId": 206,
+      "itemName": "Contactor 32A 240V",
+      "oldCategory": null,
+      "newCategory": "ELECTRICAL ITEMS"
+    },
+    {
+      "RequisitionItemId": 207,
+      "itemName": "Temperature Controller",
+      "oldCategory": null,
+      "newCategory": "ELECTRICAL ITEMS"
+    },
+    {
+      "RequisitionItemId": 208,
+      "itemName": "Temperature Controller",
+      "oldCategory": null,
+      "newCategory": "ELECTRICAL ITEMS"
+    },
+    {
+      "RequisitionItemId": 209,
+      "itemName": "staple pins 24/6",
+      "oldCategory": null,
+      "newCategory": "STATIONERY"
+    },
+    {
+      "RequisitionItemId": 210,
+      "itemName": "Computer paper 2part",
+      "oldCategory": null,
+      "newCategory": "STATIONERY"
+    },
+    {
+      "RequisitionItemId": 211,
+      "itemName": "Order Book A5",
+      "oldCategory": null,
+      "newCategory": "STATIONERY"
+    },
+    {
+      "RequisitionItemId": 212,
+      "itemName": "White Envelop Printed NCF",
+      "oldCategory": null,
+      "newCategory": "STATIONERY"
+    },
+    {
+      "RequisitionItemId": 213,
+      "itemName": "Grass Brush Cutter - Spare Part",
+      "oldCategory": null,
+      "newCategory": "ENGINEERING ITEMS"
+    },
+    {
+      "RequisitionItemId": 214,
+      "itemName": "PolyBag-8*10*250G Printed Dry Vegetables",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 215,
+      "itemName": "TRAYS-265*185*50mm-5 Lts Jerrycan",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 216,
+      "itemName": "Cutting disc- 4\"*1mm",
+      "oldCategory": null,
+      "newCategory": "ENGINEERING ITEMS"
+    },
+    {
+      "RequisitionItemId": 217,
+      "itemName": "Disposable Hand Gloves- Nitrile",
+      "oldCategory": null,
+      "newCategory": "MEDICAL ITEMS"
+    },
+    {
+      "RequisitionItemId": 218,
+      "itemName": "Pineapple Emulsion",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 219,
+      "itemName": "Vegetable Cooking Oil",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 220,
+      "itemName": "Printed Poly bags-22.5\"x39\"x500G Clear",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 221,
+      "itemName": "O-Ring 10mm",
+      "oldCategory": null,
+      "newCategory": "ENGINEERING ITEMS"
+    },
+    {
+      "RequisitionItemId": 222,
+      "itemName": "Cistern low level",
+      "oldCategory": null,
+      "newCategory": "PLUMBING ITEMS"
+    },
+    {
+      "RequisitionItemId": 223,
+      "itemName": "Phase Failure  415V",
+      "oldCategory": null,
+      "newCategory": "ELECTRICAL ITEMS"
+    },
+    {
+      "RequisitionItemId": 224,
+      "itemName": "Double Door Switch",
+      "oldCategory": null,
+      "newCategory": "ELECTRICAL ITEMS"
+    },
+    {
+      "RequisitionItemId": 225,
+      "itemName": "Nylon Sacks Ptd Njoro Canning- 75x116mm",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 226,
+      "itemName": "Eggs",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 227,
+      "itemName": "Ing-0049",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 228,
+      "itemName": "Caustic soda pearls",
+      "oldCategory": null,
+      "newCategory": "CLEANING & CLOAK"
+    },
+    {
+      "RequisitionItemId": 229,
+      "itemName": "CARTONS 305*240*223mm Bake N Top Cream 1",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 230,
+      "itemName": "Plastic Aprons",
+      "oldCategory": null,
+      "newCategory": "Protective Clothing"
+    },
+    {
+      "RequisitionItemId": 231,
+      "itemName": "Electric Mincer M32",
+      "oldCategory": null,
+      "newCategory": "MACHINERY ITEMS"
+    },
+    {
+      "RequisitionItemId": 232,
+      "itemName": "Cooking oil - sunflower RINSUN",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 233,
+      "itemName": "Kitchen knives",
+      "oldCategory": null,
+      "newCategory": "CANTEEN ITEMS"
+    },
+    {
+      "RequisitionItemId": 234,
+      "itemName": "Bottles- 700ml Vinegar",
+      "oldCategory": null,
+      "newCategory": "PACKING CANS"
+    },
+    {
+      "RequisitionItemId": 235,
+      "itemName": "Ropp Caps 28mm WHITE",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 236,
+      "itemName": "Tray 310x230x30mm 125KL Black",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 237,
+      "itemName": "Carton 370x290x260mm 5ply - A/Ketchup",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 238,
+      "itemName": "Jerrycans 5 litres",
+      "oldCategory": null,
+      "newCategory": "PACKING CANS"
+    },
+    {
+      "RequisitionItemId": 239,
+      "itemName": "Caps for 5lt jerrycan- Yellow",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 240,
+      "itemName": "Caps for 5 lts jerrycans-White",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 241,
+      "itemName": "plugs 5 litre jerrycans",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 242,
+      "itemName": "5ltr Jerrycan Red",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 243,
+      "itemName": "Cap for 5lt Jerrycan RED with Wad",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 244,
+      "itemName": "Label-American Gourmet T/Ketchup 5Kg",
+      "oldCategory": null,
+      "newCategory": "labels"
+    },
+    {
+      "RequisitionItemId": 245,
+      "itemName": "Label-Clovers Tomato Paste 3.3Kg",
+      "oldCategory": null,
+      "newCategory": "labels"
+    },
+    {
+      "RequisitionItemId": 246,
+      "itemName": "Simplistica MY1217",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 247,
+      "itemName": "Glacial Acetic Acid",
+      "oldCategory": null,
+      "newCategory": "CENTRAL STORES FINISHED GOODS"
+    },
+    {
+      "RequisitionItemId": 248,
+      "itemName": "Sodium Benzoate",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 249,
+      "itemName": "Local Sugar",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 250,
+      "itemName": "S.S. Plate 8x4x1mm",
+      "oldCategory": null,
+      "newCategory": "BUILDING ITEMS"
+    },
+    {
+      "RequisitionItemId": 251,
+      "itemName": "S.S. Angle Line 1\"x1\"x3/16",
+      "oldCategory": null,
+      "newCategory": "BUILDING ITEMS"
+    },
+    {
+      "RequisitionItemId": 252,
+      "itemName": "S.S. Rod 8mm",
+      "oldCategory": null,
+      "newCategory": "ENGINEERING ITEMS"
+    },
+    {
+      "RequisitionItemId": 253,
+      "itemName": "Temperature Controller",
+      "oldCategory": null,
+      "newCategory": "ELECTRICAL ITEMS"
+    },
+    {
+      "RequisitionItemId": 255,
+      "itemName": "Perforated Sheet 1mm x 3mm x 2mts",
+      "oldCategory": null,
+      "newCategory": "BUILDING ITEMS"
+    },
+    {
+      "RequisitionItemId": 256,
+      "itemName": "S.S. Ball Valve 1\"",
+      "oldCategory": null,
+      "newCategory": "PLUMBING ITEMS"
+    },
+    {
+      "RequisitionItemId": 257,
+      "itemName": "Glue- Super glue",
+      "oldCategory": null,
+      "newCategory": "ENGINEERING ITEMS"
+    },
+    {
+      "RequisitionItemId": 258,
+      "itemName": "Ing-0127",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 259,
+      "itemName": "Ing-0178",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    },
+    {
+      "RequisitionItemId": 260,
+      "itemName": "Carton 24x50g Royco Blackpepper Unilever",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 261,
+      "itemName": "Carton 12x100gRoyco Curry and Spice Uni.",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 262,
+      "itemName": "Carton 12x100g Royco Nyamachoma Spice",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 263,
+      "itemName": "Carton 12x100g Royco Pilau Masala Unilev",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 264,
+      "itemName": "Carton 24X50g Royco Pilau Masala Unileve",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 265,
+      "itemName": "Carton 12x100g Royco Spice Dry & Wet Fry",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 266,
+      "itemName": "Carton 24x50g Royco Spice Wet & Dry Fry",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 267,
+      "itemName": "Label UKL Royco Blackpepper Ground 50g",
+      "oldCategory": null,
+      "newCategory": "labels"
+    },
+    {
+      "RequisitionItemId": 268,
+      "itemName": "Label-Unilever Royco Black Pepper 90G",
+      "oldCategory": null,
+      "newCategory": "labels"
+    },
+    {
+      "RequisitionItemId": 269,
+      "itemName": "Label-Ukl Royco Curry And Spice 100G",
+      "oldCategory": null,
+      "newCategory": "labels"
+    },
+    {
+      "RequisitionItemId": 270,
+      "itemName": "Label- Royco Garlic Gnd Spice 100G",
+      "oldCategory": null,
+      "newCategory": "labels"
+    },
+    {
+      "RequisitionItemId": 271,
+      "itemName": "Label- Unileverroyco Pilau Masala 50G",
+      "oldCategory": null,
+      "newCategory": "labels"
+    },
+    {
+      "RequisitionItemId": 272,
+      "itemName": "Ropp cap 40mm red",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 273,
+      "itemName": "Screw Cap 55mm Red for 100g Jar(Unilever",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 274,
+      "itemName": "Herb Jar 100g White (Unilever)",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 275,
+      "itemName": "Spice Jar 50g White (Unilever)",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 276,
+      "itemName": "Bearing-51204 thrust",
+      "oldCategory": null,
+      "newCategory": "ENGINEERING ITEMS"
+    },
+    {
+      "RequisitionItemId": 277,
+      "itemName": "A21/2 401x411 EOT Lacquered Can/Lid-T/Pa",
+      "oldCategory": null,
+      "newCategory": "PACKING CANS"
+    },
+    {
+      "RequisitionItemId": 278,
+      "itemName": "Plain Sleeve 135x30mm",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 279,
+      "itemName": "Label-Kol Mixed Fruit Jam 450G",
+      "oldCategory": null,
+      "newCategory": "labels"
+    },
+    {
+      "RequisitionItemId": 280,
+      "itemName": "Ply board - 8x4ft",
+      "oldCategory": null,
+      "newCategory": "BUILDING ITEMS"
+    },
+    {
+      "RequisitionItemId": 281,
+      "itemName": "Hair Net - WHITE",
+      "oldCategory": null,
+      "newCategory": "Uniforms"
+    },
+    {
+      "RequisitionItemId": 282,
+      "itemName": "Printer Toner HP 151A",
+      "oldCategory": null,
+      "newCategory": "STATIONERY"
+    },
+    {
+      "RequisitionItemId": 283,
+      "itemName": "Industrial detergent powder",
+      "oldCategory": null,
+      "newCategory": "CLEANING & CLOAK"
+    },
+    {
+      "RequisitionItemId": 284,
+      "itemName": "Disposable Hand Gloves- Nitrile",
+      "oldCategory": null,
+      "newCategory": "MEDICAL ITEMS"
+    },
+    {
+      "RequisitionItemId": 285,
+      "itemName": "General Cleaner Liquid Detergent",
+      "oldCategory": null,
+      "newCategory": "CLEANING & CLOAK"
+    },
+    {
+      "RequisitionItemId": 286,
+      "itemName": "Hand Washing Cream",
+      "oldCategory": null,
+      "newCategory": "CLEANING & CLOAK"
+    },
+    {
+      "RequisitionItemId": 287,
+      "itemName": "Diesel",
+      "oldCategory": null,
+      "newCategory": "MOTOR VEHICLE FUEL"
+    },
+    {
+      "RequisitionItemId": 288,
+      "itemName": "CARTONS 305*240*223mm Bake N Top Cream 1",
+      "oldCategory": null,
+      "newCategory": "PACKING MATERIALS"
+    },
+    {
+      "RequisitionItemId": 289,
+      "itemName": "Pure Patent Flour",
+      "oldCategory": null,
+      "newCategory": "INGREDIENTS"
+    }
+  ],
+  "noErpMapping": [
+    {
+      "RequisitionItemId": 254,
+      "itemName": "Bearing FYJ213",
+      "currentCategory": null
+    }
+  ],
+  "skippedAmbiguous": []
+}

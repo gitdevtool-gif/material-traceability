@@ -1,0 +1,5353 @@
+{
+  "generatedAt": "2026-07-11T07:28:10.850Z",
+  "mode": "apply",
+  "summary": {
+    "totalLocal": 899,
+    "totalBusy": 894,
+    "alreadyLinked": 0,
+    "confidentUpdates": 839,
+    "ambiguous": 0,
+    "unmatched": 60,
+    "collisions": 0
+  },
+  "proposedUpdates": [
+    {
+      "SupplierId": 1,
+      "oldCode": "NCF-0001",
+      "newCode": "12912",
+      "name": "AAA GROWERS LIMITED"
+    },
+    {
+      "SupplierId": 2,
+      "oldCode": "NCF-0002",
+      "newCode": "2413",
+      "name": "ABDI NASIR"
+    },
+    {
+      "SupplierId": 3,
+      "oldCode": "NCF-0003",
+      "newCode": "2451",
+      "name": "ABDI NASIR (TAWAKAL SPICES)"
+    },
+    {
+      "SupplierId": 4,
+      "oldCode": "NCF-0004",
+      "newCode": "1987",
+      "name": "ABDIFATAH MAALIM ADAN"
+    },
+    {
+      "SupplierId": 5,
+      "oldCode": "NCF-0005",
+      "newCode": "2686",
+      "name": "ABEDI ENTERPRISES LIMITED"
+    },
+    {
+      "SupplierId": 6,
+      "oldCode": "NCF-0006",
+      "newCode": "2053",
+      "name": "ABSOLUTE SCALES LIMITED"
+    },
+    {
+      "SupplierId": 7,
+      "oldCode": "NCF-0007",
+      "newCode": "1618",
+      "name": "ACACIA COATINGS LIMITED"
+    },
+    {
+      "SupplierId": 8,
+      "oldCode": "NCF-0008",
+      "newCode": "2589",
+      "name": "ACCUMEC ENGINEERING LTD"
+    },
+    {
+      "SupplierId": 9,
+      "oldCode": "NCF-0009",
+      "newCode": "1860",
+      "name": "ACME CONTAINERS LIMITED"
+    },
+    {
+      "SupplierId": 10,
+      "oldCode": "NCF-0010",
+      "newCode": "12865",
+      "name": "AFRICA AGROTECH LIMITED"
+    },
+    {
+      "SupplierId": 11,
+      "oldCode": "NCF-0011",
+      "newCode": "12867",
+      "name": "AFRICAN SALIHIYA CARGO AND CLEARING"
+    },
+    {
+      "SupplierId": 12,
+      "oldCode": "NCF-0012",
+      "newCode": "2742",
+      "name": "AGGREY OTIENO ADIPO"
+    },
+    {
+      "SupplierId": 13,
+      "oldCode": "NCF-0013",
+      "newCode": "2103",
+      "name": "AGRI FISHERIES INTERNATIONAL LTD"
+    },
+    {
+      "SupplierId": 14,
+      "oldCode": "NCF-0014",
+      "newCode": "2707",
+      "name": "AGVENTURE LIMITED"
+    },
+    {
+      "SupplierId": 15,
+      "oldCode": "NCF-0015",
+      "newCode": "1678",
+      "name": "AHMED MOHAMUD ALI"
+    },
+    {
+      "SupplierId": 16,
+      "oldCode": "NCF-0016",
+      "newCode": "2750",
+      "name": "AIRMARINE CONVEYORS LIMITED"
+    },
+    {
+      "SupplierId": 17,
+      "oldCode": "NCF-0017",
+      "newCode": "12887",
+      "name": "ALEX NYAMONGO"
+    },
+    {
+      "SupplierId": 18,
+      "oldCode": "NCF-0018",
+      "newCode": "1825",
+      "name": "ALICE WAMBUI MUTHONI"
+    },
+    {
+      "SupplierId": 19,
+      "oldCode": "NCF-0019",
+      "newCode": "1219",
+      "name": "ALLPACK INDUSTRIES LIMITED"
+    },
+    {
+      "SupplierId": 20,
+      "oldCode": "NCF-0020",
+      "newCode": "1438",
+      "name": "ALLWIN PACKAGING INTERNATIONAL LIMITED"
+    },
+    {
+      "SupplierId": 21,
+      "oldCode": "NCF-0021",
+      "newCode": "2747",
+      "name": "AL-MANSOOR VIDEO SERVICES LIMITED"
+    },
+    {
+      "SupplierId": 22,
+      "oldCode": "NCF-0022",
+      "newCode": "12941",
+      "name": "ALMIRIA LIMITED"
+    },
+    {
+      "SupplierId": 23,
+      "oldCode": "NCF-0023",
+      "newCode": "1686",
+      "name": "AL-MUNAWAR LIMITED"
+    },
+    {
+      "SupplierId": 24,
+      "oldCode": "NCF-0024",
+      "newCode": "2120",
+      "name": "ALWARDI VENTURE LIMITED"
+    },
+    {
+      "SupplierId": 25,
+      "oldCode": "NCF-0025",
+      "newCode": "1538",
+      "name": "AMESI (K) LTD"
+    },
+    {
+      "SupplierId": 26,
+      "oldCode": "NCF-0026",
+      "newCode": "1439",
+      "name": "AMIRS AUTO TRONICS LIMITED"
+    },
+    {
+      "SupplierId": 27,
+      "oldCode": "NCF-0027",
+      "newCode": "1440",
+      "name": "AMOS MWANGI MUREITHI"
+    },
+    {
+      "SupplierId": 28,
+      "oldCode": "NCF-0028",
+      "newCode": "1441",
+      "name": "AMU PRESS CO. LIMITED"
+    },
+    {
+      "SupplierId": 29,
+      "oldCode": "NCF-0029",
+      "newCode": "2421",
+      "name": "ANALABS LIMITED"
+    },
+    {
+      "SupplierId": 30,
+      "oldCode": "NCF-0030",
+      "newCode": "2801",
+      "name": "ANJLAL IMPEX LIMITED"
+    },
+    {
+      "SupplierId": 31,
+      "oldCode": "NCF-0031",
+      "newCode": "12901",
+      "name": "ANN NDUTA -KASAMBARA"
+    },
+    {
+      "SupplierId": 32,
+      "oldCode": "NCF-0032",
+      "newCode": "2644",
+      "name": "ANN WACHERA - KASAMBARA"
+    },
+    {
+      "SupplierId": 33,
+      "oldCode": "NCF-0033",
+      "newCode": "2617",
+      "name": "ANN WANGECHI GITHAIGA - KASAMBARA"
+    },
+    {
+      "SupplierId": 34,
+      "oldCode": "NCF-0034",
+      "newCode": "2628",
+      "name": "ANNA NJERI MBURU - KASAMBARA"
+    },
+    {
+      "SupplierId": 35,
+      "oldCode": "NCF-0035",
+      "newCode": "2651",
+      "name": "ANNE MUTHONI MURIITHI"
+    },
+    {
+      "SupplierId": 36,
+      "oldCode": "NCF-0036",
+      "newCode": "2706",
+      "name": "ANTHONY MWITHIA KIRUTHI"
+    },
+    {
+      "SupplierId": 37,
+      "oldCode": "NCF-0037",
+      "newCode": "1443",
+      "name": "ANVI EMPORIUM LIMITED"
+    },
+    {
+      "SupplierId": 38,
+      "oldCode": "NCF-0038",
+      "newCode": "2022",
+      "name": "ANWAR M. ISMAIL"
+    },
+    {
+      "SupplierId": 39,
+      "oldCode": "NCF-0039",
+      "newCode": "1442",
+      "name": "APEX REFRIGERATION & AIR CONDITIONING LT"
+    },
+    {
+      "SupplierId": 40,
+      "oldCode": "NCF-0040",
+      "newCode": "2138",
+      "name": "AQUATREAT SOLUTIONS LTD"
+    },
+    {
+      "SupplierId": 41,
+      "oldCode": "NCF-0041",
+      "newCode": "2737",
+      "name": "ARAMEX KENYA LIMITED"
+    },
+    {
+      "SupplierId": 42,
+      "oldCode": "NCF-0042",
+      "newCode": "1444",
+      "name": "ARICHEM LIMITED"
+    },
+    {
+      "SupplierId": 43,
+      "oldCode": "NCF-0043",
+      "newCode": "12859",
+      "name": "ARZAAN AUTOMOBILES AFRICA LTD"
+    },
+    {
+      "SupplierId": 44,
+      "oldCode": "NCF-0044",
+      "newCode": "2754",
+      "name": "ASHNI ENTERPRISES - PRAFUL CHHAGANLAL"
+    },
+    {
+      "SupplierId": 45,
+      "oldCode": "NCF-0045",
+      "newCode": "1446",
+      "name": "ASHUT ENGINEERS LIMITED"
+    },
+    {
+      "SupplierId": 46,
+      "oldCode": "NCF-0046",
+      "newCode": "1597",
+      "name": "ASHUT PLASTICS LIMITED"
+    },
+    {
+      "SupplierId": 47,
+      "oldCode": "NCF-0047",
+      "newCode": "1617",
+      "name": "ASL PACKAGING LIMITED"
+    },
+    {
+      "SupplierId": 48,
+      "oldCode": "NCF-0048",
+      "newCode": "1636",
+      "name": "ASTON ROBERT NDEGE"
+    },
+    {
+      "SupplierId": 49,
+      "oldCode": "NCF-0049",
+      "newCode": "2735",
+      "name": "ATANASI MWANGI"
+    },
+    {
+      "SupplierId": 50,
+      "oldCode": "NCF-0050",
+      "newCode": "12956",
+      "name": "ATOMS ELECTRICAL SERVICES LTD"
+    },
+    {
+      "SupplierId": 51,
+      "oldCode": "NCF-0051",
+      "newCode": "1946",
+      "name": "AUTOCOM SYSTEMS & SOLUTIONS"
+    },
+    {
+      "SupplierId": 52,
+      "oldCode": "NCF-0052",
+      "newCode": "1447",
+      "name": "AUTOXPRESS LIMITED"
+    },
+    {
+      "SupplierId": 53,
+      "oldCode": "NCF-0053",
+      "newCode": "1675",
+      "name": "AZELIS KENYA LIMITED"
+    },
+    {
+      "SupplierId": 54,
+      "oldCode": "NCF-0054",
+      "newCode": "2097",
+      "name": "BAKSIVEL KENYA LIMITED"
+    },
+    {
+      "SupplierId": 55,
+      "oldCode": "NCF-0055",
+      "newCode": "1619",
+      "name": "BANSI WHOLESALERS LIMITED"
+    },
+    {
+      "SupplierId": 56,
+      "oldCode": "NCF-0056",
+      "newCode": "1626",
+      "name": "BANSONS ENG. & BODY WORKS LTD"
+    },
+    {
+      "SupplierId": 57,
+      "oldCode": "NCF-0057",
+      "newCode": "1688",
+      "name": "BASCO PRODUCTS (K) LTD"
+    },
+    {
+      "SupplierId": 58,
+      "oldCode": "NCF-0058",
+      "newCode": "1448",
+      "name": "BAWANI STORES LIMITED-SUPPLIER"
+    },
+    {
+      "SupplierId": 59,
+      "oldCode": "NCF-0059",
+      "newCode": "1633",
+      "name": "BEARING HOUSE (1985) LIMITED"
+    },
+    {
+      "SupplierId": 60,
+      "oldCode": "NCF-0060",
+      "newCode": "1969",
+      "name": "BEATRICE GESARE OMARI'"
+    },
+    {
+      "SupplierId": 61,
+      "oldCode": "NCF-0061",
+      "newCode": "2588",
+      "name": "BEATRICE MUMBI - KASAMBARA"
+    },
+    {
+      "SupplierId": 62,
+      "oldCode": "NCF-0062",
+      "newCode": "2026",
+      "name": "BEN MUSILA MUSYOKA"
+    },
+    {
+      "SupplierId": 63,
+      "oldCode": "NCF-0063",
+      "newCode": "2256",
+      "name": "BENARD CHEGE- KASAMBARA"
+    },
+    {
+      "SupplierId": 64,
+      "oldCode": "NCF-0064",
+      "newCode": "12932",
+      "name": "BENARD GITHUA- KASAMBARA"
+    },
+    {
+      "SupplierId": 65,
+      "oldCode": "NCF-0065",
+      "newCode": "2724",
+      "name": "BENARD KIBET KOECH"
+    },
+    {
+      "SupplierId": 66,
+      "oldCode": "NCF-0066",
+      "newCode": "1423",
+      "name": "BENARD MAINA NDURA"
+    },
+    {
+      "SupplierId": 67,
+      "oldCode": "NCF-0067",
+      "newCode": "2260",
+      "name": "BENARD MWENJA- KASAMBARA"
+    },
+    {
+      "SupplierId": 68,
+      "oldCode": "NCF-0068",
+      "newCode": "2755",
+      "name": "BENARD RIMUI MUICIGI"
+    },
+    {
+      "SupplierId": 69,
+      "oldCode": "NCF-0069",
+      "newCode": "12945",
+      "name": "BENJAMIN GICHURU MUTURI"
+    },
+    {
+      "SupplierId": 70,
+      "oldCode": "NCF-0070",
+      "newCode": "2719",
+      "name": "BENJAMIN KIPKIRUI"
+    },
+    {
+      "SupplierId": 71,
+      "oldCode": "NCF-0071",
+      "newCode": "2630",
+      "name": "BENJAMIN MAINA - KASAMBARA"
+    },
+    {
+      "SupplierId": 72,
+      "oldCode": "NCF-0072",
+      "newCode": "1647",
+      "name": "BENSON KAMARU KARANJA"
+    },
+    {
+      "SupplierId": 73,
+      "oldCode": "NCF-0073",
+      "newCode": "2746",
+      "name": "BENSON KUNGU MUIRURI"
+    },
+    {
+      "SupplierId": 74,
+      "oldCode": "NCF-0074",
+      "newCode": "2431",
+      "name": "BENSON MBARIA - KASAMBARA"
+    },
+    {
+      "SupplierId": 75,
+      "oldCode": "NCF-0075",
+      "newCode": "2818",
+      "name": "BENSON TANUI"
+    },
+    {
+      "SupplierId": 76,
+      "oldCode": "NCF-0076",
+      "newCode": "1923",
+      "name": "BERICAP EAST AFRICA LIMITED"
+    },
+    {
+      "SupplierId": 77,
+      "oldCode": "NCF-0077",
+      "newCode": "1929",
+      "name": "BERNADETTE MURUNGA"
+    },
+    {
+      "SupplierId": 78,
+      "oldCode": "NCF-0078",
+      "newCode": "2181",
+      "name": "BESAPACK LIMITED"
+    },
+    {
+      "SupplierId": 79,
+      "oldCode": "NCF-0079",
+      "newCode": "2757",
+      "name": "BESPOKE PASTRIES - CRED"
+    },
+    {
+      "SupplierId": 80,
+      "oldCode": "NCF-0080",
+      "newCode": "1449",
+      "name": "BHAGWANJI DEVSHI SHAH"
+    },
+    {
+      "SupplierId": 81,
+      "oldCode": "NCF-0081",
+      "newCode": "1450",
+      "name": "BHOGAL'S GARAGE LIMITED"
+    },
+    {
+      "SupplierId": 82,
+      "oldCode": "NCF-0082",
+      "newCode": "1599",
+      "name": "BIASHARA MASTERS SAWMILLS LTD(JOSEPH MWA"
+    },
+    {
+      "SupplierId": 83,
+      "oldCode": "NCF-0083",
+      "newCode": "2320",
+      "name": "BIGCOLD KENYA LIMITED"
+    },
+    {
+      "SupplierId": 84,
+      "oldCode": "NCF-0084",
+      "newCode": "1941",
+      "name": "BILLY GICHAGA MUNYUKO"
+    },
+    {
+      "SupplierId": 85,
+      "oldCode": "NCF-0085",
+      "newCode": "12883",
+      "name": "BINA WHOLESALERS LIMITED"
+    },
+    {
+      "SupplierId": 86,
+      "oldCode": "NCF-0086",
+      "newCode": "2076",
+      "name": "BIROKS COMPANY LIMITED"
+    },
+    {
+      "SupplierId": 87,
+      "oldCode": "NCF-0087",
+      "newCode": "2273",
+      "name": "BLOWPLAST LIMITED"
+    },
+    {
+      "SupplierId": 88,
+      "oldCode": "NCF-0088",
+      "newCode": "12886",
+      "name": "BMK TECHNOLOGIES LIMITED"
+    },
+    {
+      "SupplierId": 89,
+      "oldCode": "NCF-0089",
+      "newCode": "2419",
+      "name": "BOB MORGAN SYSTEMS LTD"
+    },
+    {
+      "SupplierId": 90,
+      "oldCode": "NCF-0090",
+      "newCode": "2717",
+      "name": "BOF AUTOSPARES AND GENERAL HARDWARE"
+    },
+    {
+      "SupplierId": 91,
+      "oldCode": "NCF-0091",
+      "newCode": "2793",
+      "name": "BOILAHIT LIMITED"
+    },
+    {
+      "SupplierId": 92,
+      "oldCode": "NCF-0092",
+      "newCode": "1620",
+      "name": "BOILAFRICA GENERAL SUPPLIERS LTD"
+    },
+    {
+      "SupplierId": 93,
+      "oldCode": "NCF-0093",
+      "newCode": "2385",
+      "name": "BOILER TECHNIQUES ENGINEERING LTD"
+    },
+    {
+      "SupplierId": 94,
+      "oldCode": "NCF-0094",
+      "newCode": "12947",
+      "name": "BONFACE NJOROGE NDUNGU"
+    },
+    {
+      "SupplierId": 95,
+      "oldCode": "NCF-0095",
+      "newCode": "1587",
+      "name": "BORESHA AFRICA LIMITED"
+    },
+    {
+      "SupplierId": 96,
+      "oldCode": "NCF-0096",
+      "newCode": "2780",
+      "name": "BOSS FREIGHT TERMINAL LTD"
+    },
+    {
+      "SupplierId": 97,
+      "oldCode": "NCF-0097",
+      "newCode": "2620",
+      "name": "BRAVIN KINANGA"
+    },
+    {
+      "SupplierId": 98,
+      "oldCode": "NCF-0098",
+      "newCode": "1557",
+      "name": "BRENNTAG KENYA LIMITED"
+    },
+    {
+      "SupplierId": 99,
+      "oldCode": "NCF-0099",
+      "newCode": "2542",
+      "name": "BRIAN KIPKOECH"
+    },
+    {
+      "SupplierId": 100,
+      "oldCode": "NCF-0100",
+      "newCode": "2587",
+      "name": "BRIAN KURIA MWANGI"
+    },
+    {
+      "SupplierId": 101,
+      "oldCode": "NCF-0101",
+      "newCode": "2841",
+      "name": "BROOKSIDE DAIRY LIMITED"
+    },
+    {
+      "SupplierId": 102,
+      "oldCode": "NCF-0102",
+      "newCode": "2047",
+      "name": "BROXBURNE VENTURES LTD"
+    },
+    {
+      "SupplierId": 103,
+      "oldCode": "NCF-0103",
+      "newCode": "12871",
+      "name": "BRUSH MANUFACTURERS LIMITED"
+    },
+    {
+      "SupplierId": 104,
+      "oldCode": "NCF-0104",
+      "newCode": "12959",
+      "name": "BUSAINO FRUITS"
+    },
+    {
+      "SupplierId": 105,
+      "oldCode": "NCF-0105",
+      "newCode": "1582",
+      "name": "BUTALI SUGAR MILLS LTD"
+    },
+    {
+      "SupplierId": 106,
+      "oldCode": "NCF-0106",
+      "newCode": "1452",
+      "name": "BUTT & ASSOCIATES CPA"
+    },
+    {
+      "SupplierId": 107,
+      "oldCode": "NCF-0107",
+      "newCode": "1459",
+      "name": "C. CZARNIKOW SUGAR (EAST AFRICA) LTD"
+    },
+    {
+      "SupplierId": 108,
+      "oldCode": "NCF-0108",
+      "newCode": "12877",
+      "name": "CAPEL FOOD INGREDIENTS LTD"
+    },
+    {
+      "SupplierId": 109,
+      "oldCode": "NCF-0109",
+      "newCode": "2133",
+      "name": "CAPITOL PRINTERS LIMITED"
+    },
+    {
+      "SupplierId": 110,
+      "oldCode": "NCF-0110",
+      "newCode": "2131",
+      "name": "CAPWELL INDUSTRIES LIMITED"
+    },
+    {
+      "SupplierId": 111,
+      "oldCode": "NCF-0111",
+      "newCode": "2680",
+      "name": "CARBACID (CO2) LIMITED"
+    },
+    {
+      "SupplierId": 112,
+      "oldCode": "NCF-0112",
+      "newCode": "1453",
+      "name": "CARE CHEMISTS LTD"
+    },
+    {
+      "SupplierId": 113,
+      "oldCode": "NCF-0113",
+      "newCode": "2679",
+      "name": "CARLITA ENTERPRISES ENVIRONMENTAL CONSUL"
+    },
+    {
+      "SupplierId": 114,
+      "oldCode": "NCF-0114",
+      "newCode": "2140",
+      "name": "CAROLINE MUTHONI GICHURE - KASAMBARA"
+    },
+    {
+      "SupplierId": 115,
+      "oldCode": "NCF-0115",
+      "newCode": "2826",
+      "name": "CAROLINE NJERI KAMAU"
+    },
+    {
+      "SupplierId": 116,
+      "oldCode": "NCF-0116",
+      "newCode": "1454",
+      "name": "CASH ACCOUNT SUNDRY VENDORS"
+    },
+    {
+      "SupplierId": 117,
+      "oldCode": "NCF-0117",
+      "newCode": "12897",
+      "name": "CDN LARE CATHOLIC PARISH"
+    },
+    {
+      "SupplierId": 118,
+      "oldCode": "NCF-0118",
+      "newCode": "2827",
+      "name": "CELIA VENTURES LIMITED"
+    },
+    {
+      "SupplierId": 119,
+      "oldCode": "NCF-0119",
+      "newCode": "1903",
+      "name": "CENTURION SYSTEMS LTD"
+    },
+    {
+      "SupplierId": 120,
+      "oldCode": "NCF-0120",
+      "newCode": "2132",
+      "name": "CEOITBOX TECH SERVICES LLP"
+    },
+    {
+      "SupplierId": 121,
+      "oldCode": "NCF-0121",
+      "newCode": "1902",
+      "name": "CET INDUSTRIAL LIMITED"
+    },
+    {
+      "SupplierId": 122,
+      "oldCode": "NCF-0122",
+      "newCode": "2766",
+      "name": "CHAI HARDWARE AND GLASS LIMITED"
+    },
+    {
+      "SupplierId": 123,
+      "oldCode": "NCF-0123",
+      "newCode": "2669",
+      "name": "CHANDARIA INDUSTRIES LIMITED- CR"
+    },
+    {
+      "SupplierId": 124,
+      "oldCode": "NCF-0124",
+      "newCode": "1455",
+      "name": "CHANJE DOMINION ENTERPRISES LTD"
+    },
+    {
+      "SupplierId": 125,
+      "oldCode": "NCF-0125",
+      "newCode": "1637",
+      "name": "CHARLES K. CHERUIYOT"
+    },
+    {
+      "SupplierId": 126,
+      "oldCode": "NCF-0126",
+      "newCode": "2650",
+      "name": "CHARLES KABAALE"
+    },
+    {
+      "SupplierId": 127,
+      "oldCode": "NCF-0127",
+      "newCode": "1937",
+      "name": "CHARLES KINYUA KIRIRO"
+    },
+    {
+      "SupplierId": 128,
+      "oldCode": "NCF-0128",
+      "newCode": "1915",
+      "name": "CHARLES MACHARIA PAUL"
+    },
+    {
+      "SupplierId": 129,
+      "oldCode": "NCF-0129",
+      "newCode": "2591",
+      "name": "CHARLES NDUNGU - CR"
+    },
+    {
+      "SupplierId": 130,
+      "oldCode": "NCF-0130",
+      "newCode": "1559",
+      "name": "CHARLES WAINANA"
+    },
+    {
+      "SupplierId": 131,
+      "oldCode": "NCF-0131",
+      "newCode": "2031",
+      "name": "CHARVI INVESTMENTS LTD"
+    },
+    {
+      "SupplierId": 132,
+      "oldCode": "NCF-0132",
+      "newCode": "12874",
+      "name": "CHEF MEDIA LIMITED"
+    },
+    {
+      "SupplierId": 133,
+      "oldCode": "NCF-0133",
+      "newCode": "2817",
+      "name": "CHERONO BETT - KASAMBARA"
+    },
+    {
+      "SupplierId": 134,
+      "oldCode": "NCF-0134",
+      "newCode": "2569",
+      "name": "CHETAN ENTERPRISE"
+    },
+    {
+      "SupplierId": 135,
+      "oldCode": "NCF-0135",
+      "newCode": "1602",
+      "name": "CHROME PARTNERS LIMITED"
+    },
+    {
+      "SupplierId": 136,
+      "oldCode": "NCF-0136",
+      "newCode": "2839",
+      "name": "CHRORI ENTERPRISES"
+    },
+    {
+      "SupplierId": 137,
+      "oldCode": "NCF-0137",
+      "newCode": "1547",
+      "name": "CIMBRIA EAST AFRICA LTD"
+    },
+    {
+      "SupplierId": 138,
+      "oldCode": "NCF-0138",
+      "newCode": "2408",
+      "name": "CINCH MARKETS LIMITED"
+    },
+    {
+      "SupplierId": 139,
+      "oldCode": "NCF-0139",
+      "newCode": "1456",
+      "name": "COLOUR PACKAGING LIMITED"
+    },
+    {
+      "SupplierId": 140,
+      "oldCode": "NCF-0140",
+      "newCode": "1457",
+      "name": "COMHARD LIMITED"
+    },
+    {
+      "SupplierId": 141,
+      "oldCode": "NCF-0141",
+      "newCode": "1458",
+      "name": "COMPUTER PLANET LIMITED"
+    },
+    {
+      "SupplierId": 142,
+      "oldCode": "NCF-0142",
+      "newCode": "2830",
+      "name": "CONSOLBASE LIMITED"
+    },
+    {
+      "SupplierId": 143,
+      "oldCode": "NCF-0143",
+      "newCode": "2062",
+      "name": "COOLTEMPER INDUSTRIAL SUPPLIES LTD"
+    },
+    {
+      "SupplierId": 144,
+      "oldCode": "NCF-0144",
+      "newCode": "2227",
+      "name": "COPYRITE FURNITURES LTD"
+    },
+    {
+      "SupplierId": 145,
+      "oldCode": "NCF-0145",
+      "newCode": "2384",
+      "name": "CROPCARE ENTERPRISE LTD"
+    },
+    {
+      "SupplierId": 146,
+      "oldCode": "NCF-0146",
+      "newCode": "1545",
+      "name": "CUMA REFRIGERATION (EA) LIMITED"
+    },
+    {
+      "SupplierId": 147,
+      "oldCode": "NCF-0147",
+      "newCode": "12966",
+      "name": "CUPRICHEM INDUSTRIAL CHEMICALS LTD"
+    },
+    {
+      "SupplierId": 148,
+      "oldCode": "NCF-0148",
+      "newCode": "2786",
+      "name": "CYBERNAPTICS KENYA LIMITED"
+    },
+    {
+      "SupplierId": 149,
+      "oldCode": "NCF-0149",
+      "newCode": "2340",
+      "name": "D.L. PATEL PRESS (K) LTD"
+    },
+    {
+      "SupplierId": 150,
+      "oldCode": "NCF-0150",
+      "newCode": "2745",
+      "name": "DAGI HARDWARE & ELECTRICALS"
+    },
+    {
+      "SupplierId": 152,
+      "oldCode": "NCF-0152",
+      "newCode": "12928",
+      "name": "DAMARIS NJERI MWANGI"
+    },
+    {
+      "SupplierId": 153,
+      "oldCode": "NCF-0153",
+      "newCode": "2618",
+      "name": "DAMARIS NJOROGE - KASAMBARA"
+    },
+    {
+      "SupplierId": 154,
+      "oldCode": "NCF-0154",
+      "newCode": "2001",
+      "name": "DAN ROTICH"
+    },
+    {
+      "SupplierId": 155,
+      "oldCode": "NCF-0155",
+      "newCode": "12876",
+      "name": "DANIEL KANE JEAN LOUIS"
+    },
+    {
+      "SupplierId": 156,
+      "oldCode": "NCF-0156",
+      "newCode": "2634",
+      "name": "DANIEL KIMINTA"
+    },
+    {
+      "SupplierId": 157,
+      "oldCode": "NCF-0157",
+      "newCode": "12936",
+      "name": "DANIEL MWANGI-KASAMBARA"
+    },
+    {
+      "SupplierId": 158,
+      "oldCode": "NCF-0158",
+      "newCode": "2345",
+      "name": "DANKUL REFRIGERATION & ELECTRICAL STALL"
+    },
+    {
+      "SupplierId": 159,
+      "oldCode": "NCF-0159",
+      "newCode": "2432",
+      "name": "DAVID KABIRU MATHAI"
+    },
+    {
+      "SupplierId": 160,
+      "oldCode": "NCF-0160",
+      "newCode": "2583",
+      "name": "DAVID KAMAU MAINA"
+    },
+    {
+      "SupplierId": 161,
+      "oldCode": "NCF-0161",
+      "newCode": "2151",
+      "name": "DAVID KAMAU WAINAINA- KASAMBARA"
+    },
+    {
+      "SupplierId": 162,
+      "oldCode": "NCF-0162",
+      "newCode": "2276",
+      "name": "DAVID KIMANI KARANJA"
+    },
+    {
+      "SupplierId": 163,
+      "oldCode": "NCF-0163",
+      "newCode": "2676",
+      "name": "DAVID KIMANI MUGWATA"
+    },
+    {
+      "SupplierId": 164,
+      "oldCode": "NCF-0164",
+      "newCode": "2605",
+      "name": "DAVID KIRWA KIRONG"
+    },
+    {
+      "SupplierId": 165,
+      "oldCode": "NCF-0165",
+      "newCode": "12878",
+      "name": "DAVID MAINA MACHARIA"
+    },
+    {
+      "SupplierId": 166,
+      "oldCode": "NCF-0166",
+      "newCode": "2607",
+      "name": "DAVID MUNALA INYANI"
+    },
+    {
+      "SupplierId": 167,
+      "oldCode": "NCF-0167",
+      "newCode": "1549",
+      "name": "DAVID MWANGI GATIMU"
+    },
+    {
+      "SupplierId": 168,
+      "oldCode": "NCF-0168",
+      "newCode": "2611",
+      "name": "DAVID MWANGI MBICHO"
+    },
+    {
+      "SupplierId": 169,
+      "oldCode": "NCF-0169",
+      "newCode": "2672",
+      "name": "DAVID MWANGI NDUATI"
+    },
+    {
+      "SupplierId": 170,
+      "oldCode": "NCF-0170",
+      "newCode": "1460",
+      "name": "DAVID MWAURA WAMBUGU"
+    },
+    {
+      "SupplierId": 171,
+      "oldCode": "NCF-0171",
+      "newCode": "12898",
+      "name": "DAVIS BOSUBEN"
+    },
+    {
+      "SupplierId": 172,
+      "oldCode": "NCF-0172",
+      "newCode": "2812",
+      "name": "DEBENHAM & FEAR LIMITED - CR."
+    },
+    {
+      "SupplierId": 173,
+      "oldCode": "NCF-0173",
+      "newCode": "12879",
+      "name": "DEDAN GITUKIA NGAI"
+    },
+    {
+      "SupplierId": 174,
+      "oldCode": "NCF-0174",
+      "newCode": "2549",
+      "name": "DEFENCE FOOD PRODUCTION & PROCESSING FAC"
+    },
+    {
+      "SupplierId": 175,
+      "oldCode": "NCF-0175",
+      "newCode": "1631",
+      "name": "DELITE SUPPLIERS LIMITED"
+    },
+    {
+      "SupplierId": 176,
+      "oldCode": "NCF-0176",
+      "newCode": "2424",
+      "name": "DEMI TOOL EXPERT LTD"
+    },
+    {
+      "SupplierId": 177,
+      "oldCode": "NCF-0177",
+      "newCode": "1461",
+      "name": "DENTEX INDUSTRIES LIMITED"
+    },
+    {
+      "SupplierId": 178,
+      "oldCode": "NCF-0178",
+      "newCode": "2715",
+      "name": "DESANN RADIATORS"
+    },
+    {
+      "SupplierId": 179,
+      "oldCode": "NCF-0179",
+      "newCode": "12860",
+      "name": "DEVI STATIONERS & COMPUTERS LTD"
+    },
+    {
+      "SupplierId": 180,
+      "oldCode": "NCF-0180",
+      "newCode": "1918",
+      "name": "DHANAK KAUSAL"
+    },
+    {
+      "SupplierId": 181,
+      "oldCode": "NCF-0181",
+      "newCode": "1613",
+      "name": "DHL WORLDWIDE EXPRESS KENYA LTD"
+    },
+    {
+      "SupplierId": 182,
+      "oldCode": "NCF-0182",
+      "newCode": "1951",
+      "name": "DIAMOND HYGIENE SOLUTIONS"
+    },
+    {
+      "SupplierId": 183,
+      "oldCode": "NCF-0183",
+      "newCode": "1554",
+      "name": "DICKENS MAINA KABOKA"
+    },
+    {
+      "SupplierId": 184,
+      "oldCode": "NCF-0184",
+      "newCode": "2623",
+      "name": "DICKSON KIMANI MWANGI - KASAMBARA"
+    },
+    {
+      "SupplierId": 185,
+      "oldCode": "NCF-0185",
+      "newCode": "1859",
+      "name": "DIVERSEY EASTERN AND CENTRAL AFRICA LTD"
+    },
+    {
+      "SupplierId": 186,
+      "oldCode": "NCF-0186",
+      "newCode": "1648",
+      "name": "DIVKISH IMPEX LLP"
+    },
+    {
+      "SupplierId": 187,
+      "oldCode": "NCF-0187",
+      "newCode": "2821",
+      "name": "DOMINIC KINYANJUI"
+    },
+    {
+      "SupplierId": 188,
+      "oldCode": "NCF-0188",
+      "newCode": "2007",
+      "name": "DOMINIC MACHARIA NYAMBURA"
+    },
+    {
+      "SupplierId": 189,
+      "oldCode": "NCF-0189",
+      "newCode": "1570",
+      "name": "DUNE PACKAGING LIMITED"
+    },
+    {
+      "SupplierId": 190,
+      "oldCode": "NCF-0190",
+      "newCode": "1463",
+      "name": "EAST AFRICAN CHAINS LIMITED"
+    },
+    {
+      "SupplierId": 191,
+      "oldCode": "NCF-0191",
+      "newCode": "1580",
+      "name": "EAST AFRICAN GROWERS FRESH PRODUCE LTD"
+    },
+    {
+      "SupplierId": 192,
+      "oldCode": "NCF-0192",
+      "newCode": "1853",
+      "name": "ECO-GREEN BRIQUETTE LTD"
+    },
+    {
+      "SupplierId": 193,
+      "oldCode": "NCF-0193",
+      "newCode": "1464",
+      "name": "ECOH INTEGRATED TECH LIMITED"
+    },
+    {
+      "SupplierId": 194,
+      "oldCode": "NCF-0194",
+      "newCode": "2539",
+      "name": "ECOJET TECHNOLOGIES LTD"
+    },
+    {
+      "SupplierId": 195,
+      "oldCode": "NCF-0195",
+      "newCode": "2797",
+      "name": "ECU WORLDWIDE (KENYA) LTD"
+    },
+    {
+      "SupplierId": 196,
+      "oldCode": "NCF-0196",
+      "newCode": "2363",
+      "name": "EDNA JEPNGETICH ROTICH"
+    },
+    {
+      "SupplierId": 197,
+      "oldCode": "NCF-0197",
+      "newCode": "1551",
+      "name": "EDWIN KAMAU NDUNGU"
+    },
+    {
+      "SupplierId": 198,
+      "oldCode": "NCF-0198",
+      "newCode": "1600",
+      "name": "EFF CHEMICALS LIMTED"
+    },
+    {
+      "SupplierId": 199,
+      "oldCode": "NCF-0199",
+      "newCode": "12866",
+      "name": "EGERTON UNIVERSITY"
+    },
+    {
+      "SupplierId": 200,
+      "oldCode": "NCF-0200",
+      "newCode": "1677",
+      "name": "EKARU AUTOMOBILES LTD"
+    },
+    {
+      "SupplierId": 201,
+      "oldCode": "NCF-0201",
+      "newCode": "1873",
+      "name": "ELBURGIT ENTERPRISES LTD"
+    },
+    {
+      "SupplierId": 202,
+      "oldCode": "NCF-0202",
+      "newCode": "1465",
+      "name": "ELGON KENYA LIMITED"
+    },
+    {
+      "SupplierId": 203,
+      "oldCode": "NCF-0203",
+      "newCode": "2843",
+      "name": "ELICA SUPPLIERS"
+    },
+    {
+      "SupplierId": 204,
+      "oldCode": "NCF-0204",
+      "newCode": "12902",
+      "name": "ELIJAH KUNGU - KASAMBARA"
+    },
+    {
+      "SupplierId": 205,
+      "oldCode": "NCF-0205",
+      "newCode": "2426",
+      "name": "ELIZABETH KAHORO NYAMBURA - KASAMBARA"
+    },
+    {
+      "SupplierId": 206,
+      "oldCode": "NCF-0206",
+      "newCode": "2254",
+      "name": "ELIZABETH NYAMBURA- KASAMBARA"
+    },
+    {
+      "SupplierId": 207,
+      "oldCode": "NCF-0207",
+      "newCode": "2555",
+      "name": "EMERALD AFRILOG LIMITED"
+    },
+    {
+      "SupplierId": 208,
+      "oldCode": "NCF-0208",
+      "newCode": "2393",
+      "name": "EMMANUEL AGWENGE"
+    },
+    {
+      "SupplierId": 209,
+      "oldCode": "NCF-0209",
+      "newCode": "2819",
+      "name": "EMMANUEL AKIDIVA MBUGUA"
+    },
+    {
+      "SupplierId": 210,
+      "oldCode": "NCF-0210",
+      "newCode": "1848",
+      "name": "ENGRAVERS WORLD LTD"
+    },
+    {
+      "SupplierId": 211,
+      "oldCode": "NCF-0211",
+      "newCode": "2387",
+      "name": "ENOCK KIPROP KIPTOO"
+    },
+    {
+      "SupplierId": 212,
+      "oldCode": "NCF-0212",
+      "newCode": "1614",
+      "name": "EPREN PETROL STATIONS LIMITED"
+    },
+    {
+      "SupplierId": 213,
+      "oldCode": "NCF-0213",
+      "newCode": "1573",
+      "name": "ESSENTIAL DRUGS LIMITED"
+    },
+    {
+      "SupplierId": 214,
+      "oldCode": "NCF-0214",
+      "newCode": "2615",
+      "name": "ESTHER KAGWA"
+    },
+    {
+      "SupplierId": 215,
+      "oldCode": "NCF-0215",
+      "newCode": "2113",
+      "name": "ESTHER WAMBUI"
+    },
+    {
+      "SupplierId": 216,
+      "oldCode": "NCF-0216",
+      "newCode": "12968",
+      "name": "ESTHER WAMBUI KANAKE"
+    },
+    {
+      "SupplierId": 217,
+      "oldCode": "NCF-0217",
+      "newCode": "2164",
+      "name": "ESTHER WANGARI KUNGU"
+    },
+    {
+      "SupplierId": 218,
+      "oldCode": "NCF-0218",
+      "newCode": "12927",
+      "name": "ESTHER WANJA KAGUA"
+    },
+    {
+      "SupplierId": 219,
+      "oldCode": "NCF-0219",
+      "newCode": "2646",
+      "name": "EUNICE WAIRIMU NDIRANGU - KASAMBARA"
+    },
+    {
+      "SupplierId": 220,
+      "oldCode": "NCF-0220",
+      "newCode": "1671",
+      "name": "EUNICE WANJIRU KINYANJUI"
+    },
+    {
+      "SupplierId": 221,
+      "oldCode": "NCF-0221",
+      "newCode": "1466",
+      "name": "EURO INDUSTRIAL CHEMICALS LTD"
+    },
+    {
+      "SupplierId": 222,
+      "oldCode": "NCF-0222",
+      "newCode": "2670",
+      "name": "EVANS KARURU KAHURA"
+    },
+    {
+      "SupplierId": 223,
+      "oldCode": "NCF-0223",
+      "newCode": "12892",
+      "name": "EVERGREEN FRESH DISTRIBUTION LTD"
+    },
+    {
+      "SupplierId": 224,
+      "oldCode": "NCF-0224",
+      "newCode": "2178",
+      "name": "EXECUTIVE COMPUTERS EGERTON"
+    },
+    {
+      "SupplierId": 225,
+      "oldCode": "NCF-0225",
+      "newCode": "2502",
+      "name": "FAIDA INVESTMENT BANK LTD"
+    },
+    {
+      "SupplierId": 226,
+      "oldCode": "NCF-0226",
+      "newCode": "2063",
+      "name": "FAISA GENERAL SUPPLIES CO. LTD"
+    },
+    {
+      "SupplierId": 227,
+      "oldCode": "NCF-0227",
+      "newCode": "1576",
+      "name": "FARGO COURIER LIMITED"
+    },
+    {
+      "SupplierId": 228,
+      "oldCode": "NCF-0228",
+      "newCode": "1550",
+      "name": "FARM PARTS LIMITED"
+    },
+    {
+      "SupplierId": 229,
+      "oldCode": "NCF-0229",
+      "newCode": "1653",
+      "name": "FARMERS WORLD LIMITED"
+    },
+    {
+      "SupplierId": 230,
+      "oldCode": "NCF-0230",
+      "newCode": "1467",
+      "name": "FEDERATION OF KENYA EMPLOYERS"
+    },
+    {
+      "SupplierId": 231,
+      "oldCode": "NCF-0231",
+      "newCode": "2656",
+      "name": "FEDEX EXPRESS KENYA LTD"
+    },
+    {
+      "SupplierId": 232,
+      "oldCode": "NCF-0232",
+      "newCode": "2143",
+      "name": "FELICAH MUGI -KASAMBARA"
+    },
+    {
+      "SupplierId": 233,
+      "oldCode": "NCF-0233",
+      "newCode": "2165",
+      "name": "FILMICO AGENCIES LIMITED"
+    },
+    {
+      "SupplierId": 234,
+      "oldCode": "NCF-0234",
+      "newCode": "2703",
+      "name": "FINETOUCH AFRICA LIMITED"
+    },
+    {
+      "SupplierId": 235,
+      "oldCode": "NCF-0235",
+      "newCode": "1468",
+      "name": "FLAMCO LIMITED"
+    },
+    {
+      "SupplierId": 236,
+      "oldCode": "NCF-0236",
+      "newCode": "12908",
+      "name": "FLORENCE WACHIRA - KASAMBARA"
+    },
+    {
+      "SupplierId": 237,
+      "oldCode": "NCF-0237",
+      "newCode": "1837",
+      "name": "FLUENT CARGO EXPRESS LTD"
+    },
+    {
+      "SupplierId": 238,
+      "oldCode": "NCF-0238",
+      "newCode": "1607",
+      "name": "FORESIGHT TLC LIMITED(NJORO) - RUBIS"
+    },
+    {
+      "SupplierId": 239,
+      "oldCode": "NCF-0239",
+      "newCode": "2625",
+      "name": "FOUNTAIN VENT LIMITED"
+    },
+    {
+      "SupplierId": 240,
+      "oldCode": "NCF-0240",
+      "newCode": "1656",
+      "name": "FRANCIS GACHOKI"
+    },
+    {
+      "SupplierId": 241,
+      "oldCode": "NCF-0241",
+      "newCode": "2443",
+      "name": "FRANCIS KARARA"
+    },
+    {
+      "SupplierId": 242,
+      "oldCode": "NCF-0242",
+      "newCode": "12920",
+      "name": "FRANCIS KIMATHI-KASAMBARA"
+    },
+    {
+      "SupplierId": 243,
+      "oldCode": "NCF-0243",
+      "newCode": "1469",
+      "name": "FRANCIS KIOKO KYUNGUTI"
+    },
+    {
+      "SupplierId": 244,
+      "oldCode": "NCF-0244",
+      "newCode": "2835",
+      "name": "FRANCIS MURIGI - KASAMBARA"
+    },
+    {
+      "SupplierId": 245,
+      "oldCode": "NCF-0245",
+      "newCode": "12910",
+      "name": "FRANCIS NDUNDA NZUKI"
+    },
+    {
+      "SupplierId": 246,
+      "oldCode": "NCF-0246",
+      "newCode": "12906",
+      "name": "FRANCIS NGURE - KASAMBARA"
+    },
+    {
+      "SupplierId": 247,
+      "oldCode": "NCF-0247",
+      "newCode": "2390",
+      "name": "FRANCIS NJOROGE MWAURA"
+    },
+    {
+      "SupplierId": 248,
+      "oldCode": "NCF-0248",
+      "newCode": "1661",
+      "name": "FRANCIS NJUGUNA MUNGAI"
+    },
+    {
+      "SupplierId": 249,
+      "oldCode": "NCF-0249",
+      "newCode": "2284",
+      "name": "FRANCO AND SONS TIMBER ENTERPRICES LIMIT"
+    },
+    {
+      "SupplierId": 250,
+      "oldCode": "NCF-0250",
+      "newCode": "2504",
+      "name": "FREDERICK NDERI KINUTHIA"
+    },
+    {
+      "SupplierId": 251,
+      "oldCode": "NCF-0251",
+      "newCode": "2606",
+      "name": "FREDRICK OTIENO OPIYO"
+    },
+    {
+      "SupplierId": 252,
+      "oldCode": "NCF-0252",
+      "newCode": "1836",
+      "name": "FREDRICK WANYONYI"
+    },
+    {
+      "SupplierId": 253,
+      "oldCode": "NCF-0253",
+      "newCode": "1571",
+      "name": "FRIENDSHIP CONTAINERS MFG . LIMITED"
+    },
+    {
+      "SupplierId": 254,
+      "oldCode": "NCF-0254",
+      "newCode": "1470",
+      "name": "GA INSURANCE LIMITED"
+    },
+    {
+      "SupplierId": 255,
+      "oldCode": "NCF-0255",
+      "newCode": "12955",
+      "name": "GABRIEL GICHUHI NDUNHU"
+    },
+    {
+      "SupplierId": 256,
+      "oldCode": "NCF-0256",
+      "newCode": "2445",
+      "name": "GACHAGUA WOOD PRODUCTS LIMITED"
+    },
+    {
+      "SupplierId": 257,
+      "oldCode": "NCF-0257",
+      "newCode": "1471",
+      "name": "GAJIPARA BUILDERS LIMITED"
+    },
+    {
+      "SupplierId": 258,
+      "oldCode": "NCF-0258",
+      "newCode": "2486",
+      "name": "GALANA ENERGIES LIMITED"
+    },
+    {
+      "SupplierId": 259,
+      "oldCode": "NCF-0259",
+      "newCode": "2018",
+      "name": "GARAGE MAHAL LIMITED"
+    },
+    {
+      "SupplierId": 260,
+      "oldCode": "NCF-0260",
+      "newCode": "1569",
+      "name": "GENERAL CARGO SERVICES LTD"
+    },
+    {
+      "SupplierId": 261,
+      "oldCode": "NCF-0261",
+      "newCode": "1901",
+      "name": "GENERAL EQUIPMENT (1978) CO. LTD"
+    },
+    {
+      "SupplierId": 262,
+      "oldCode": "NCF-0262",
+      "newCode": "1472",
+      "name": "GENERAL PLASTICS LIMITED"
+    },
+    {
+      "SupplierId": 263,
+      "oldCode": "NCF-0263",
+      "newCode": "2521",
+      "name": "GENERAL PRINTERS 2021 LTD"
+    },
+    {
+      "SupplierId": 264,
+      "oldCode": "NCF-0264",
+      "newCode": "2182",
+      "name": "GEOFREY OPILE"
+    },
+    {
+      "SupplierId": 265,
+      "oldCode": "NCF-0265",
+      "newCode": "2696",
+      "name": "GEORGE GATHANGU MWANGI"
+    },
+    {
+      "SupplierId": 266,
+      "oldCode": "NCF-0266",
+      "newCode": "2767",
+      "name": "GEORGE KAMAU WAWERU"
+    },
+    {
+      "SupplierId": 267,
+      "oldCode": "NCF-0267",
+      "newCode": "1561",
+      "name": "GEORGE MWENJA"
+    },
+    {
+      "SupplierId": 268,
+      "oldCode": "NCF-0268",
+      "newCode": "2785",
+      "name": "GEORGE NJENGA KAMAU"
+    },
+    {
+      "SupplierId": 269,
+      "oldCode": "NCF-0269",
+      "newCode": "2428",
+      "name": "GEORGE THUO KAGIGITE- KASAMBARA"
+    },
+    {
+      "SupplierId": 270,
+      "oldCode": "NCF-0270",
+      "newCode": "12952",
+      "name": "GEORGE WAINAINA"
+    },
+    {
+      "SupplierId": 271,
+      "oldCode": "NCF-0271",
+      "newCode": "2716",
+      "name": "GEORGE WAJUJE WACHIRA - KASAMBARA"
+    },
+    {
+      "SupplierId": 272,
+      "oldCode": "NCF-0272",
+      "newCode": "2430",
+      "name": "GEORGE WAJUJE WANGOMBE - KASAMBARA"
+    },
+    {
+      "SupplierId": 273,
+      "oldCode": "NCF-0273",
+      "newCode": "2240",
+      "name": "GERALD OGAWO OKELO"
+    },
+    {
+      "SupplierId": 274,
+      "oldCode": "NCF-0274",
+      "newCode": "1832",
+      "name": "GILANI'S DISTRIBUTORS LIMITED"
+    },
+    {
+      "SupplierId": 275,
+      "oldCode": "NCF-0275",
+      "newCode": "1473",
+      "name": "GILANI'S SUPERMARKET LIMITED"
+    },
+    {
+      "SupplierId": 276,
+      "oldCode": "NCF-0276",
+      "newCode": "2528",
+      "name": "GLOBAL FOOD INTERNATIONAL"
+    },
+    {
+      "SupplierId": 278,
+      "oldCode": "NCF-0278",
+      "newCode": "1474",
+      "name": "GMP SERVICES LIMITED"
+    },
+    {
+      "SupplierId": 279,
+      "oldCode": "NCF-0279",
+      "newCode": "2823",
+      "name": "GOLD SUITE HOTEL"
+    },
+    {
+      "SupplierId": 280,
+      "oldCode": "NCF-0280",
+      "newCode": "2610",
+      "name": "GREAT GOSHEN INVESTMENTS"
+    },
+    {
+      "SupplierId": 281,
+      "oldCode": "NCF-0281",
+      "newCode": "2805",
+      "name": "GREBE ENTERPRISES LTD"
+    },
+    {
+      "SupplierId": 282,
+      "oldCode": "NCF-0282",
+      "newCode": "2592",
+      "name": "GREENSPAN AGRITECH AFRICA LTD"
+    },
+    {
+      "SupplierId": 283,
+      "oldCode": "NCF-0283",
+      "newCode": "2303",
+      "name": "GS1 KENYA LIMITED"
+    },
+    {
+      "SupplierId": 284,
+      "oldCode": "NCF-0284",
+      "newCode": "1563",
+      "name": "GURU IMPEX LTD"
+    },
+    {
+      "SupplierId": 285,
+      "oldCode": "NCF-0285",
+      "newCode": "1475",
+      "name": "H.B. FULLER KENYA LIMITED"
+    },
+    {
+      "SupplierId": 286,
+      "oldCode": "NCF-0286",
+      "newCode": "1476",
+      "name": "H.H.J. SPICES AND CEREALS SUPPLIERS"
+    },
+    {
+      "SupplierId": 287,
+      "oldCode": "NCF-0287",
+      "newCode": "1581",
+      "name": "H.H.J. SPICES AND CEREALS SUPPLIERS - Cl"
+    },
+    {
+      "SupplierId": 288,
+      "oldCode": "NCF-0288",
+      "newCode": "2551",
+      "name": "HAKIKA ENGINEERING WORKS"
+    },
+    {
+      "SupplierId": 289,
+      "oldCode": "NCF-0289",
+      "newCode": "2046",
+      "name": "HANNAH WANGARI NGATIA"
+    },
+    {
+      "SupplierId": 290,
+      "oldCode": "NCF-0290",
+      "newCode": "2809",
+      "name": "HAPPY COW LIMITED"
+    },
+    {
+      "SupplierId": 291,
+      "oldCode": "NCF-0291",
+      "newCode": "12919",
+      "name": "HARDSON MAHASI-KASAMBARA"
+    },
+    {
+      "SupplierId": 292,
+      "oldCode": "NCF-0292",
+      "newCode": "2170",
+      "name": "HARSH KHILANA ENTERPRISES"
+    },
+    {
+      "SupplierId": 293,
+      "oldCode": "NCF-0293",
+      "newCode": "1681",
+      "name": "HASHIM ABDULLAHI IBRAHIM"
+    },
+    {
+      "SupplierId": 294,
+      "oldCode": "NCF-0294",
+      "newCode": "12935",
+      "name": "HELLEN NDUNGU- KASAMBARA"
+    },
+    {
+      "SupplierId": 295,
+      "oldCode": "NCF-0295",
+      "newCode": "2828",
+      "name": "HELMA FREIGHT LIMITED"
+    },
+    {
+      "SupplierId": 296,
+      "oldCode": "NCF-0296",
+      "newCode": "12896",
+      "name": "HENRY MWANGI NGIGI"
+    },
+    {
+      "SupplierId": 297,
+      "oldCode": "NCF-0297",
+      "newCode": "2704",
+      "name": "HORTECH LIMITED"
+    },
+    {
+      "SupplierId": 298,
+      "oldCode": "NCF-0298",
+      "newCode": "1574",
+      "name": "HOSTAFRICA EAC LIMITED - (Deepafrica)"
+    },
+    {
+      "SupplierId": 299,
+      "oldCode": "NCF-0299",
+      "newCode": "1478",
+      "name": "HOT POINT APPLIANCES LTD"
+    },
+    {
+      "SupplierId": 300,
+      "oldCode": "NCF-0300",
+      "newCode": "1669",
+      "name": "HOTEL WATERBUCK LIMITED"
+    },
+    {
+      "SupplierId": 301,
+      "oldCode": "NCF-0301",
+      "newCode": "2700",
+      "name": "HOUSE OF PROCUREMENT LIMITED"
+    },
+    {
+      "SupplierId": 302,
+      "oldCode": "NCF-0302",
+      "newCode": "12953",
+      "name": "HUDSON MUGASHA - KASAMBARA"
+    },
+    {
+      "SupplierId": 303,
+      "oldCode": "NCF-0303",
+      "newCode": "1658",
+      "name": "HYCHEM HYGIENE AND HEALTHCARE SOLUTIONS"
+    },
+    {
+      "SupplierId": 304,
+      "oldCode": "NCF-0304",
+      "newCode": "1479",
+      "name": "HYDROLINK TECHNOLOGIES LIMITED"
+    },
+    {
+      "SupplierId": 305,
+      "oldCode": "NCF-0305",
+      "newCode": "1556",
+      "name": "HYDROMATICS LTD"
+    },
+    {
+      "SupplierId": 306,
+      "oldCode": "NCF-0306",
+      "newCode": "1480",
+      "name": "HYRAX GENERAL SUPPLIES"
+    },
+    {
+      "SupplierId": 307,
+      "oldCode": "NCF-0307",
+      "newCode": "1541",
+      "name": "IBRAHIM ALI HASSAN"
+    },
+    {
+      "SupplierId": 308,
+      "oldCode": "NCF-0308",
+      "newCode": "1933",
+      "name": "IBRAHIM ISSACK IBRAHIM"
+    },
+    {
+      "SupplierId": 309,
+      "oldCode": "NCF-0309",
+      "newCode": "1481",
+      "name": "IDEAL QUALITY TRAIL SYSTEMS LTD"
+    },
+    {
+      "SupplierId": 310,
+      "oldCode": "NCF-0310",
+      "newCode": "1482",
+      "name": "IMCD KENYA LIMITED"
+    },
+    {
+      "SupplierId": 311,
+      "oldCode": "NCF-0311",
+      "newCode": "2833",
+      "name": "INCHCAPE SHIPPING SERVICES"
+    },
+    {
+      "SupplierId": 312,
+      "oldCode": "NCF-0312",
+      "newCode": "1621",
+      "name": "INSTRUMENTATION ENGINEERS (EA) LIMITED"
+    },
+    {
+      "SupplierId": 313,
+      "oldCode": "NCF-0313",
+      "newCode": "1690",
+      "name": "INSULATION WORLD KENYA LTD"
+    },
+    {
+      "SupplierId": 314,
+      "oldCode": "NCF-0314",
+      "newCode": "2778",
+      "name": "INTERGULF LIMITED"
+    },
+    {
+      "SupplierId": 315,
+      "oldCode": "NCF-0315",
+      "newCode": "1838",
+      "name": "INTERTEK INTERNATIONAL LIMITED"
+    },
+    {
+      "SupplierId": 316,
+      "oldCode": "NCF-0316",
+      "newCode": "2071",
+      "name": "INTERTRACTOR CO. LIMITED"
+    },
+    {
+      "SupplierId": 317,
+      "oldCode": "NCF-0317",
+      "newCode": "2400",
+      "name": "IRENE SITIENEI CHEROTICH"
+    },
+    {
+      "SupplierId": 318,
+      "oldCode": "NCF-0318",
+      "newCode": "2699",
+      "name": "IRRIGURU LIMITED"
+    },
+    {
+      "SupplierId": 319,
+      "oldCode": "NCF-0319",
+      "newCode": "1427",
+      "name": "ISAAC ADAM MWIRI"
+    },
+    {
+      "SupplierId": 320,
+      "oldCode": "NCF-0320",
+      "newCode": "2709",
+      "name": "ISABELLA KWAMBOKA OBWOGE"
+    },
+    {
+      "SupplierId": 321,
+      "oldCode": "NCF-0321",
+      "newCode": "1548",
+      "name": "IVORY SOFTWARE LIMITED"
+    },
+    {
+      "SupplierId": 322,
+      "oldCode": "NCF-0322",
+      "newCode": "1417",
+      "name": "JACINTA SIMIYU"
+    },
+    {
+      "SupplierId": 323,
+      "oldCode": "NCF-0323",
+      "newCode": "1938",
+      "name": "JACOB MUMO SIYASA"
+    },
+    {
+      "SupplierId": 324,
+      "oldCode": "NCF-0324",
+      "newCode": "1646",
+      "name": "JAICHI AUTO HARDWARE LIMITED"
+    },
+    {
+      "SupplierId": 325,
+      "oldCode": "NCF-0325",
+      "newCode": "1981",
+      "name": "JAKANA FOODS LIMITED"
+    },
+    {
+      "SupplierId": 326,
+      "oldCode": "NCF-0326",
+      "newCode": "2820",
+      "name": "JAMES KIPLAGAT"
+    },
+    {
+      "SupplierId": 327,
+      "oldCode": "NCF-0327",
+      "newCode": "2364",
+      "name": "JAMES KIRIMI MWENDA"
+    },
+    {
+      "SupplierId": 328,
+      "oldCode": "NCF-0328",
+      "newCode": "1610",
+      "name": "JAMES MBURU"
+    },
+    {
+      "SupplierId": 329,
+      "oldCode": "NCF-0329",
+      "newCode": "12965",
+      "name": "JAMES NDIRANGU KIFARE"
+    },
+    {
+      "SupplierId": 330,
+      "oldCode": "NCF-0330",
+      "newCode": "12939",
+      "name": "JAMES NGUGI MATATHIA"
+    },
+    {
+      "SupplierId": 331,
+      "oldCode": "NCF-0331",
+      "newCode": "2764",
+      "name": "JAMU GARAGE & AUTOSPARES LIMITED"
+    },
+    {
+      "SupplierId": 332,
+      "oldCode": "NCF-0332",
+      "newCode": "1967",
+      "name": "JANE NJERI"
+    },
+    {
+      "SupplierId": 333,
+      "oldCode": "NCF-0333",
+      "newCode": "2582",
+      "name": "JANE WAMBUI"
+    },
+    {
+      "SupplierId": 334,
+      "oldCode": "NCF-0334",
+      "newCode": "2664",
+      "name": "JANE WANJA - KASAMBARA"
+    },
+    {
+      "SupplierId": 335,
+      "oldCode": "NCF-0335",
+      "newCode": "12918",
+      "name": "JANET KAMAU- KASAMBARA"
+    },
+    {
+      "SupplierId": 336,
+      "oldCode": "NCF-0336",
+      "newCode": "12900",
+      "name": "JANET WANGARI"
+    },
+    {
+      "SupplierId": 337,
+      "oldCode": "NCF-0337",
+      "newCode": "1483",
+      "name": "JAYKAY ENTERPRISES LIMITED"
+    },
+    {
+      "SupplierId": 338,
+      "oldCode": "NCF-0338",
+      "newCode": "2012",
+      "name": "JEDIDAH GATHONI MWANGI"
+    },
+    {
+      "SupplierId": 339,
+      "oldCode": "NCF-0339",
+      "newCode": "2038",
+      "name": "JEDIDAH WANGUI GATUA"
+    },
+    {
+      "SupplierId": 340,
+      "oldCode": "NCF-0340",
+      "newCode": "2761",
+      "name": "JEFFERSON MUTUA MBUVI"
+    },
+    {
+      "SupplierId": 341,
+      "oldCode": "NCF-0341",
+      "newCode": "2342",
+      "name": "JOASH OTIENDE"
+    },
+    {
+      "SupplierId": 342,
+      "oldCode": "NCF-0342",
+      "newCode": "1665",
+      "name": "JOEL KANYINGI MUTHEE"
+    },
+    {
+      "SupplierId": 343,
+      "oldCode": "NCF-0343",
+      "newCode": "2649",
+      "name": "JOEL KARIUKI KINYANJUI"
+    },
+    {
+      "SupplierId": 344,
+      "oldCode": "NCF-0344",
+      "newCode": "2629",
+      "name": "JOHANA NJIIRI - KASAMBARA"
+    },
+    {
+      "SupplierId": 345,
+      "oldCode": "NCF-0345",
+      "newCode": "2723",
+      "name": "JOHN AUNGA"
+    },
+    {
+      "SupplierId": 346,
+      "oldCode": "NCF-0346",
+      "newCode": "2510",
+      "name": "JOHN CHEGE WAWERU"
+    },
+    {
+      "SupplierId": 347,
+      "oldCode": "NCF-0347",
+      "newCode": "12875",
+      "name": "JOHN KANAE MPARRU"
+    },
+    {
+      "SupplierId": 348,
+      "oldCode": "NCF-0348",
+      "newCode": "2144",
+      "name": "JOHN KIIRU KUNGU- KASAMBARA"
+    },
+    {
+      "SupplierId": 349,
+      "oldCode": "NCF-0349",
+      "newCode": "1558",
+      "name": "JOHN KONYE KARIUKI"
+    },
+    {
+      "SupplierId": 350,
+      "oldCode": "NCF-0350",
+      "newCode": "2115",
+      "name": "JOHN MAINA MUNGAI"
+    },
+    {
+      "SupplierId": 351,
+      "oldCode": "NCF-0351",
+      "newCode": "1666",
+      "name": "JOHN MWANGI"
+    },
+    {
+      "SupplierId": 352,
+      "oldCode": "NCF-0352",
+      "newCode": "12926",
+      "name": "JOHN MWAURA- KASAMBARA"
+    },
+    {
+      "SupplierId": 353,
+      "oldCode": "NCF-0353",
+      "newCode": "12904",
+      "name": "JOHN NDIRANGU- KASAMBARA"
+    },
+    {
+      "SupplierId": 354,
+      "oldCode": "NCF-0354",
+      "newCode": "1831",
+      "name": "JOHN NGIRU CHEGE"
+    },
+    {
+      "SupplierId": 355,
+      "oldCode": "NCF-0355",
+      "newCode": "2114",
+      "name": "JOHN NGUNJIRI"
+    },
+    {
+      "SupplierId": 356,
+      "oldCode": "NCF-0356",
+      "newCode": "12869",
+      "name": "JOHN NJIHIA MUIGAI"
+    },
+    {
+      "SupplierId": 357,
+      "oldCode": "NCF-0357",
+      "newCode": "12868",
+      "name": "JOHNSON GACHERU"
+    },
+    {
+      "SupplierId": 358,
+      "oldCode": "NCF-0358",
+      "newCode": "2661",
+      "name": "JOHNSON GIOCHE MURITU"
+    },
+    {
+      "SupplierId": 359,
+      "oldCode": "NCF-0359",
+      "newCode": "1552",
+      "name": "JOHNSON MURAGE"
+    },
+    {
+      "SupplierId": 360,
+      "oldCode": "NCF-0360",
+      "newCode": "2673",
+      "name": "JONATHAN MWANGI NDUATI"
+    },
+    {
+      "SupplierId": 361,
+      "oldCode": "NCF-0361",
+      "newCode": "2128",
+      "name": "JOSEPH GACHUNGI KANJA"
+    },
+    {
+      "SupplierId": 362,
+      "oldCode": "NCF-0362",
+      "newCode": "12893",
+      "name": "JOSEPH KIMANI WACHUA"
+    },
+    {
+      "SupplierId": 363,
+      "oldCode": "NCF-0363",
+      "newCode": "1649",
+      "name": "JOSEPH KIPKOGEI RONO"
+    },
+    {
+      "SupplierId": 364,
+      "oldCode": "NCF-0364",
+      "newCode": "2733",
+      "name": "JOSEPH MAIGUA MURAYA"
+    },
+    {
+      "SupplierId": 365,
+      "oldCode": "NCF-0365",
+      "newCode": "1922",
+      "name": "JOSEPH MANUNDU WAMBUA"
+    },
+    {
+      "SupplierId": 366,
+      "oldCode": "NCF-0366",
+      "newCode": "12913",
+      "name": "JOSEPH MWENGENYE- KASAMBARA"
+    },
+    {
+      "SupplierId": 367,
+      "oldCode": "NCF-0367",
+      "newCode": "2481",
+      "name": "JOSEPH NDETI NDONYE (TRUPRINT CYBER)"
+    },
+    {
+      "SupplierId": 368,
+      "oldCode": "NCF-0368",
+      "newCode": "2513",
+      "name": "JOSEPH WAINAINA"
+    },
+    {
+      "SupplierId": 369,
+      "oldCode": "NCF-0369",
+      "newCode": "1638",
+      "name": "JOSEPHAT KILUNGYA NZILU"
+    },
+    {
+      "SupplierId": 370,
+      "oldCode": "NCF-0370",
+      "newCode": "1689",
+      "name": "JOSIAH MBUTHIA KARIUKI"
+    },
+    {
+      "SupplierId": 371,
+      "oldCode": "NCF-0371",
+      "newCode": "2096",
+      "name": "JOSPHAT MARITIM"
+    },
+    {
+      "SupplierId": 372,
+      "oldCode": "NCF-0372",
+      "newCode": "2416",
+      "name": "JOYCE NJERI KARANJA"
+    },
+    {
+      "SupplierId": 373,
+      "oldCode": "NCF-0373",
+      "newCode": "2614",
+      "name": "JOYCE NYAMBURA"
+    },
+    {
+      "SupplierId": 374,
+      "oldCode": "NCF-0374",
+      "newCode": "12895",
+      "name": "JOYCE NYAMBURA KARIUKI"
+    },
+    {
+      "SupplierId": 375,
+      "oldCode": "NCF-0375",
+      "newCode": "2596",
+      "name": "JOYCE WAIRIMU MWANGI"
+    },
+    {
+      "SupplierId": 376,
+      "oldCode": "NCF-0376",
+      "newCode": "12894",
+      "name": "JRS SILVATEAM INGREDIENTS"
+    },
+    {
+      "SupplierId": 377,
+      "oldCode": "NCF-0377",
+      "newCode": "2645",
+      "name": "JULIA NJERI - KASAMBARA"
+    },
+    {
+      "SupplierId": 378,
+      "oldCode": "NCF-0378",
+      "newCode": "2840",
+      "name": "JULIAH WANGARI NDUNGU"
+    },
+    {
+      "SupplierId": 379,
+      "oldCode": "NCF-0379",
+      "newCode": "2822",
+      "name": "JULIUS MIBEI"
+    },
+    {
+      "SupplierId": 380,
+      "oldCode": "NCF-0380",
+      "newCode": "2177",
+      "name": "JULIUS MWANGI GITHINJI"
+    },
+    {
+      "SupplierId": 381,
+      "oldCode": "NCF-0381",
+      "newCode": "1567",
+      "name": "JULIUS MWANGI KIONGO"
+    },
+    {
+      "SupplierId": 382,
+      "oldCode": "NCF-0382",
+      "newCode": "2811",
+      "name": "JULIUS RAGOR MATEI"
+    },
+    {
+      "SupplierId": 383,
+      "oldCode": "NCF-0383",
+      "newCode": "2635",
+      "name": "JUSTINA MAKAU"
+    },
+    {
+      "SupplierId": 384,
+      "oldCode": "NCF-0384",
+      "newCode": "2526",
+      "name": "KACHRA JIVRAJ KENYA LTD"
+    },
+    {
+      "SupplierId": 385,
+      "oldCode": "NCF-0385",
+      "newCode": "2010",
+      "name": "KAD CONTROLS LIMITED"
+    },
+    {
+      "SupplierId": 386,
+      "oldCode": "NCF-0386",
+      "newCode": "2517",
+      "name": "KALLEN MULILO NALYANYA"
+    },
+    {
+      "SupplierId": 387,
+      "oldCode": "NCF-0387",
+      "newCode": "12950",
+      "name": "KALRO - LANET"
+    },
+    {
+      "SupplierId": 388,
+      "oldCode": "NCF-0388",
+      "newCode": "1912",
+      "name": "KANINI HARAKA ENTERPRISES LTD"
+    },
+    {
+      "SupplierId": 389,
+      "oldCode": "NCF-0389",
+      "newCode": "1592",
+      "name": "KANKU KENYA LTD"
+    },
+    {
+      "SupplierId": 390,
+      "oldCode": "NCF-0390",
+      "newCode": "2375",
+      "name": "KANSAI PLASCON KENYA LTD"
+    },
+    {
+      "SupplierId": 391,
+      "oldCode": "NCF-0391",
+      "newCode": "2825",
+      "name": "KASOONI COMMERCIAL FARMING"
+    },
+    {
+      "SupplierId": 392,
+      "oldCode": "NCF-0392",
+      "newCode": "1857",
+      "name": "KASTEN PROPERTY"
+    },
+    {
+      "SupplierId": 393,
+      "oldCode": "NCF-0393",
+      "newCode": "2800",
+      "name": "KATE PNEUMATICS SOLUTION"
+    },
+    {
+      "SupplierId": 394,
+      "oldCode": "NCF-0394",
+      "newCode": "1543",
+      "name": "KEISHDALE PVT LIMITED"
+    },
+    {
+      "SupplierId": 395,
+      "oldCode": "NCF-0395",
+      "newCode": "1365",
+      "name": "KELLAND HOLDINGS"
+    },
+    {
+      "SupplierId": 396,
+      "oldCode": "NCF-0396",
+      "newCode": "2094",
+      "name": "KELVIN CHEGE NJOMO"
+    },
+    {
+      "SupplierId": 397,
+      "oldCode": "NCF-0397",
+      "newCode": "1622",
+      "name": "KENAFRIC INDUSTRIES LIMITED"
+    },
+    {
+      "SupplierId": 398,
+      "oldCode": "NCF-0398",
+      "newCode": "1484",
+      "name": "KENAFRIC MANUFACTURING LTD"
+    },
+    {
+      "SupplierId": 399,
+      "oldCode": "NCF-0399",
+      "newCode": "1657",
+      "name": "KENJAP MOTORS LIMITED"
+    },
+    {
+      "SupplierId": 400,
+      "oldCode": "NCF-0400",
+      "newCode": "2662",
+      "name": "KENNEDY BOSIRE MASITA"
+    },
+    {
+      "SupplierId": 401,
+      "oldCode": "NCF-0401",
+      "newCode": "2501",
+      "name": "KENNETH K. MITIKEI"
+    },
+    {
+      "SupplierId": 402,
+      "oldCode": "NCF-0402",
+      "newCode": "1910",
+      "name": "KENNETH MAINA"
+    },
+    {
+      "SupplierId": 403,
+      "oldCode": "NCF-0403",
+      "newCode": "1667",
+      "name": "KENNETH METHU THIONGO"
+    },
+    {
+      "SupplierId": 404,
+      "oldCode": "NCF-0404",
+      "newCode": "1670",
+      "name": "KENPACK LIMITED"
+    },
+    {
+      "SupplierId": 405,
+      "oldCode": "NCF-0405",
+      "newCode": "2763",
+      "name": "KENPOLY MANUFACTURERS LTD"
+    },
+    {
+      "SupplierId": 406,
+      "oldCode": "NCF-0406",
+      "newCode": "1485",
+      "name": "KENS METAL INDUSTRIES LTD"
+    },
+    {
+      "SupplierId": 407,
+      "oldCode": "NCF-0407",
+      "newCode": "1317",
+      "name": "KENSALT LIMITED - FILM"
+    },
+    {
+      "SupplierId": 408,
+      "oldCode": "NCF-0408",
+      "newCode": "2802",
+      "name": "KENSALT LIMITED - SALT"
+    },
+    {
+      "SupplierId": 409,
+      "oldCode": "NCF-0409",
+      "newCode": "2166",
+      "name": "KENYA ASSOCIATION OF MANUFACTURERS"
+    },
+    {
+      "SupplierId": 410,
+      "oldCode": "NCF-0410",
+      "newCode": "1486",
+      "name": "KENYA BUREAU OF HALAL CERTIFICATION"
+    },
+    {
+      "SupplierId": 411,
+      "oldCode": "NCF-0411",
+      "newCode": "1487",
+      "name": "KENYA BUREAU OF STANDARDS"
+    },
+    {
+      "SupplierId": 412,
+      "oldCode": "NCF-0412",
+      "newCode": "1586",
+      "name": "KENYA HIGHLAND SEED CO. LIMITED"
+    },
+    {
+      "SupplierId": 413,
+      "oldCode": "NCF-0413",
+      "newCode": "1488",
+      "name": "KENYA HORTICULTURAL EXPORTERS (1977) LTD"
+    },
+    {
+      "SupplierId": 414,
+      "oldCode": "NCF-0414",
+      "newCode": "1839",
+      "name": "KENYA ORCHARDS LIMITED-SUPPLIER"
+    },
+    {
+      "SupplierId": 415,
+      "oldCode": "NCF-0415",
+      "newCode": "1627",
+      "name": "KENYA ORDNANCE FACTORIES CORPORATION"
+    },
+    {
+      "SupplierId": 416,
+      "oldCode": "NCF-0416",
+      "newCode": "2540",
+      "name": "KENYA PLANT HEALTH INSPECTORATE SERVICE"
+    },
+    {
+      "SupplierId": 417,
+      "oldCode": "NCF-0417",
+      "newCode": "1489",
+      "name": "KENYA POWER & LIGHTING CO LTD"
+    },
+    {
+      "SupplierId": 418,
+      "oldCode": "NCF-0418",
+      "newCode": "2577",
+      "name": "KEPRO"
+    },
+    {
+      "SupplierId": 419,
+      "oldCode": "NCF-0419",
+      "newCode": "12929",
+      "name": "KEZIAH MUMBI NYAGITA"
+    },
+    {
+      "SupplierId": 420,
+      "oldCode": "NCF-0420",
+      "newCode": "1542",
+      "name": "KHALIF SPICES LIMITED"
+    },
+    {
+      "SupplierId": 421,
+      "oldCode": "NCF-0421",
+      "newCode": "2633",
+      "name": "KIAZI MFALME LIMITED"
+    },
+    {
+      "SupplierId": 422,
+      "oldCode": "NCF-0422",
+      "newCode": "1577",
+      "name": "KIBOS PAPER AND PACKAGING LIMITED"
+    },
+    {
+      "SupplierId": 423,
+      "oldCode": "NCF-0423",
+      "newCode": "1490",
+      "name": "KINGSWAY TYRES LIMITED"
+    },
+    {
+      "SupplierId": 424,
+      "oldCode": "NCF-0424",
+      "newCode": "1659",
+      "name": "KOBIAN KENYA LIMITED"
+    },
+    {
+      "SupplierId": 425,
+      "oldCode": "NCF-0425",
+      "newCode": "2678",
+      "name": "KRIS MOCHU KIRUNGU"
+    },
+    {
+      "SupplierId": 426,
+      "oldCode": "NCF-0426",
+      "newCode": "2762",
+      "name": "KRONA PLASTICS LIMITED"
+    },
+    {
+      "SupplierId": 427,
+      "oldCode": "NCF-0427",
+      "newCode": "1639",
+      "name": "KUBTECH ENGINEERING SERVICES LTD"
+    },
+    {
+      "SupplierId": 428,
+      "oldCode": "NCF-0428",
+      "newCode": "2067",
+      "name": "KUK - EAST AFRICA LIMITED"
+    },
+    {
+      "SupplierId": 429,
+      "oldCode": "NCF-0429",
+      "newCode": "2795",
+      "name": "KUZA BIASHARA LIMITED"
+    },
+    {
+      "SupplierId": 430,
+      "oldCode": "NCF-0430",
+      "newCode": "12870",
+      "name": "KWIKBASKET SOLUTIONS LTD"
+    },
+    {
+      "SupplierId": 431,
+      "oldCode": "NCF-0431",
+      "newCode": "1491",
+      "name": "LABCHEM LIMITED"
+    },
+    {
+      "SupplierId": 432,
+      "oldCode": "NCF-0432",
+      "newCode": "2004",
+      "name": "LABEL CONVERTERS LIMITED"
+    },
+    {
+      "SupplierId": 433,
+      "oldCode": "NCF-0433",
+      "newCode": "1492",
+      "name": "LABEL CRAFT (K) LIMITED"
+    },
+    {
+      "SupplierId": 434,
+      "oldCode": "NCF-0434",
+      "newCode": "2496",
+      "name": "LAKE - ECONO GARAGE"
+    },
+    {
+      "SupplierId": 435,
+      "oldCode": "NCF-0435",
+      "newCode": "1539",
+      "name": "LAKELAND CARGO LOGISTICS LTD"
+    },
+    {
+      "SupplierId": 436,
+      "oldCode": "NCF-0436",
+      "newCode": "2106",
+      "name": "LASSIC JAPANESE AUTOSPARES LTD"
+    },
+    {
+      "SupplierId": 437,
+      "oldCode": "NCF-0437",
+      "newCode": "2070",
+      "name": "LAWRENCE OMONDI"
+    },
+    {
+      "SupplierId": 438,
+      "oldCode": "NCF-0438",
+      "newCode": "1562",
+      "name": "LEAH NJERI WANDUI"
+    },
+    {
+      "SupplierId": 439,
+      "oldCode": "NCF-0439",
+      "newCode": "2638",
+      "name": "LEAN VENTURES LIMITED."
+    },
+    {
+      "SupplierId": 440,
+      "oldCode": "NCF-0440",
+      "newCode": "12948",
+      "name": "LEGHORNS LIMITED"
+    },
+    {
+      "SupplierId": 441,
+      "oldCode": "NCF-0441",
+      "newCode": "1662",
+      "name": "LENOKS ENTERPRISES LIMITED"
+    },
+    {
+      "SupplierId": 442,
+      "oldCode": "NCF-0442",
+      "newCode": "1852",
+      "name": "LIFTING EQUIPMENT CO. LTD"
+    },
+    {
+      "SupplierId": 443,
+      "oldCode": "NCF-0443",
+      "newCode": "1940",
+      "name": "LINIUM SCRAP DEALERS LTD"
+    },
+    {
+      "SupplierId": 444,
+      "oldCode": "NCF-0444",
+      "newCode": "1584",
+      "name": "LIQUID TELECOM LTD"
+    },
+    {
+      "SupplierId": 445,
+      "oldCode": "NCF-0445",
+      "newCode": "2787",
+      "name": "LM AFRICA SERVICES LTD"
+    },
+    {
+      "SupplierId": 446,
+      "oldCode": "NCF-0446",
+      "newCode": "1564",
+      "name": "LOCAL FARMERS"
+    },
+    {
+      "SupplierId": 447,
+      "oldCode": "NCF-0447",
+      "newCode": "1654",
+      "name": "LOISE WANJIKU MAINA"
+    },
+    {
+      "SupplierId": 448,
+      "oldCode": "NCF-0448",
+      "newCode": "1609",
+      "name": "LOSONGWA SAWMILL ENTERPRISES LIMITED"
+    },
+    {
+      "SupplierId": 449,
+      "oldCode": "NCF-0449",
+      "newCode": "1643",
+      "name": "LUCIA WANGUI GITHAIGA"
+    },
+    {
+      "SupplierId": 450,
+      "oldCode": "NCF-0450",
+      "newCode": "1920",
+      "name": "LUCY NYAMBURA KAMAU"
+    },
+    {
+      "SupplierId": 451,
+      "oldCode": "NCF-0451",
+      "newCode": "2643",
+      "name": "LUCY WAIRIMU CHEGE - KASAMBARA"
+    },
+    {
+      "SupplierId": 452,
+      "oldCode": "NCF-0452",
+      "newCode": "12872",
+      "name": "LUCY WANJIKU MUHIA"
+    },
+    {
+      "SupplierId": 453,
+      "oldCode": "NCF-0453",
+      "newCode": "2025",
+      "name": "LYDTEC ENTERPRISES"
+    },
+    {
+      "SupplierId": 454,
+      "oldCode": "NCF-0454",
+      "newCode": "1495",
+      "name": "M.D. VAID LIMITED"
+    },
+    {
+      "SupplierId": 455,
+      "oldCode": "NCF-0455",
+      "newCode": "12960",
+      "name": "M/S ANJOPLUS MACHINES"
+    },
+    {
+      "SupplierId": 456,
+      "oldCode": "NCF-0456",
+      "newCode": "1493",
+      "name": "MACHE HARDWARE STORES LTD"
+    },
+    {
+      "SupplierId": 457,
+      "oldCode": "NCF-0457",
+      "newCode": "2752",
+      "name": "MAERSK KENYA LIMITED"
+    },
+    {
+      "SupplierId": 458,
+      "oldCode": "NCF-0458",
+      "newCode": "2581",
+      "name": "MAGDALINE KUKO CHEPKOECH"
+    },
+    {
+      "SupplierId": 459,
+      "oldCode": "NCF-0459",
+      "newCode": "2728",
+      "name": "MAIMEL TRADING COMPAY LTD"
+    },
+    {
+      "SupplierId": 460,
+      "oldCode": "NCF-0460",
+      "newCode": "1655",
+      "name": "MANIPAL INTERNATIONAL PRINTING PRESS LTD"
+    },
+    {
+      "SupplierId": 461,
+      "oldCode": "NCF-0461",
+      "newCode": "2784",
+      "name": "MARGARET G. KIBE"
+    },
+    {
+      "SupplierId": 462,
+      "oldCode": "NCF-0462",
+      "newCode": "2639",
+      "name": "MARGARET MWANGI"
+    },
+    {
+      "SupplierId": 463,
+      "oldCode": "NCF-0463",
+      "newCode": "2241",
+      "name": "MARGARET NGENDO"
+    },
+    {
+      "SupplierId": 464,
+      "oldCode": "NCF-0464",
+      "newCode": "2545",
+      "name": "MARGARET WAMBUI CHAINA"
+    },
+    {
+      "SupplierId": 465,
+      "oldCode": "NCF-0465",
+      "newCode": "1641",
+      "name": "MARGARET WAMBUI KAGECHE"
+    },
+    {
+      "SupplierId": 466,
+      "oldCode": "NCF-0466",
+      "newCode": "2608",
+      "name": "MARIA WANGARI NJUGUNA"
+    },
+    {
+      "SupplierId": 467,
+      "oldCode": "NCF-0467",
+      "newCode": "1494",
+      "name": "MARSHALL - FOWLER (ENGINEERS) LTD"
+    },
+    {
+      "SupplierId": 468,
+      "oldCode": "NCF-0468",
+      "newCode": "2066",
+      "name": "MARSYETU LIMITED"
+    },
+    {
+      "SupplierId": 469,
+      "oldCode": "NCF-0469",
+      "newCode": "12909",
+      "name": "MARTHA NYAMBURA"
+    },
+    {
+      "SupplierId": 470,
+      "oldCode": "NCF-0470",
+      "newCode": "2554",
+      "name": "MARY ANGEL OKELLO"
+    },
+    {
+      "SupplierId": 471,
+      "oldCode": "NCF-0471",
+      "newCode": "12930",
+      "name": "MARY GITAU- KASAMBARA"
+    },
+    {
+      "SupplierId": 472,
+      "oldCode": "NCF-0472",
+      "newCode": "2150",
+      "name": "MARY KARURI- KASAMBARA"
+    },
+    {
+      "SupplierId": 473,
+      "oldCode": "NCF-0473",
+      "newCode": "12921",
+      "name": "MARY MBUTHIA- KASAMBARA"
+    },
+    {
+      "SupplierId": 474,
+      "oldCode": "NCF-0474",
+      "newCode": "12934",
+      "name": "MARY NJERI - KASAMBARA"
+    },
+    {
+      "SupplierId": 475,
+      "oldCode": "NCF-0475",
+      "newCode": "2744",
+      "name": "MARY WAMBUI"
+    },
+    {
+      "SupplierId": 476,
+      "oldCode": "NCF-0476",
+      "newCode": "12899",
+      "name": "MARY WANGARI KURIA"
+    },
+    {
+      "SupplierId": 477,
+      "oldCode": "NCF-0477",
+      "newCode": "2624",
+      "name": "MARY WANGECI GITHAIGA"
+    },
+    {
+      "SupplierId": 478,
+      "oldCode": "NCF-0478",
+      "newCode": "2250",
+      "name": "MARY WANJIKU NGANGA- KASAMBARA"
+    },
+    {
+      "SupplierId": 479,
+      "oldCode": "NCF-0479",
+      "newCode": "2682",
+      "name": "MARY WANJIKU RURIGI - KASAMBARA"
+    },
+    {
+      "SupplierId": 480,
+      "oldCode": "NCF-0480",
+      "newCode": "2500",
+      "name": "MARYAM SALAAH MOHAMED"
+    },
+    {
+      "SupplierId": 481,
+      "oldCode": "NCF-0481",
+      "newCode": "2838",
+      "name": "MASH EAST AFRICA LTD"
+    },
+    {
+      "SupplierId": 482,
+      "oldCode": "NCF-0482",
+      "newCode": "2622",
+      "name": "MATHEW KAMAU KAHIRU - KASAMBARA"
+    },
+    {
+      "SupplierId": 483,
+      "oldCode": "NCF-0483",
+      "newCode": "2279",
+      "name": "MATHEW KIMANI MBURU"
+    },
+    {
+      "SupplierId": 484,
+      "oldCode": "NCF-0484",
+      "newCode": "2435",
+      "name": "MATRIX CHEMICALS LIMITED"
+    },
+    {
+      "SupplierId": 485,
+      "oldCode": "NCF-0485",
+      "newCode": "1477",
+      "name": "MAX WAY ENTERPRISES LTD - Highland print"
+    },
+    {
+      "SupplierId": 486,
+      "oldCode": "NCF-0486",
+      "newCode": "1864",
+      "name": "MAXPRO INFOTECH LIMITED"
+    },
+    {
+      "SupplierId": 487,
+      "oldCode": "NCF-0487",
+      "newCode": "2530",
+      "name": "MAYFAIR INSURANCE CO. LTD"
+    },
+    {
+      "SupplierId": 488,
+      "oldCode": "NCF-0488",
+      "newCode": "2691",
+      "name": "MBOYA WANGONG'U & WAIYAKI"
+    },
+    {
+      "SupplierId": 489,
+      "oldCode": "NCF-0489",
+      "newCode": "1683",
+      "name": "MBWANA MASUDI GANGU"
+    },
+    {
+      "SupplierId": 490,
+      "oldCode": "NCF-0490",
+      "newCode": "2328",
+      "name": "MENENGAI HARDWARE & MOTOR SPARES LTD"
+    },
+    {
+      "SupplierId": 491,
+      "oldCode": "NCF-0491",
+      "newCode": "2556",
+      "name": "MERAKI PACKAGING KENYA LTD"
+    },
+    {
+      "SupplierId": 492,
+      "oldCode": "NCF-0492",
+      "newCode": "1927",
+      "name": "MERCY NJERI WANGARI"
+    },
+    {
+      "SupplierId": 493,
+      "oldCode": "NCF-0493",
+      "newCode": "2773",
+      "name": "MESHACK KIPKORIR RUTTO"
+    },
+    {
+      "SupplierId": 494,
+      "oldCode": "NCF-0494",
+      "newCode": "2407",
+      "name": "MICHAEL KIMAIYO LAGAT"
+    },
+    {
+      "SupplierId": 495,
+      "oldCode": "NCF-0495",
+      "newCode": "1616",
+      "name": "MIJENGO INVESTMENTS LIMITED"
+    },
+    {
+      "SupplierId": 496,
+      "oldCode": "NCF-0496",
+      "newCode": "1544",
+      "name": "MILLBROOK GARMENT"
+    },
+    {
+      "SupplierId": 497,
+      "oldCode": "NCF-0497",
+      "newCode": "2519",
+      "name": "MILLICENT WAIRIMU NJATHI"
+    },
+    {
+      "SupplierId": 498,
+      "oldCode": "NCF-0498",
+      "newCode": "2765",
+      "name": "MILLICENT WANJA MAINA - CR"
+    },
+    {
+      "SupplierId": 499,
+      "oldCode": "NCF-0499",
+      "newCode": "1676",
+      "name": "MILLY GLASS WORKS LTD"
+    },
+    {
+      "SupplierId": 500,
+      "oldCode": "NCF-0500",
+      "newCode": "1663",
+      "name": "MILPRO LIMITED"
+    },
+    {
+      "SupplierId": 501,
+      "oldCode": "NCF-0501",
+      "newCode": "2288",
+      "name": "MIMASA LIMITED"
+    },
+    {
+      "SupplierId": 502,
+      "oldCode": "NCF-0502",
+      "newCode": "2538",
+      "name": "MINVOD EAST AFRICA LTD"
+    },
+    {
+      "SupplierId": 503,
+      "oldCode": "NCF-0503",
+      "newCode": "12925",
+      "name": "MIRIAM MURIITHI-KASAMBARA"
+    },
+    {
+      "SupplierId": 504,
+      "oldCode": "NCF-0504",
+      "newCode": "12903",
+      "name": "MIRIAM NJERI WAWERU - KASAMBARA"
+    },
+    {
+      "SupplierId": 505,
+      "oldCode": "NCF-0505",
+      "newCode": "2640",
+      "name": "MIRIAM NYAMBURA KAMAU"
+    },
+    {
+      "SupplierId": 506,
+      "oldCode": "NCF-0506",
+      "newCode": "1861",
+      "name": "MIXING POINT ENTERPRISES"
+    },
+    {
+      "SupplierId": 507,
+      "oldCode": "NCF-0507",
+      "newCode": "1917",
+      "name": "MODERN BRAKE SERVICES NAKURU LTD"
+    },
+    {
+      "SupplierId": 508,
+      "oldCode": "NCF-0508",
+      "newCode": "1496",
+      "name": "MOGAS KENYA LIMITED"
+    },
+    {
+      "SupplierId": 509,
+      "oldCode": "NCF-0509",
+      "newCode": "1497",
+      "name": "MOGERE AGENCIES LIMITED"
+    },
+    {
+      "SupplierId": 510,
+      "oldCode": "NCF-0510",
+      "newCode": "2357",
+      "name": "MOHAMED MAHMOUD"
+    },
+    {
+      "SupplierId": 511,
+      "oldCode": "NCF-0511",
+      "newCode": "2015",
+      "name": "MOLENAAR KENYA LIMITED"
+    },
+    {
+      "SupplierId": 512,
+      "oldCode": "NCF-0512",
+      "newCode": "12888",
+      "name": "MOLLIE ANAMI"
+    },
+    {
+      "SupplierId": 513,
+      "oldCode": "NCF-0513",
+      "newCode": "1498",
+      "name": "MORIS ONE ENTERPRISES LTD"
+    },
+    {
+      "SupplierId": 514,
+      "oldCode": "NCF-0514",
+      "newCode": "2701",
+      "name": "MOSES JUMA KATONYOKHA"
+    },
+    {
+      "SupplierId": 515,
+      "oldCode": "NCF-0515",
+      "newCode": "2567",
+      "name": "MOSES KAMAU NJENGA"
+    },
+    {
+      "SupplierId": 516,
+      "oldCode": "NCF-0516",
+      "newCode": "2641",
+      "name": "MOSES KIMONDO GICHUKI - KASAMBARA"
+    },
+    {
+      "SupplierId": 517,
+      "oldCode": "NCF-0517",
+      "newCode": "2738",
+      "name": "MOSES MUGO"
+    },
+    {
+      "SupplierId": 518,
+      "oldCode": "NCF-0518",
+      "newCode": "2442",
+      "name": "MOSES MWENDA"
+    },
+    {
+      "SupplierId": 519,
+      "oldCode": "NCF-0519",
+      "newCode": "2743",
+      "name": "MOSES NDIRITU GICHUKI"
+    },
+    {
+      "SupplierId": 520,
+      "oldCode": "NCF-0520",
+      "newCode": "1957",
+      "name": "MUNGAI NDOGO"
+    },
+    {
+      "SupplierId": 521,
+      "oldCode": "NCF-0521",
+      "newCode": "2124",
+      "name": "MURIITHI MWANGI"
+    },
+    {
+      "SupplierId": 522,
+      "oldCode": "NCF-0522",
+      "newCode": "2330",
+      "name": "MUSOBYA ASUMAN"
+    },
+    {
+      "SupplierId": 523,
+      "oldCode": "NCF-0523",
+      "newCode": "1566",
+      "name": "MUSTAQBAL STORE LTD"
+    },
+    {
+      "SupplierId": 524,
+      "oldCode": "NCF-0524",
+      "newCode": "2789",
+      "name": "MUTARA ORCHARDS LIMITED"
+    },
+    {
+      "SupplierId": 525,
+      "oldCode": "NCF-0525",
+      "newCode": "2324",
+      "name": "MUTSIMOTO MOTOR CO. LTD"
+    },
+    {
+      "SupplierId": 526,
+      "oldCode": "NCF-0526",
+      "newCode": "12938",
+      "name": "MWAKA MUSAU CONSULTANTS"
+    },
+    {
+      "SupplierId": 527,
+      "oldCode": "NCF-0527",
+      "newCode": "2772",
+      "name": "MWAPATRICE ENTERPRISES"
+    },
+    {
+      "SupplierId": 528,
+      "oldCode": "NCF-0528",
+      "newCode": "2663",
+      "name": "NAFTALI RUBUA - KASAMBARA"
+    },
+    {
+      "SupplierId": 529,
+      "oldCode": "NCF-0529",
+      "newCode": "2557",
+      "name": "NAKURU EQUIPMENT SUPPLIES LTD"
+    },
+    {
+      "SupplierId": 530,
+      "oldCode": "NCF-0530",
+      "newCode": "1499",
+      "name": "NAKURU MEDICAL STORES LTD"
+    },
+    {
+      "SupplierId": 531,
+      "oldCode": "NCF-0531",
+      "newCode": "1500",
+      "name": "NAKURU PLASTICS LIMITED"
+    },
+    {
+      "SupplierId": 532,
+      "oldCode": "NCF-0532",
+      "newCode": "2173",
+      "name": "NAKURU RAHISI WHOLESALERS LTD"
+    },
+    {
+      "SupplierId": 533,
+      "oldCode": "NCF-0533",
+      "newCode": "1546",
+      "name": "NAKURU WATER & SANITATION SERVICES CO LT"
+    },
+    {
+      "SupplierId": 534,
+      "oldCode": "NCF-0534",
+      "newCode": "1501",
+      "name": "NAKURU WOOL SHOP LIMITED"
+    },
+    {
+      "SupplierId": 535,
+      "oldCode": "NCF-0535",
+      "newCode": "1596",
+      "name": "NAMDHARI SEEDS AFRICA LIMITED"
+    },
+    {
+      "SupplierId": 536,
+      "oldCode": "NCF-0536",
+      "newCode": "1502",
+      "name": "NAMPAK KENYA LIMITED"
+    },
+    {
+      "SupplierId": 537,
+      "oldCode": "NCF-0537",
+      "newCode": "12915",
+      "name": "NANCY WAINAINA-KASAMBARA"
+    },
+    {
+      "SupplierId": 538,
+      "oldCode": "NCF-0538",
+      "newCode": "12923",
+      "name": "NANCY WAMUCII- KASAMBARA"
+    },
+    {
+      "SupplierId": 539,
+      "oldCode": "NCF-0539",
+      "newCode": "2619",
+      "name": "NAOMI NJOROGE - KASAMBARA"
+    },
+    {
+      "SupplierId": 540,
+      "oldCode": "NCF-0540",
+      "newCode": "12933",
+      "name": "NAOMI WAMBUI- KASAMBARA"
+    },
+    {
+      "SupplierId": 541,
+      "oldCode": "NCF-0541",
+      "newCode": "1885",
+      "name": "NCF FARM"
+    },
+    {
+      "SupplierId": 542,
+      "oldCode": "NCF-0542",
+      "newCode": "1503",
+      "name": "NEAT HYGIENE SERVICES LTD"
+    },
+    {
+      "SupplierId": 543,
+      "oldCode": "NCF-0543",
+      "newCode": "2546",
+      "name": "NES CEREALS LIMITED"
+    },
+    {
+      "SupplierId": 544,
+      "oldCode": "NCF-0544",
+      "newCode": "2238",
+      "name": "NEW AGRODEAL (K) LTD"
+    },
+    {
+      "SupplierId": 545,
+      "oldCode": "NCF-0545",
+      "newCode": "1603",
+      "name": "NEW KENYA CO-OPERATIVE CREAMERIES LIMITE"
+    },
+    {
+      "SupplierId": 546,
+      "oldCode": "NCF-0546",
+      "newCode": "2418",
+      "name": "NEW MOLO CO-OPERATIVE SOCIETY"
+    },
+    {
+      "SupplierId": 547,
+      "oldCode": "NCF-0547",
+      "newCode": "1651",
+      "name": "NEW WESTLAND STORES LIMITED"
+    },
+    {
+      "SupplierId": 548,
+      "oldCode": "NCF-0548",
+      "newCode": "2552",
+      "name": "NEWRY FARM LIMITED"
+    },
+    {
+      "SupplierId": 549,
+      "oldCode": "NCF-0549",
+      "newCode": "1540",
+      "name": "NEWS PAPER TRANSPORTERS LTD"
+    },
+    {
+      "SupplierId": 550,
+      "oldCode": "NCF-0550",
+      "newCode": "1640",
+      "name": "NICK ABOKO OMARI"
+    },
+    {
+      "SupplierId": 551,
+      "oldCode": "NCF-0551",
+      "newCode": "2739",
+      "name": "NINUS SUPPLIES LIMITED"
+    },
+    {
+      "SupplierId": 552,
+      "oldCode": "NCF-0552",
+      "newCode": "12963",
+      "name": "NJORO SUB COUNTY HOSPITAL"
+    },
+    {
+      "SupplierId": 553,
+      "oldCode": "NCF-0553",
+      "newCode": "2447",
+      "name": "NJOROGE KAMAU"
+    },
+    {
+      "SupplierId": 554,
+      "oldCode": "NCF-0554",
+      "newCode": "12885",
+      "name": "NYATI AUTO PARTS LTD"
+    },
+    {
+      "SupplierId": 555,
+      "oldCode": "NCF-0555",
+      "newCode": "1504",
+      "name": "ODEX CHEMICALS LIMITED"
+    },
+    {
+      "SupplierId": 556,
+      "oldCode": "NCF-0556",
+      "newCode": "2729",
+      "name": "OEM CORPORATION"
+    },
+    {
+      "SupplierId": 557,
+      "oldCode": "NCF-0557",
+      "newCode": "2091",
+      "name": "OIL SEALS AND BEARING CENTRE LTD"
+    },
+    {
+      "SupplierId": 558,
+      "oldCode": "NCF-0558",
+      "newCode": "2045",
+      "name": "OILS SAVORIES AND FLAVORS E.A. LTD"
+    },
+    {
+      "SupplierId": 559,
+      "oldCode": "NCF-0559",
+      "newCode": "1505",
+      "name": "OLINE RETREADS LIMITED"
+    },
+    {
+      "SupplierId": 560,
+      "oldCode": "NCF-0560",
+      "newCode": "12957",
+      "name": "OPTACE NETWORKS LIMITED"
+    },
+    {
+      "SupplierId": 561,
+      "oldCode": "NCF-0561",
+      "newCode": "1914",
+      "name": "ORBITAL FASTNER LIMITED"
+    },
+    {
+      "SupplierId": 562,
+      "oldCode": "NCF-0562",
+      "newCode": "2687",
+      "name": "OSCARIOUS COMPANY LTD"
+    },
+    {
+      "SupplierId": 563,
+      "oldCode": "NCF-0563",
+      "newCode": "2708",
+      "name": "OSHO CHEMICALS LIMITED"
+    },
+    {
+      "SupplierId": 564,
+      "oldCode": "NCF-0564",
+      "newCode": "2285",
+      "name": "PACKAGING INDUSTRIES LIMITED"
+    },
+    {
+      "SupplierId": 565,
+      "oldCode": "NCF-0565",
+      "newCode": "1578",
+      "name": "PALSGAARD KENYA LTD"
+    },
+    {
+      "SupplierId": 566,
+      "oldCode": "NCF-0566",
+      "newCode": "2167",
+      "name": "PAPERBAGS LIMITED"
+    },
+    {
+      "SupplierId": 567,
+      "oldCode": "NCF-0567",
+      "newCode": "1644",
+      "name": "PARTH AUTO SPARES LIMITED"
+    },
+    {
+      "SupplierId": 568,
+      "oldCode": "NCF-0568",
+      "newCode": "1847",
+      "name": "PATRICK MAINA WANJIRU"
+    },
+    {
+      "SupplierId": 569,
+      "oldCode": "NCF-0569",
+      "newCode": "12924",
+      "name": "PATRICK MWAURA- KASAMBARA"
+    },
+    {
+      "SupplierId": 570,
+      "oldCode": "NCF-0570",
+      "newCode": "2720",
+      "name": "PATRICK N KINYANJUI"
+    },
+    {
+      "SupplierId": 571,
+      "oldCode": "NCF-0571",
+      "newCode": "2482",
+      "name": "PATRICK WAITHAKA"
+    },
+    {
+      "SupplierId": 572,
+      "oldCode": "NCF-0572",
+      "newCode": "2597",
+      "name": "PATTERSON KINUTHIA KIRIRO"
+    },
+    {
+      "SupplierId": 573,
+      "oldCode": "NCF-0573",
+      "newCode": "2127",
+      "name": "PAUL NJAU NJOGU"
+    },
+    {
+      "SupplierId": 574,
+      "oldCode": "NCF-0574",
+      "newCode": "2427",
+      "name": "PAULINE MBURU - KASAMBARA"
+    },
+    {
+      "SupplierId": 575,
+      "oldCode": "NCF-0575",
+      "newCode": "12914",
+      "name": "PAULINE WANJIRU - KASAMBARA"
+    },
+    {
+      "SupplierId": 576,
+      "oldCode": "NCF-0576",
+      "newCode": "1604",
+      "name": "PEE CEE ELECTRICAL & HARDWARE"
+    },
+    {
+      "SupplierId": 577,
+      "oldCode": "NCF-0577",
+      "newCode": "2613",
+      "name": "PENINAH MUIRURI"
+    },
+    {
+      "SupplierId": 578,
+      "oldCode": "NCF-0578",
+      "newCode": "1679",
+      "name": "PERFECT PACKAGING LIMITED"
+    },
+    {
+      "SupplierId": 579,
+      "oldCode": "NCF-0579",
+      "newCode": "12916",
+      "name": "PERIS WANJA- KASAMBARA"
+    },
+    {
+      "SupplierId": 580,
+      "oldCode": "NCF-0580",
+      "newCode": "1994",
+      "name": "PERISHABLES CONSERVATION SOLUTIONS LTD"
+    },
+    {
+      "SupplierId": 581,
+      "oldCode": "NCF-0581",
+      "newCode": "2775",
+      "name": "PESNET INVESTMENTS"
+    },
+    {
+      "SupplierId": 582,
+      "oldCode": "NCF-0582",
+      "newCode": "2781",
+      "name": "PETER GACHANJA"
+    },
+    {
+      "SupplierId": 583,
+      "oldCode": "NCF-0583",
+      "newCode": "12873",
+      "name": "PETER GICOBI THAITHI"
+    },
+    {
+      "SupplierId": 584,
+      "oldCode": "NCF-0584",
+      "newCode": "2242",
+      "name": "PETER KAHURA MWANGI"
+    },
+    {
+      "SupplierId": 585,
+      "oldCode": "NCF-0585",
+      "newCode": "2016",
+      "name": "PETER KAMAU"
+    },
+    {
+      "SupplierId": 586,
+      "oldCode": "NCF-0586",
+      "newCode": "1930",
+      "name": "PETER MBUGUA"
+    },
+    {
+      "SupplierId": 587,
+      "oldCode": "NCF-0587",
+      "newCode": "1990",
+      "name": "PETER MBUGUA KARANJA"
+    },
+    {
+      "SupplierId": 588,
+      "oldCode": "NCF-0588",
+      "newCode": "2677",
+      "name": "PETER MBUGWA KINYANJUI"
+    },
+    {
+      "SupplierId": 589,
+      "oldCode": "NCF-0589",
+      "newCode": "2604",
+      "name": "PETER MWANGI NGUGI"
+    },
+    {
+      "SupplierId": 590,
+      "oldCode": "NCF-0590",
+      "newCode": "1692",
+      "name": "PETER MWANGI WAMBOGO"
+    },
+    {
+      "SupplierId": 591,
+      "oldCode": "NCF-0591",
+      "newCode": "12958",
+      "name": "PETER NG'ETHE KARANJA"
+    },
+    {
+      "SupplierId": 592,
+      "oldCode": "NCF-0592",
+      "newCode": "1632",
+      "name": "PETER NJOGU KEHIKO"
+    },
+    {
+      "SupplierId": 593,
+      "oldCode": "NCF-0593",
+      "newCode": "2698",
+      "name": "PETER WAINAINA GITAU"
+    },
+    {
+      "SupplierId": 594,
+      "oldCode": "NCF-0594",
+      "newCode": "1674",
+      "name": "PETER WAWERU KURIA"
+    },
+    {
+      "SupplierId": 595,
+      "oldCode": "NCF-0595",
+      "newCode": "2376",
+      "name": "PHANBET HYDRO PURE - yvonne"
+    },
+    {
+      "SupplierId": 596,
+      "oldCode": "NCF-0596",
+      "newCode": "1673",
+      "name": "PHASE TWO LIMITED"
+    },
+    {
+      "SupplierId": 597,
+      "oldCode": "NCF-0597",
+      "newCode": "2231",
+      "name": "PHENIQ CONSULTANTS LTD"
+    },
+    {
+      "SupplierId": 598,
+      "oldCode": "NCF-0598",
+      "newCode": "12951",
+      "name": "PHILIP KAMAU MUCHIRI"
+    },
+    {
+      "SupplierId": 599,
+      "oldCode": "NCF-0599",
+      "newCode": "1553",
+      "name": "PHILIP NJAO MUCHINJO"
+    },
+    {
+      "SupplierId": 600,
+      "oldCode": "NCF-0600",
+      "newCode": "1506",
+      "name": "PHILIPH CHERUIYOT MUTAI"
+    },
+    {
+      "SupplierId": 601,
+      "oldCode": "NCF-0601",
+      "newCode": "2251",
+      "name": "PHILIS WANGARI-KAAMBARA"
+    },
+    {
+      "SupplierId": 602,
+      "oldCode": "NCF-0602",
+      "newCode": "2270",
+      "name": "PIMA INSTRUMENTS SERVICES"
+    },
+    {
+      "SupplierId": 603,
+      "oldCode": "NCF-0603",
+      "newCode": "1845",
+      "name": "PIPE MANUFACTURERS LTD"
+    },
+    {
+      "SupplierId": 604,
+      "oldCode": "NCF-0604",
+      "newCode": "2732",
+      "name": "PLAINSVIEW FARMERS LIMITED"
+    },
+    {
+      "SupplierId": 605,
+      "oldCode": "NCF-0605",
+      "newCode": "1507",
+      "name": "PLANT SAFETY ENGINEERING"
+    },
+    {
+      "SupplierId": 606,
+      "oldCode": "NCF-0606",
+      "newCode": "2751",
+      "name": "PLASTICO INDUSTRIES LIMITED"
+    },
+    {
+      "SupplierId": 607,
+      "oldCode": "NCF-0607",
+      "newCode": "1555",
+      "name": "PLATINUM PACKAGING LTD"
+    },
+    {
+      "SupplierId": 608,
+      "oldCode": "NCF-0608",
+      "newCode": "2392",
+      "name": "PNEUHYDRO ENGINEERING SOLUTIONS LIMITED"
+    },
+    {
+      "SupplierId": 609,
+      "oldCode": "NCF-0609",
+      "newCode": "1508",
+      "name": "POLYFLEX INDUSTRIES LIMITED"
+    },
+    {
+      "SupplierId": 610,
+      "oldCode": "NCF-0610",
+      "newCode": "2842",
+      "name": "POPULAR INDUSTRIES LIMITED"
+    },
+    {
+      "SupplierId": 611,
+      "oldCode": "NCF-0611",
+      "newCode": "1594",
+      "name": "POTATO SERVICES AFRICA LTD"
+    },
+    {
+      "SupplierId": 612,
+      "oldCode": "NCF-0612",
+      "newCode": "1589",
+      "name": "PRADIP ENTERPRISES(EA)LIMITED"
+    },
+    {
+      "SupplierId": 613,
+      "oldCode": "NCF-0613",
+      "newCode": "2009",
+      "name": "PRECISE LAB AFRICA LTD"
+    },
+    {
+      "SupplierId": 614,
+      "oldCode": "NCF-0614",
+      "newCode": "12861",
+      "name": "PREMIER FOOD INDUSTRIES LIMITED"
+    },
+    {
+      "SupplierId": 615,
+      "oldCode": "NCF-0615",
+      "newCode": "2174",
+      "name": "PREMIUM VEGETABLE OILS SDN BHD"
+    },
+    {
+      "SupplierId": 616,
+      "oldCode": "NCF-0616",
+      "newCode": "1593",
+      "name": "PRESSMASTER AFRICA LTD"
+    },
+    {
+      "SupplierId": 617,
+      "oldCode": "NCF-0617",
+      "newCode": "2536",
+      "name": "PRIME POWER GENERATORS KENYA LTD"
+    },
+    {
+      "SupplierId": 618,
+      "oldCode": "NCF-0618",
+      "newCode": "1585",
+      "name": "PRINTPAK"
+    },
+    {
+      "SupplierId": 619,
+      "oldCode": "NCF-0619",
+      "newCode": "2616",
+      "name": "PRISCILLA WACU - KASAMBARA"
+    },
+    {
+      "SupplierId": 620,
+      "oldCode": "NCF-0620",
+      "newCode": "2681",
+      "name": "PRIYANN ENTERPRISES LIMITED"
+    },
+    {
+      "SupplierId": 621,
+      "oldCode": "NCF-0621",
+      "newCode": "1905",
+      "name": "PROACTIVE PEST SOLUTIONS LTD"
+    },
+    {
+      "SupplierId": 622,
+      "oldCode": "NCF-0622",
+      "newCode": "2815",
+      "name": "PROBET HYGIENE & CLEANING SOLUTIONS LTD"
+    },
+    {
+      "SupplierId": 623,
+      "oldCode": "NCF-0623",
+      "newCode": "2466",
+      "name": "PROCURE CONSULTANCY INDIA PVT LTD"
+    },
+    {
+      "SupplierId": 624,
+      "oldCode": "NCF-0624",
+      "newCode": "12862",
+      "name": "PROGRESSIVE INDUSTRIES LIMITED"
+    },
+    {
+      "SupplierId": 625,
+      "oldCode": "NCF-0625",
+      "newCode": "1601",
+      "name": "PROTON ENGINEERING & SUPPLIES(E.A) LTD"
+    },
+    {
+      "SupplierId": 626,
+      "oldCode": "NCF-0626",
+      "newCode": "1575",
+      "name": "PROVINCIAL CLEARING & FORWARDING LTD"
+    },
+    {
+      "SupplierId": 627,
+      "oldCode": "NCF-0627",
+      "newCode": "2272",
+      "name": "PURJAM GENERAL MERCHANT"
+    },
+    {
+      "SupplierId": 628,
+      "oldCode": "NCF-0628",
+      "newCode": "1511",
+      "name": "PYRAMID PACKAGING LIMITED"
+    },
+    {
+      "SupplierId": 629,
+      "oldCode": "NCF-0629",
+      "newCode": "2816",
+      "name": "QIANHE CONDIMENT AND FOOD CO. LTD"
+    },
+    {
+      "SupplierId": 630,
+      "oldCode": "NCF-0630",
+      "newCode": "2381",
+      "name": "QUANTAM AGENCIES"
+    },
+    {
+      "SupplierId": 631,
+      "oldCode": "NCF-0631",
+      "newCode": "2347",
+      "name": "QUICK CUTS LIMITED"
+    },
+    {
+      "SupplierId": 632,
+      "oldCode": "NCF-0632",
+      "newCode": "1512",
+      "name": "QUICKPACK LIMITED"
+    },
+    {
+      "SupplierId": 633,
+      "oldCode": "NCF-0633",
+      "newCode": "1680",
+      "name": "QUICKWAY VENTURES"
+    },
+    {
+      "SupplierId": 634,
+      "oldCode": "NCF-0634",
+      "newCode": "2734",
+      "name": "R0BINSON KIBET KORIR"
+    },
+    {
+      "SupplierId": 635,
+      "oldCode": "NCF-0635",
+      "newCode": "2507",
+      "name": "RAFIKI ENGINEERING WORKS LTD"
+    },
+    {
+      "SupplierId": 636,
+      "oldCode": "NCF-0636",
+      "newCode": "2244",
+      "name": "RAHAB NJOKI MBUGUA - KASAMBARA"
+    },
+    {
+      "SupplierId": 637,
+      "oldCode": "NCF-0637",
+      "newCode": "2142",
+      "name": "RAHAB WANJA - KASAMBARA"
+    },
+    {
+      "SupplierId": 638,
+      "oldCode": "NCF-0638",
+      "newCode": "2806",
+      "name": "RAVID INDUSTRIAL SOLUTION LTD"
+    },
+    {
+      "SupplierId": 639,
+      "oldCode": "NCF-0639",
+      "newCode": "2631",
+      "name": "REBECCA MUHIA - KASAMBARA"
+    },
+    {
+      "SupplierId": 640,
+      "oldCode": "NCF-0640",
+      "newCode": "1605",
+      "name": "REDACHEM EAST AFRICA LIMITED"
+    },
+    {
+      "SupplierId": 641,
+      "oldCode": "NCF-0641",
+      "newCode": "1858",
+      "name": "REFRIGERATION COMPONENTS LTD"
+    },
+    {
+      "SupplierId": 642,
+      "oldCode": "NCF-0642",
+      "newCode": "2168",
+      "name": "REKHA MONDAL"
+    },
+    {
+      "SupplierId": 643,
+      "oldCode": "NCF-0643",
+      "newCode": "1943",
+      "name": "RELIABLE FOOD AND LOGISTICS LTD."
+    },
+    {
+      "SupplierId": 644,
+      "oldCode": "NCF-0644",
+      "newCode": "1606",
+      "name": "RELIANCE PLASTICS LIMITED"
+    },
+    {
+      "SupplierId": 645,
+      "oldCode": "NCF-0645",
+      "newCode": "1513",
+      "name": "RENTOKIL INITIAL (K) LIMITED"
+    },
+    {
+      "SupplierId": 646,
+      "oldCode": "NCF-0646",
+      "newCode": "12946",
+      "name": "REUBEN MBUTHIA NJOGU"
+    },
+    {
+      "SupplierId": 647,
+      "oldCode": "NCF-0647",
+      "newCode": "1514",
+      "name": "RIFT VALLEY GLAZIERS LTD"
+    },
+    {
+      "SupplierId": 648,
+      "oldCode": "NCF-0648",
+      "newCode": "12940",
+      "name": "RIFT VALLEY MACHINERY SERVICES LTD"
+    },
+    {
+      "SupplierId": 649,
+      "oldCode": "NCF-0649",
+      "newCode": "1515",
+      "name": "RIVA PETROLEUM DEALERS LTD"
+    },
+    {
+      "SupplierId": 650,
+      "oldCode": "NCF-0650",
+      "newCode": "1968",
+      "name": "ROBERT MATANO OMASETE"
+    },
+    {
+      "SupplierId": 651,
+      "oldCode": "NCF-0651",
+      "newCode": "2280",
+      "name": "ROSE GASOLINE SUPPLIES LTD"
+    },
+    {
+      "SupplierId": 652,
+      "oldCode": "NCF-0652",
+      "newCode": "1830",
+      "name": "ROSELINE WANGUI WANGECHI"
+    },
+    {
+      "SupplierId": 653,
+      "oldCode": "NCF-0653",
+      "newCode": "1882",
+      "name": "ROYAL FAJU PLUS INTERNATIONAL LTD"
+    },
+    {
+      "SupplierId": 654,
+      "oldCode": "NCF-0654",
+      "newCode": "1629",
+      "name": "RUBIS ENERGY KENYA PLC"
+    },
+    {
+      "SupplierId": 655,
+      "oldCode": "NCF-0655",
+      "newCode": "1840",
+      "name": "RUBY HARDWARE LIMITED - Supplier"
+    },
+    {
+      "SupplierId": 656,
+      "oldCode": "NCF-0656",
+      "newCode": "1516",
+      "name": "RUMISH LIMITED"
+    },
+    {
+      "SupplierId": 657,
+      "oldCode": "NCF-0657",
+      "newCode": "2788",
+      "name": "RUTH GODWIN MLAY"
+    },
+    {
+      "SupplierId": 658,
+      "oldCode": "NCF-0658",
+      "newCode": "12881",
+      "name": "RUTH LUMARAI MWENJE"
+    },
+    {
+      "SupplierId": 659,
+      "oldCode": "NCF-0659",
+      "newCode": "1660",
+      "name": "RUTU INDUSTRIES LIMITED"
+    },
+    {
+      "SupplierId": 660,
+      "oldCode": "NCF-0660",
+      "newCode": "1517",
+      "name": "SAFARICOM PLC"
+    },
+    {
+      "SupplierId": 661,
+      "oldCode": "NCF-0661",
+      "newCode": "1518",
+      "name": "SAFEPAK LIMITED"
+    },
+    {
+      "SupplierId": 662,
+      "oldCode": "NCF-0662",
+      "newCode": "1628",
+      "name": "SAGOO AUTOMECH LIMITED"
+    },
+    {
+      "SupplierId": 663,
+      "oldCode": "NCF-0663",
+      "newCode": "1868",
+      "name": "SAHARA ENERGY LTD"
+    },
+    {
+      "SupplierId": 664,
+      "oldCode": "NCF-0664",
+      "newCode": "2180",
+      "name": "SAI AUTOMOBILE LIMITED"
+    },
+    {
+      "SupplierId": 665,
+      "oldCode": "NCF-0665",
+      "newCode": "1519",
+      "name": "SAI CHEMICALS LIMITED"
+    },
+    {
+      "SupplierId": 666,
+      "oldCode": "NCF-0666",
+      "newCode": "1625",
+      "name": "SAI RAJ LIMITED"
+    },
+    {
+      "SupplierId": 667,
+      "oldCode": "NCF-0667",
+      "newCode": "1623",
+      "name": "SALIM KINYANJUI"
+    },
+    {
+      "SupplierId": 668,
+      "oldCode": "NCF-0668",
+      "newCode": "2810",
+      "name": "SALU HARDWARE (SAMUEL .N. NGANGA)"
+    },
+    {
+      "SupplierId": 669,
+      "oldCode": "NCF-0669",
+      "newCode": "2731",
+      "name": "SALVIAN ENERGIES LTD"
+    },
+    {
+      "SupplierId": 670,
+      "oldCode": "NCF-0670",
+      "newCode": "1928",
+      "name": "SAMAWA GENERAL SUPPLIES"
+    },
+    {
+      "SupplierId": 671,
+      "oldCode": "NCF-0671",
+      "newCode": "2632",
+      "name": "SAMUEL GURE KAHORO - KASAMBARA"
+    },
+    {
+      "SupplierId": 672,
+      "oldCode": "NCF-0672",
+      "newCode": "1685",
+      "name": "SAMUEL KARIUKI WAWERU"
+    },
+    {
+      "SupplierId": 673,
+      "oldCode": "NCF-0673",
+      "newCode": "2776",
+      "name": "SAMUEL MWANGI"
+    },
+    {
+      "SupplierId": 674,
+      "oldCode": "NCF-0674",
+      "newCode": "2434",
+      "name": "SAMUEL NDUNGU NJUGUNA"
+    },
+    {
+      "SupplierId": 675,
+      "oldCode": "NCF-0675",
+      "newCode": "2560",
+      "name": "SAMUEL NJOROGE"
+    },
+    {
+      "SupplierId": 676,
+      "oldCode": "NCF-0676",
+      "newCode": "2060",
+      "name": "SAMUEL NKOILE TUMPES"
+    },
+    {
+      "SupplierId": 677,
+      "oldCode": "NCF-0677",
+      "newCode": "12967",
+      "name": "SAMUEL NYAMBANE OKEYO"
+    },
+    {
+      "SupplierId": 678,
+      "oldCode": "NCF-0678",
+      "newCode": "1650",
+      "name": "SAMUEL NYINGI MATIMU"
+    },
+    {
+      "SupplierId": 679,
+      "oldCode": "NCF-0679",
+      "newCode": "2683",
+      "name": "SAMUEL WAWERU KARIUKI"
+    },
+    {
+      "SupplierId": 680,
+      "oldCode": "NCF-0680",
+      "newCode": "2814",
+      "name": "SANG KEMBOI"
+    },
+    {
+      "SupplierId": 681,
+      "oldCode": "NCF-0681",
+      "newCode": "1520",
+      "name": "SANMEDIC LABORATORY SUPPLY LTD"
+    },
+    {
+      "SupplierId": 682,
+      "oldCode": "NCF-0682",
+      "newCode": "1521",
+      "name": "SANPAC AFRICA LIMITED"
+    },
+    {
+      "SupplierId": 683,
+      "oldCode": "NCF-0683",
+      "newCode": "12943",
+      "name": "SARAH CHEPTANUI LANGAT"
+    },
+    {
+      "SupplierId": 684,
+      "oldCode": "NCF-0684",
+      "newCode": "12931",
+      "name": "SARAH WAIRIMU NGUGI"
+    },
+    {
+      "SupplierId": 685,
+      "oldCode": "NCF-0685",
+      "newCode": "2395",
+      "name": "SAROVA WOODLANDS HOTEL & SPA"
+    },
+    {
+      "SupplierId": 686,
+      "oldCode": "NCF-0686",
+      "newCode": "12964",
+      "name": "SAVINET COMPANY LIMITED"
+    },
+    {
+      "SupplierId": 687,
+      "oldCode": "NCF-0687",
+      "newCode": "2108",
+      "name": "SEAMLESS PROCESS AUTOMATION LTD"
+    },
+    {
+      "SupplierId": 688,
+      "oldCode": "NCF-0688",
+      "newCode": "1522",
+      "name": "SEAPOINT ENTERPRISE"
+    },
+    {
+      "SupplierId": 689,
+      "oldCode": "NCF-0689",
+      "newCode": "2647",
+      "name": "SERAH GITHINJI - KASAMBARA"
+    },
+    {
+      "SupplierId": 690,
+      "oldCode": "NCF-0690",
+      "newCode": "1947",
+      "name": "SERAH WANGUI"
+    },
+    {
+      "SupplierId": 691,
+      "oldCode": "NCF-0691",
+      "newCode": "2269",
+      "name": "SERAH WANGUI GACHIRA - KASAMBARA"
+    },
+    {
+      "SupplierId": 692,
+      "oldCode": "NCF-0692",
+      "newCode": "2331",
+      "name": "SEWAK ENGINEERING"
+    },
+    {
+      "SupplierId": 693,
+      "oldCode": "NCF-0693",
+      "newCode": "1523",
+      "name": "SGS KENYA LIMITED"
+    },
+    {
+      "SupplierId": 694,
+      "oldCode": "NCF-0694",
+      "newCode": "2290",
+      "name": "SHANGHAI BARCHEN INDUSTRIAL CO. LTD"
+    },
+    {
+      "SupplierId": 695,
+      "oldCode": "NCF-0695",
+      "newCode": "1906",
+      "name": "SHANICE GENERAL SUPPLIERS"
+    },
+    {
+      "SupplierId": 696,
+      "oldCode": "NCF-0696",
+      "newCode": "1998",
+      "name": "SHARIFF ABDI"
+    },
+    {
+      "SupplierId": 697,
+      "oldCode": "NCF-0697",
+      "newCode": "2226",
+      "name": "SHAWA STORES LTD"
+    },
+    {
+      "SupplierId": 698,
+      "oldCode": "NCF-0698",
+      "newCode": "2653",
+      "name": "SHENYANG BEIYA BEVERAGE MACHINERY CO LTD"
+    },
+    {
+      "SupplierId": 699,
+      "oldCode": "NCF-0699",
+      "newCode": "2695",
+      "name": "SHREE HAJ ENTERPRISE - NAKURU"
+    },
+    {
+      "SupplierId": 700,
+      "oldCode": "NCF-0700",
+      "newCode": "1568",
+      "name": "SHREE SAI INDUSTRIES LTD"
+    },
+    {
+      "SupplierId": 701,
+      "oldCode": "NCF-0701",
+      "newCode": "2808",
+      "name": "SHYAM PLASTICS INDUSTRIES"
+    },
+    {
+      "SupplierId": 702,
+      "oldCode": "NCF-0702",
+      "newCode": "1560",
+      "name": "SIDDHAM CHEMICALS EAST AFRICA LIMITED"
+    },
+    {
+      "SupplierId": 703,
+      "oldCode": "NCF-0703",
+      "newCode": "2281",
+      "name": "SILAS CHEPSERGON"
+    },
+    {
+      "SupplierId": 704,
+      "oldCode": "NCF-0704",
+      "newCode": "2234",
+      "name": "SILAS K BOWEN"
+    },
+    {
+      "SupplierId": 705,
+      "oldCode": "NCF-0705",
+      "newCode": "2705",
+      "name": "SILAS MASIKA WANYONYI"
+    },
+    {
+      "SupplierId": 706,
+      "oldCode": "NCF-0706",
+      "newCode": "12884",
+      "name": "SILVATEAM"
+    },
+    {
+      "SupplierId": 707,
+      "oldCode": "NCF-0707",
+      "newCode": "2710",
+      "name": "SILVERSTONE TYRES (K) LIMITED"
+    },
+    {
+      "SupplierId": 708,
+      "oldCode": "NCF-0708",
+      "newCode": "2585",
+      "name": "SIMON KAGAI NDUNGU"
+    },
+    {
+      "SupplierId": 709,
+      "oldCode": "NCF-0709",
+      "newCode": "1926",
+      "name": "SIMON MBUGUA MUNGAI"
+    },
+    {
+      "SupplierId": 710,
+      "oldCode": "NCF-0710",
+      "newCode": "12944",
+      "name": "SIMON MERU KAHARA"
+    },
+    {
+      "SupplierId": 711,
+      "oldCode": "NCF-0711",
+      "newCode": "1451",
+      "name": "SIREN CHEMICALS LIMITED (BLUSAN)"
+    },
+    {
+      "SupplierId": 712,
+      "oldCode": "NCF-0712",
+      "newCode": "2499",
+      "name": "SITIMA PACKAGING LIMITED"
+    },
+    {
+      "SupplierId": 713,
+      "oldCode": "NCF-0713",
+      "newCode": "12911",
+      "name": "SMARTEX COOLING SYSTEMS LTD"
+    },
+    {
+      "SupplierId": 714,
+      "oldCode": "NCF-0714",
+      "newCode": "1851",
+      "name": "SMARTLINK COOLING SYSTEMS LTD"
+    },
+    {
+      "SupplierId": 715,
+      "oldCode": "NCF-0715",
+      "newCode": "2208",
+      "name": "SPECIALISED FIBREGLASS LIMITED"
+    },
+    {
+      "SupplierId": 716,
+      "oldCode": "NCF-0716",
+      "newCode": "2411",
+      "name": "SPHERE INDUSTRIAL EAST AFRICA LTD"
+    },
+    {
+      "SupplierId": 717,
+      "oldCode": "NCF-0717",
+      "newCode": "2386",
+      "name": "SPICE WORLD LIMITED"
+    },
+    {
+      "SupplierId": 718,
+      "oldCode": "NCF-0718",
+      "newCode": "12942",
+      "name": "SPICEPRO INTERNATIONAL CO. LTD"
+    },
+    {
+      "SupplierId": 719,
+      "oldCode": "NCF-0719",
+      "newCode": "1953",
+      "name": "SPOTCOM SOLUTIONS"
+    },
+    {
+      "SupplierId": 720,
+      "oldCode": "NCF-0720",
+      "newCode": "2667",
+      "name": "SPOTON TECHNOLOGIES LIMITED"
+    },
+    {
+      "SupplierId": 721,
+      "oldCode": "NCF-0721",
+      "newCode": "2824",
+      "name": "STALITE SYSTEMS COMPANY LTD"
+    },
+    {
+      "SupplierId": 722,
+      "oldCode": "NCF-0722",
+      "newCode": "12961",
+      "name": "STANLEY KIGGIMA KAMONJO"
+    },
+    {
+      "SupplierId": 723,
+      "oldCode": "NCF-0723",
+      "newCode": "2584",
+      "name": "STANLEY MUCHUGU"
+    },
+    {
+      "SupplierId": 724,
+      "oldCode": "NCF-0724",
+      "newCode": "1524",
+      "name": "STATPACK INDUSTRIES LIMITED"
+    },
+    {
+      "SupplierId": 725,
+      "oldCode": "NCF-0725",
+      "newCode": "1525",
+      "name": "STEAM SYSTEMS LIMITED"
+    },
+    {
+      "SupplierId": 726,
+      "oldCode": "NCF-0726",
+      "newCode": "1635",
+      "name": "STEINBOK ENTERPRISES"
+    },
+    {
+      "SupplierId": 727,
+      "oldCode": "NCF-0727",
+      "newCode": "2308",
+      "name": "STEKAN CONSTRUCTION LIMITED"
+    },
+    {
+      "SupplierId": 728,
+      "oldCode": "NCF-0728",
+      "newCode": "1634",
+      "name": "STENIC ENTERPRISES LIMITED"
+    },
+    {
+      "SupplierId": 729,
+      "oldCode": "NCF-0729",
+      "newCode": "1583",
+      "name": "STEPHEN IRUNGU"
+    },
+    {
+      "SupplierId": 730,
+      "oldCode": "NCF-0730",
+      "newCode": "2522",
+      "name": "STEPHEN KARANJA GITHAIGA"
+    },
+    {
+      "SupplierId": 731,
+      "oldCode": "NCF-0731",
+      "newCode": "1526",
+      "name": "STEPHEN KARANJA MBUGUA"
+    },
+    {
+      "SupplierId": 732,
+      "oldCode": "NCF-0732",
+      "newCode": "1979",
+      "name": "STEPHEN KIPLAGAT KIPRONO"
+    },
+    {
+      "SupplierId": 733,
+      "oldCode": "NCF-0733",
+      "newCode": "12907",
+      "name": "STEPHEN MAINA - KASAMBARA"
+    },
+    {
+      "SupplierId": 734,
+      "oldCode": "NCF-0734",
+      "newCode": "2179",
+      "name": "STEPHEN MWANGI MAINA"
+    },
+    {
+      "SupplierId": 735,
+      "oldCode": "NCF-0735",
+      "newCode": "12917",
+      "name": "STEPHEN MWANGI-KASAMBARA"
+    },
+    {
+      "SupplierId": 736,
+      "oldCode": "NCF-0736",
+      "newCode": "2322",
+      "name": "STEPHEN SANINGO"
+    },
+    {
+      "SupplierId": 737,
+      "oldCode": "NCF-0737",
+      "newCode": "1588",
+      "name": "STERLUBE AFRICA LTD"
+    },
+    {
+      "SupplierId": 738,
+      "oldCode": "NCF-0738",
+      "newCode": "2671",
+      "name": "STEVE AUTOSPARES"
+    },
+    {
+      "SupplierId": 739,
+      "oldCode": "NCF-0739",
+      "newCode": "2172",
+      "name": "STEVEMORE AUTO SPARES"
+    },
+    {
+      "SupplierId": 740,
+      "oldCode": "NCF-0740",
+      "newCode": "2423",
+      "name": "STEVENS EAST AFRICAN TRADING CO. LTD"
+    },
+    {
+      "SupplierId": 741,
+      "oldCode": "NCF-0741",
+      "newCode": "2292",
+      "name": "SUBLIME SOLUTIONS LIMITED"
+    },
+    {
+      "SupplierId": 742,
+      "oldCode": "NCF-0742",
+      "newCode": "1924",
+      "name": "SUMKAM SUPERMARKET LIMITED"
+    },
+    {
+      "SupplierId": 743,
+      "oldCode": "NCF-0743",
+      "newCode": "2561",
+      "name": "SUNAR COMPANY LIMITED - CR."
+    },
+    {
+      "SupplierId": 744,
+      "oldCode": "NCF-0744",
+      "newCode": "12863",
+      "name": "SUNNY PROCESSORS LIMITED"
+    },
+    {
+      "SupplierId": 745,
+      "oldCode": "NCF-0745",
+      "newCode": "2397",
+      "name": "SUNRIPE (1976) LIMITED"
+    },
+    {
+      "SupplierId": 746,
+      "oldCode": "NCF-0746",
+      "newCode": "1528",
+      "name": "SUNSHINE ENGINEERING LIMITED"
+    },
+    {
+      "SupplierId": 747,
+      "oldCode": "NCF-0747",
+      "newCode": "1645",
+      "name": "SUPER BARGAINS GLASS & H/W (NKU) LTD"
+    },
+    {
+      "SupplierId": 748,
+      "oldCode": "NCF-0748",
+      "newCode": "1993",
+      "name": "SUPER PLASTICS LIMITED"
+    },
+    {
+      "SupplierId": 749,
+      "oldCode": "NCF-0749",
+      "newCode": "2689",
+      "name": "SUPPLIES AND SERVICES LTD"
+    },
+    {
+      "SupplierId": 750,
+      "oldCode": "NCF-0750",
+      "newCode": "1684",
+      "name": "SUPREME EXPRESS LABELS LIMITED"
+    },
+    {
+      "SupplierId": 751,
+      "oldCode": "NCF-0751",
+      "newCode": "2527",
+      "name": "SURETY FUEL INJECTION WORKS"
+    },
+    {
+      "SupplierId": 752,
+      "oldCode": "NCF-0752",
+      "newCode": "2252",
+      "name": "SUSAN MAINA- KASAMBARA"
+    },
+    {
+      "SupplierId": 753,
+      "oldCode": "NCF-0753",
+      "newCode": "2548",
+      "name": "SUSAN MOI"
+    },
+    {
+      "SupplierId": 754,
+      "oldCode": "NCF-0754",
+      "newCode": "2433",
+      "name": "SUSAN NJERI KURIA"
+    },
+    {
+      "SupplierId": 755,
+      "oldCode": "NCF-0755",
+      "newCode": "12922",
+      "name": "SUSAN WACHIRA-KASAMBARA"
+    },
+    {
+      "SupplierId": 756,
+      "oldCode": "NCF-0756",
+      "newCode": "2300",
+      "name": "SUSAN WAMBUI WACHIRA - KASAMBARA"
+    },
+    {
+      "SupplierId": 757,
+      "oldCode": "NCF-0757",
+      "newCode": "12905",
+      "name": "SUSAN WANJIRU- KASAMBARA"
+    },
+    {
+      "SupplierId": 758,
+      "oldCode": "NCF-0758",
+      "newCode": "2564",
+      "name": "SWIFT HYGIENE AND SAFETY LTD"
+    },
+    {
+      "SupplierId": 759,
+      "oldCode": "NCF-0759",
+      "newCode": "2779",
+      "name": "SWISSPORT KENYA LIMITED"
+    },
+    {
+      "SupplierId": 760,
+      "oldCode": "NCF-0760",
+      "newCode": "1833",
+      "name": "SYMON KIPKENEI CHEPTARUS"
+    },
+    {
+      "SupplierId": 761,
+      "oldCode": "NCF-0761",
+      "newCode": "2792",
+      "name": "TANAD FOOD STUFF LIMITED"
+    },
+    {
+      "SupplierId": 762,
+      "oldCode": "NCF-0762",
+      "newCode": "1572",
+      "name": "TATA AFRICA HOLDINGS (K) LIMITED"
+    },
+    {
+      "SupplierId": 763,
+      "oldCode": "NCF-0763",
+      "newCode": "1880",
+      "name": "TAWAKAL SPICES SHOP"
+    },
+    {
+      "SupplierId": 764,
+      "oldCode": "NCF-0764",
+      "newCode": "1630",
+      "name": "TECHNICAL TRADING CORPORATION LIMITED"
+    },
+    {
+      "SupplierId": 765,
+      "oldCode": "NCF-0765",
+      "newCode": "1579",
+      "name": "TECHPAK INDUSTRIES LTD"
+    },
+    {
+      "SupplierId": 766,
+      "oldCode": "NCF-0766",
+      "newCode": "2044",
+      "name": "TEEKAY LIMITED-supplier"
+    },
+    {
+      "SupplierId": 767,
+      "oldCode": "NCF-0767",
+      "newCode": "1590",
+      "name": "TEENY FASHIONS LTD"
+    },
+    {
+      "SupplierId": 768,
+      "oldCode": "NCF-0768",
+      "newCode": "12880",
+      "name": "TELESONIC LIMITED"
+    },
+    {
+      "SupplierId": 769,
+      "oldCode": "NCF-0769",
+      "newCode": "2684",
+      "name": "TERESA NJERI"
+    },
+    {
+      "SupplierId": 770,
+      "oldCode": "NCF-0770",
+      "newCode": "1529",
+      "name": "TERRANOVA AUTOSPARES LIMITED"
+    },
+    {
+      "SupplierId": 771,
+      "oldCode": "NCF-0771",
+      "newCode": "12882",
+      "name": "TEXPRO LIMITED"
+    },
+    {
+      "SupplierId": 772,
+      "oldCode": "NCF-0772",
+      "newCode": "2759",
+      "name": "TEXTBOOK CENTRE"
+    },
+    {
+      "SupplierId": 773,
+      "oldCode": "NCF-0773",
+      "newCode": "1687",
+      "name": "THAMES ELECTRICALS LIMITED"
+    },
+    {
+      "SupplierId": 774,
+      "oldCode": "NCF-0774",
+      "newCode": "2769",
+      "name": "THE KENYA TRADE NETWORK AGENCY"
+    },
+    {
+      "SupplierId": 775,
+      "oldCode": "NCF-0775",
+      "newCode": "2074",
+      "name": "TIGER PACKAGING LIMITED"
+    },
+    {
+      "SupplierId": 776,
+      "oldCode": "NCF-0776",
+      "newCode": "2524",
+      "name": "TILE AND CARPET CENTRE LTD"
+    },
+    {
+      "SupplierId": 777,
+      "oldCode": "NCF-0777",
+      "newCode": "2072",
+      "name": "TILEMAC BUILDING SUPPLIES LTD"
+    },
+    {
+      "SupplierId": 778,
+      "oldCode": "NCF-0778",
+      "newCode": "2051",
+      "name": "TIMOTHY M. KIOGORA"
+    },
+    {
+      "SupplierId": 779,
+      "oldCode": "NCF-0779",
+      "newCode": "1530",
+      "name": "TIN CAN MANUFACTURERS LTD"
+    },
+    {
+      "SupplierId": 780,
+      "oldCode": "NCF-0780",
+      "newCode": "1287",
+      "name": "TOP FOOD (EA) LTD"
+    },
+    {
+      "SupplierId": 781,
+      "oldCode": "NCF-0781",
+      "newCode": "2740",
+      "name": "TOPSERVE LIMITED - CR"
+    },
+    {
+      "SupplierId": 782,
+      "oldCode": "NCF-0782",
+      "newCode": "2175",
+      "name": "TOTAL SOLUTIONS LIMITED"
+    },
+    {
+      "SupplierId": 783,
+      "oldCode": "NCF-0783",
+      "newCode": "1531",
+      "name": "TRACK AND TRACE LIMITED"
+    },
+    {
+      "SupplierId": 784,
+      "oldCode": "NCF-0784",
+      "newCode": "1807",
+      "name": "TRADE AND OTHER PAYABLES"
+    },
+    {
+      "SupplierId": 785,
+      "oldCode": "NCF-0785",
+      "newCode": "1608",
+      "name": "TRADECON DOWNTOWN LTD"
+    },
+    {
+      "SupplierId": 786,
+      "oldCode": "NCF-0786",
+      "newCode": "1598",
+      "name": "TRAILMYCAR SOLUTIONS LIMITED"
+    },
+    {
+      "SupplierId": 787,
+      "oldCode": "NCF-0787",
+      "newCode": "12962",
+      "name": "TRAINING LEVY"
+    },
+    {
+      "SupplierId": 788,
+      "oldCode": "NCF-0788",
+      "newCode": "1624",
+      "name": "TRANSLINK POWER TRANSMISSION LTD"
+    },
+    {
+      "SupplierId": 789,
+      "oldCode": "NCF-0789",
+      "newCode": "1978",
+      "name": "TRENDZ AND FUTURE VENTURES LTD"
+    },
+    {
+      "SupplierId": 790,
+      "oldCode": "NCF-0790",
+      "newCode": "1948",
+      "name": "TRI CLOVER INDUSTRIES LTD"
+    },
+    {
+      "SupplierId": 791,
+      "oldCode": "NCF-0791",
+      "newCode": "1612",
+      "name": "TRONIC KENYA LIMITED"
+    },
+    {
+      "SupplierId": 792,
+      "oldCode": "NCF-0792",
+      "newCode": "1950",
+      "name": "TROPICAL HEAT LIMITED"
+    },
+    {
+      "SupplierId": 793,
+      "oldCode": "NCF-0793",
+      "newCode": "2383",
+      "name": "TRUEGANIC LIMITED"
+    },
+    {
+      "SupplierId": 794,
+      "oldCode": "NCF-0794",
+      "newCode": "1672",
+      "name": "TRUSTNET TECHNOLOGIES"
+    },
+    {
+      "SupplierId": 796,
+      "oldCode": "NCF-0796",
+      "newCode": "1611",
+      "name": "UCHUMI QUICK SUPPLIERS LTD"
+    },
+    {
+      "SupplierId": 797,
+      "oldCode": "NCF-0797",
+      "newCode": "1854",
+      "name": "UMOJA SHOE COMPANY LTD"
+    },
+    {
+      "SupplierId": 798,
+      "oldCode": "NCF-0798",
+      "newCode": "2325",
+      "name": "UNGA LIMITED"
+    },
+    {
+      "SupplierId": 799,
+      "oldCode": "NCF-0799",
+      "newCode": "1532",
+      "name": "UNIFLEX LIMITED"
+    },
+    {
+      "SupplierId": 800,
+      "oldCode": "NCF-0800",
+      "newCode": "1911",
+      "name": "UNILEVER KENYA LTD"
+    },
+    {
+      "SupplierId": 801,
+      "oldCode": "NCF-0801",
+      "newCode": "2169",
+      "name": "UNITED ENGINEERING SUPPLIES LTD"
+    },
+    {
+      "SupplierId": 802,
+      "oldCode": "NCF-0802",
+      "newCode": "1533",
+      "name": "UNIVERSAL TRADING"
+    },
+    {
+      "SupplierId": 803,
+      "oldCode": "NCF-0803",
+      "newCode": "1844",
+      "name": "UTHERI ENERGY SOLUTIONS"
+    },
+    {
+      "SupplierId": 804,
+      "oldCode": "NCF-0804",
+      "newCode": "2017",
+      "name": "VALLEY CONFECTIONERY LIMITED"
+    },
+    {
+      "SupplierId": 805,
+      "oldCode": "NCF-0805",
+      "newCode": "1534",
+      "name": "VEGPRO (K) LIMITED"
+    },
+    {
+      "SupplierId": 806,
+      "oldCode": "NCF-0806",
+      "newCode": "12937",
+      "name": "VESTA ENGINEERING LIMITED"
+    },
+    {
+      "SupplierId": 807,
+      "oldCode": "NCF-0807",
+      "newCode": "2544",
+      "name": "VIAZI KINGS LIMITED"
+    },
+    {
+      "SupplierId": 808,
+      "oldCode": "NCF-0808",
+      "newCode": "2083",
+      "name": "VIGONET TECHNOLOGIES LIMITED"
+    },
+    {
+      "SupplierId": 809,
+      "oldCode": "NCF-0809",
+      "newCode": "2406",
+      "name": "VINCENT OSANGO"
+    },
+    {
+      "SupplierId": 810,
+      "oldCode": "NCF-0810",
+      "newCode": "2130",
+      "name": "VIRGINIA NJOKI THUO"
+    },
+    {
+      "SupplierId": 811,
+      "oldCode": "NCF-0811",
+      "newCode": "12891",
+      "name": "WAFA KENYA"
+    },
+    {
+      "SupplierId": 812,
+      "oldCode": "NCF-0812",
+      "newCode": "2798",
+      "name": "WAKAFREIGHT FORWARDERS LTD"
+    },
+    {
+      "SupplierId": 813,
+      "oldCode": "NCF-0813",
+      "newCode": "2566",
+      "name": "WALTER MWANIA"
+    },
+    {
+      "SupplierId": 814,
+      "oldCode": "NCF-0814",
+      "newCode": "1535",
+      "name": "WAMEER WHOLESALERS & DISTRIBUTORS LTD"
+    },
+    {
+      "SupplierId": 815,
+      "oldCode": "NCF-0815",
+      "newCode": "2836",
+      "name": "WANANCHI FARMERS STORE"
+    },
+    {
+      "SupplierId": 816,
+      "oldCode": "NCF-0816",
+      "newCode": "2563",
+      "name": "WANDI PACKAGING LIMITED"
+    },
+    {
+      "SupplierId": 817,
+      "oldCode": "NCF-0817",
+      "newCode": "2813",
+      "name": "WANJIKU MWANGI"
+    },
+    {
+      "SupplierId": 818,
+      "oldCode": "NCF-0818",
+      "newCode": "2636",
+      "name": "WATER RESOURCES AUTHORITY"
+    },
+    {
+      "SupplierId": 819,
+      "oldCode": "NCF-0819",
+      "newCode": "2550",
+      "name": "WEBARAZA MARKETING LIMITED LIABILITY PAR"
+    },
+    {
+      "SupplierId": 820,
+      "oldCode": "NCF-0820",
+      "newCode": "1536",
+      "name": "WELDING ALLOYS LIMITED"
+    },
+    {
+      "SupplierId": 821,
+      "oldCode": "NCF-0821",
+      "newCode": "2804",
+      "name": "WELDING FUNITURE& CHEI"
+    },
+    {
+      "SupplierId": 822,
+      "oldCode": "NCF-0822",
+      "newCode": "2642",
+      "name": "WILLIAM WAHOME GICHUHI - KASAMBARA"
+    },
+    {
+      "SupplierId": 823,
+      "oldCode": "NCF-0823",
+      "newCode": "2807",
+      "name": "WILSON KIPCHIRCHIR MOSBEY"
+    },
+    {
+      "SupplierId": 824,
+      "oldCode": "NCF-0824",
+      "newCode": "12890",
+      "name": "WILSON NDUNGU NJOROGE"
+    },
+    {
+      "SupplierId": 825,
+      "oldCode": "NCF-0825",
+      "newCode": "2621",
+      "name": "WINFRED WAIRIMU MUTEGI - KASAMBARA"
+    },
+    {
+      "SupplierId": 826,
+      "oldCode": "NCF-0826",
+      "newCode": "12864",
+      "name": "WINS FIRE APPLIANCES LTD"
+    },
+    {
+      "SupplierId": 827,
+      "oldCode": "NCF-0827",
+      "newCode": "12954",
+      "name": "WONDER 254 GROUP LIMITED"
+    },
+    {
+      "SupplierId": 828,
+      "oldCode": "NCF-0828",
+      "newCode": "2730",
+      "name": "WRAPTECH MACHINES PVT LTD"
+    },
+    {
+      "SupplierId": 829,
+      "oldCode": "NCF-0829",
+      "newCode": "2727",
+      "name": "WUERTH KENYA LIMITED"
+    },
+    {
+      "SupplierId": 830,
+      "oldCode": "NCF-0830",
+      "newCode": "12949",
+      "name": "WYCLIFF LUONGA OGOLA"
+    },
+    {
+      "SupplierId": 831,
+      "oldCode": "NCF-0831",
+      "newCode": "2837",
+      "name": "YASHAR'EL CHEMICALS LTD"
+    },
+    {
+      "SupplierId": 832,
+      "oldCode": "NCF-0832",
+      "newCode": "12889",
+      "name": "ZADOK KIBET KORIR"
+    },
+    {
+      "SupplierId": 833,
+      "oldCode": "NCF-0833",
+      "newCode": "2505",
+      "name": "ZAHRA"
+    },
+    {
+      "SupplierId": 834,
+      "oldCode": "NCF-0834",
+      "newCode": "2529",
+      "name": "ZAINABU NANGOBI"
+    },
+    {
+      "SupplierId": 835,
+      "oldCode": "NCF-0835",
+      "newCode": "1995",
+      "name": "ZEN FOAM MATTRESS LTD"
+    },
+    {
+      "SupplierId": 836,
+      "oldCode": "NCF-0836",
+      "newCode": "2534",
+      "name": "ZHAOQING FENGXIANG FOOD MACHINERY INTL."
+    },
+    {
+      "SupplierId": 852,
+      "oldCode": "NCF-0847",
+      "newCode": "2867",
+      "name": "BENJAMIN BUTUK"
+    },
+    {
+      "SupplierId": 856,
+      "oldCode": "NCF-0851",
+      "newCode": "2874",
+      "name": "HENRY KIPKIRUI CHERUIYOT"
+    },
+    {
+      "SupplierId": 876,
+      "oldCode": "NCF-0871",
+      "newCode": "13188",
+      "name": "JOSEPH MWANGI"
+    },
+    {
+      "SupplierId": 888,
+      "oldCode": "NCF-0883",
+      "newCode": "13340",
+      "name": "JOSPHAT SIGILAI RIK"
+    },
+    {
+      "SupplierId": 893,
+      "oldCode": "NCF-0888",
+      "newCode": "13342",
+      "name": "GEOFFREY GATHUKI"
+    },
+    {
+      "SupplierId": 899,
+      "oldCode": "NCF-0894",
+      "newCode": "13338",
+      "name": "CATHERINE KINUTHIA"
+    }
+  ],
+  "ambiguous": [],
+  "unmatched": [
+    {
+      "SupplierId": 151,
+      "SupplierCode": "NCF-0151",
+      "SupplierName": "DAIRY CONSULTING LIMITED"
+    },
+    {
+      "SupplierId": 277,
+      "SupplierCode": "NCF-0277",
+      "SupplierName": "GLOBAL LOGISTICS"
+    },
+    {
+      "SupplierId": 795,
+      "SupplierCode": "NCF-0795",
+      "SupplierName": "TWINCAT CREATIVE AGENCY"
+    },
+    {
+      "SupplierId": 842,
+      "SupplierCode": "NCF-0837",
+      "SupplierName": "max"
+    },
+    {
+      "SupplierId": 843,
+      "SupplierCode": "NCF-0838",
+      "SupplierName": "LAGAT KEN KIPRONO"
+    },
+    {
+      "SupplierId": 844,
+      "SupplierCode": "NCF-0839",
+      "SupplierName": "JOSPHAT"
+    },
+    {
+      "SupplierId": 845,
+      "SupplierCode": "NCF-0840",
+      "SupplierName": "REDACHEM"
+    },
+    {
+      "SupplierId": 846,
+      "SupplierCode": "NCF-0841",
+      "SupplierName": "JAMES WACHIRA KAMATU"
+    },
+    {
+      "SupplierId": 847,
+      "SupplierCode": "NCF-0842",
+      "SupplierName": "REDA CHEM"
+    },
+    {
+      "SupplierId": 848,
+      "SupplierCode": "NCF-0843",
+      "SupplierName": "KENGAT CONSULTANT LTD"
+    },
+    {
+      "SupplierId": 849,
+      "SupplierCode": "NCF-0844",
+      "SupplierName": "chris farm ncf"
+    },
+    {
+      "SupplierId": 850,
+      "SupplierCode": "NCF-0845",
+      "SupplierName": "TINCAN MANUFACTURERS"
+    },
+    {
+      "SupplierId": 851,
+      "SupplierCode": "NCF-0846",
+      "SupplierName": "ALL PACKS"
+    },
+    {
+      "SupplierId": 853,
+      "SupplierCode": "NCF-0848",
+      "SupplierName": "SEREN CHEMICAL AND FRIENDSHIP"
+    },
+    {
+      "SupplierId": 854,
+      "SupplierCode": "NCF-0849",
+      "SupplierName": "QUICK PACK"
+    },
+    {
+      "SupplierId": 855,
+      "SupplierCode": "NCF-0850",
+      "SupplierName": "MARANIA LTD"
+    },
+    {
+      "SupplierId": 857,
+      "SupplierCode": "NCF-0852",
+      "SupplierName": "SARA MUTHONI"
+    },
+    {
+      "SupplierId": 858,
+      "SupplierCode": "NCF-0853",
+      "SupplierName": "OFFSHORE GROBAL LOGISTICS"
+    },
+    {
+      "SupplierId": 859,
+      "SupplierCode": "NCF-0854",
+      "SupplierName": "AGL KENYA LIMITED"
+    },
+    {
+      "SupplierId": 860,
+      "SupplierCode": "NCF-0855",
+      "SupplierName": "NCF CHRIS FARM"
+    },
+    {
+      "SupplierId": 861,
+      "SupplierCode": "NCF-0856",
+      "SupplierName": "NCF GRIS FARM"
+    },
+    {
+      "SupplierId": 862,
+      "SupplierCode": "NCF-0857",
+      "SupplierName": "ELIUDI  ENTERPLISES"
+    },
+    {
+      "SupplierId": 863,
+      "SupplierCode": "NCF-0858",
+      "SupplierName": "BEARING HOUSE 1985 LTD"
+    },
+    {
+      "SupplierId": 864,
+      "SupplierCode": "NCF-0859",
+      "SupplierName": "STEVEN IRUNGU"
+    },
+    {
+      "SupplierId": 865,
+      "SupplierCode": "NCF-0860",
+      "SupplierName": "MICHAEL"
+    },
+    {
+      "SupplierId": 866,
+      "SupplierCode": "NCF-0861",
+      "SupplierName": "AGRI LANE MARKET"
+    },
+    {
+      "SupplierId": 867,
+      "SupplierCode": "NCF-0862",
+      "SupplierName": "EAST AFRICA FRESH PRODUCE LTD"
+    },
+    {
+      "SupplierId": 868,
+      "SupplierCode": "NCF-0863",
+      "SupplierName": "BROWPLAST LTD"
+    },
+    {
+      "SupplierId": 869,
+      "SupplierCode": "NCF-0864",
+      "SupplierName": "ELIUD ENTERPRISE"
+    },
+    {
+      "SupplierId": 870,
+      "SupplierCode": "NCF-0865",
+      "SupplierName": "ready swift"
+    },
+    {
+      "SupplierId": 871,
+      "SupplierCode": "NCF-0866",
+      "SupplierName": "ELUD  ENTERPRISESELIUD"
+    },
+    {
+      "SupplierId": 872,
+      "SupplierCode": "NCF-0867",
+      "SupplierName": "ELIUD ENTERPPLISES"
+    },
+    {
+      "SupplierId": 873,
+      "SupplierCode": "NCF-0868",
+      "SupplierName": "josepart"
+    },
+    {
+      "SupplierId": 874,
+      "SupplierCode": "NCF-0869",
+      "SupplierName": "STEPHEN ZANIKO"
+    },
+    {
+      "SupplierId": 875,
+      "SupplierCode": "NCF-0870",
+      "SupplierName": "LOICE MAINA"
+    },
+    {
+      "SupplierId": 877,
+      "SupplierCode": "NCF-0872",
+      "SupplierName": "THOMAS"
+    },
+    {
+      "SupplierId": 878,
+      "SupplierCode": "NCF-0873",
+      "SupplierName": "magaret wambui"
+    },
+    {
+      "SupplierId": 879,
+      "SupplierCode": "NCF-0874",
+      "SupplierName": "EDWARD MOGAMBI"
+    },
+    {
+      "SupplierId": 880,
+      "SupplierCode": "NCF-0875",
+      "SupplierName": "frezzy"
+    },
+    {
+      "SupplierId": 881,
+      "SupplierCode": "NCF-0876",
+      "SupplierName": "magrete wambui china"
+    },
+    {
+      "SupplierId": 882,
+      "SupplierCode": "NCF-0877",
+      "SupplierName": "josphart"
+    },
+    {
+      "SupplierId": 883,
+      "SupplierCode": "NCF-0878",
+      "SupplierName": "keneth"
+    },
+    {
+      "SupplierId": 884,
+      "SupplierCode": "NCF-0879",
+      "SupplierName": "MOHAMED"
+    },
+    {
+      "SupplierId": 885,
+      "SupplierCode": "NCF-0880",
+      "SupplierName": "JOEL KIPKEMOI YEGON"
+    },
+    {
+      "SupplierId": 886,
+      "SupplierCode": "NCF-0881",
+      "SupplierName": "MICHAEL OGUMU"
+    },
+    {
+      "SupplierId": 887,
+      "SupplierCode": "NCF-0882",
+      "SupplierName": "NEW KCC"
+    },
+    {
+      "SupplierId": 889,
+      "SupplierCode": "NCF-0884",
+      "SupplierName": "ROBINSON KIBET KORIR"
+    },
+    {
+      "SupplierId": 890,
+      "SupplierCode": "NCF-0885",
+      "SupplierName": "RUTH"
+    },
+    {
+      "SupplierId": 891,
+      "SupplierCode": "NCF-0886",
+      "SupplierName": "GEORGE MUCHAI"
+    },
+    {
+      "SupplierId": 892,
+      "SupplierCode": "NCF-0887",
+      "SupplierName": "milicent"
+    },
+    {
+      "SupplierId": 894,
+      "SupplierCode": "NCF-0889",
+      "SupplierName": "MILLICENT WAMBUI CHAINA"
+    },
+    {
+      "SupplierId": 895,
+      "SupplierCode": "NCF-0890",
+      "SupplierName": "RACHAEL WARIARA"
+    },
+    {
+      "SupplierId": 896,
+      "SupplierCode": "NCF-0891",
+      "SupplierName": "kennedy methu"
+    },
+    {
+      "SupplierId": 897,
+      "SupplierCode": "NCF-0892",
+      "SupplierName": "MARGARET WAMBUI CHINA"
+    },
+    {
+      "SupplierId": 898,
+      "SupplierCode": "NCF-0893",
+      "SupplierName": "ANN MUTHONI MURIITHI"
+    },
+    {
+      "SupplierId": 900,
+      "SupplierCode": "NCF-0895",
+      "SupplierName": "RAJAMU ENTERPRISE LIMITED"
+    },
+    {
+      "SupplierId": 901,
+      "SupplierCode": "NCF-0896",
+      "SupplierName": "EAST AFRICAN GROWERS"
+    },
+    {
+      "SupplierId": 902,
+      "SupplierCode": "NCF-0897",
+      "SupplierName": "KILUU DIGTEK INVEST"
+    },
+    {
+      "SupplierId": 903,
+      "SupplierCode": "NCF-0898",
+      "SupplierName": "linus ngatia nes"
+    },
+    {
+      "SupplierId": 904,
+      "SupplierCode": "NCF-0899",
+      "SupplierName": "PETER NJAU MUNGAI"
+    }
+  ],
+  "collisions": []
+}
