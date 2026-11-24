@@ -35,19 +35,19 @@ const { matCenterRequiresOpsApproval } = require('../../services/procurement-syn
 const { FUEL_ITEMS, isTransport, fuelItemName, listVehicles, resolveVehicle } = require('../../services/fuel-order.service');
 
 const router = express.Router();
-const CREATE_ROLES = ['FactoryReceiving', 'StoreReceiving', 'Admin'];
+// FactoryQA (2026-10-26) raises orders like a FactoryReceiving clerk — locked to their own AssignedMatCenter.
+const CREATE_ROLES = ['FactoryReceiving', 'FactoryQA', 'StoreReceiving', 'Admin'];
 // Central Stores raising for themselves (2026-09-21) is always against
 // this fixed Mat Centre — matches the real "CENTRAL STORES" value already
 // used across live Requisitions rows. Unlike a FactoryReceiving clerk,
 // Central Stores has no per-user AssignedMatCenter to look up (there's
 // only ever one Central Stores), so this is a constant, not a lookup.
 const CENTRAL_STORES_MAT_CENTER = 'CENTRAL STORES';
-// Fixed unit-of-measure picklist (2026-09-21) — the clerk specifies which
-// unit the qty is in (a bare number was ambiguous for anything not
-// counted in pieces). Kept as a short fixed list rather than an
-// Admin-managed table since the business only asked for a handful
-// (Set and Rim added 2026-09-30).
-const UNITS = ['Kgs', 'Pcs', 'Metres', 'Litres', 'Set', 'Rim'];
+// Unit-of-measure picklist (2026-09-21) — the clerk specifies which unit
+// the qty is in (a bare number was ambiguous for anything not counted in
+// pieces). Admin manages the list on the System Settings page since
+// 2026-10-27 (settings.service.js); Rolls added then.
+const { getRequisitionUnits } = require('../../services/settings.service');
 
 // Looked up fresh per request rather than trusting a JWT claim — if Admin
 // reassigns a clerk's MatCenter, that must take effect immediately, not
@@ -163,8 +163,10 @@ router.get('/vehicles', authenticate, authorize(...CREATE_ROLES), async (req, re
 });
 
 // ── GET /api/procurement/requisitions-create/units ───────────────────────────
-router.get('/units', authenticate, authorize(...CREATE_ROLES), async (req, res) => {
-  res.json(UNITS);
+router.get('/units', authenticate, authorize(...CREATE_ROLES), async (req, res, next) => {
+  try {
+    res.json(await getRequisitionUnits());
+  } catch (err) { next(err); }
 });
 
 // ── GET /api/procurement/requisitions-create/suppliers ───────────────────────
@@ -218,6 +220,7 @@ router.post('/', authenticate, authorize(...CREATE_ROLES), async (req, res, next
     }
     const orderMatCenter = vehicle ? vehicle.store : matCenter;
 
+    const units = await getRequisitionUnits();
     for (const it of items) {
       if (!it.itemName || !String(it.itemName).trim()) {
         return res.status(400).json({ error: 'Every item needs a name' });
@@ -235,8 +238,8 @@ router.post('/', authenticate, authorize(...CREATE_ROLES), async (req, res, next
       } else if (!Number.isFinite(qty) || qty <= 0) {
         return res.status(400).json({ error: `Item "${it.itemName}": qty must be a positive number` });
       }
-      if (!UNITS.includes(it.unit)) {
-        return res.status(400).json({ error: `Item "${it.itemName}": unit must be one of ${UNITS.join(', ')}` });
+      if (!units.includes(it.unit)) {
+        return res.status(400).json({ error: `Item "${it.itemName}": unit must be one of ${units.join(', ')}` });
       }
     }
 
@@ -379,3 +382,5 @@ router.post('/', authenticate, authorize(...CREATE_ROLES), async (req, res, next
 });
 
 module.exports = router;
+// Shared with requisition-approval.routes.js (follow-up requisitions for resubmitted rejected items).
+module.exports.generateRequisitionNo = generateRequisitionNo;

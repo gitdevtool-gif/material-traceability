@@ -98,26 +98,62 @@ async function searchProducts(erpPool, search, limit = 30) {
     }));
 }
 
-/** Pending sales-order quantity per item (approved SOs, ordered − delivered). */
+/**
+ * Pending sales-order quantity per item (SOs approved in Busy only, ordered − delivered),
+ * with the customers waiting (the SO line's party, Tran3.MasterCode2),
+ * largest pending first.
+ */
 async function getPendingSalesOrders(erpPool, itemCodes) {
   const ids = itemCodes ? [...new Set(itemCodes.map((c) => parseInt(c, 10)).filter(Number.isFinite))] : null;
   if (ids && ids.length === 0) return new Map();
   const result = await erpPool.request().query(`
     WITH so AS (
-      SELECT t3.RefCode, t3.MasterCode1 AS ItemCode, ABS(t3.Value1) AS Ordered, t3.VchCode
+      SELECT t3.RefCode, t3.MasterCode1 AS ItemCode, t3.MasterCode2 AS PartyCode, ABS(t3.Value1) AS Ordered, t3.VchCode
       FROM dbo.Tran3 t3 JOIN dbo.Tran1 t1 ON t1.VchCode = t3.VchCode
-      WHERE t3.VchType = 12 AND t3.Method = 1 AND t3.RecType = 4 AND t1.ApprovalStatus <> 2
+      -- Approved sales orders only (2026-10-21): ApprovalStatus 1 = approved in Busy,
+      -- 2 = awaiting approval, 0 = early-May orders saved before approval was in use
+      -- and never approved. Since June every SO is 1 or 2.
+      WHERE t3.VchType = 12 AND t3.Method = 1 AND t3.RecType = 4 AND t1.ApprovalStatus = 1
         ${ids ? `AND t3.MasterCode1 IN (${ids.join(',')})` : ''}
     ), dl AS (
       SELECT x.RefCode, SUM(ABS(x.Value1)) AS Delivered FROM dbo.Tran3 x
       WHERE x.RecType = 4 AND x.Method = 2 AND x.RefCode IN (SELECT RefCode FROM so) GROUP BY x.RefCode
     )
-    SELECT so.ItemCode, SUM(so.Ordered - ISNULL(dl.Delivered, 0)) AS Pending, COUNT(DISTINCT so.VchCode) AS Orders
+    SELECT so.ItemCode, so.PartyCode, LTRIM(RTRIM(p.Name)) AS Customer,
+           SUM(so.Ordered - ISNULL(dl.Delivered, 0)) AS Pending, COUNT(DISTINCT so.VchCode) AS Orders,
+           STRING_AGG(CAST(LTRIM(RTRIM(t1.VchNo)) AS NVARCHAR(MAX)), ', ') AS SoNos
     FROM so LEFT JOIN dl ON dl.RefCode = so.RefCode
+    JOIN dbo.Tran1 t1 ON t1.VchCode = so.VchCode
+    LEFT JOIN dbo.Master1 p ON p.Code = so.PartyCode
     WHERE so.Ordered - ISNULL(dl.Delivered, 0) > 0.0001
-    GROUP BY so.ItemCode`);
-  return new Map(result.recordset.map((r) => [r.ItemCode, { pending: r3(r.Pending), orders: r.Orders }]));
+    GROUP BY so.ItemCode, so.PartyCode, p.Name`);
+  const out = new Map();
+  for (const r of result.recordset) {
+    const e = out.get(r.ItemCode) || { pending: 0, orders: 0, customers: [] };
+    e.pending += Number(r.Pending) || 0;
+    e.orders += r.Orders;
+    e.customers.push({
+      name: r.Customer || `Party #${r.PartyCode}`, pending: r3(r.Pending), orders: r.Orders,
+      soNos: [...new Set(String(r.SoNos || '').split(', ').filter(Boolean))],
+    });
+    out.set(r.ItemCode, e);
+  }
+  for (const e of out.values()) {
+    e.pending = r3(e.pending);
+    e.customers.sort((a, b) => b.pending - a.pending);
+  }
+  return out;
 }
+
+/**
+ * The factory that makes an item, from its Busy item group ("F2 FINISHED
+ * GOODS", "F1 WIP", "F6 BULK STOCK" → F2 / F1 / F6). Open sales orders are
+ * ~all in such groups (2026-10-21); anything else is "Other".
+ */
+const factoryOf = (group) => {
+  const m = String(group || '').trim().match(/^F(\d+)\b/i);
+  return m ? `F${m[1]}` : 'Other';
+};
 
 /**
  * Finished goods customers are waiting for: pending sales orders vs stock,
@@ -136,8 +172,8 @@ async function getDemand(erpPool) {
     const pending = so.get(c).pending;
     return {
       itemCode: c, itemName: meta.get(c)?.itemName || bom.itemName, unitName: meta.get(c)?.unitName || null,
-      group: meta.get(c)?.group || null, bomCode: bom.bomCode, bomName: bom.bomName,
-      pendingSalesOrders: pending, salesOrders: so.get(c).orders, stock: r3(live),
+      group: meta.get(c)?.group || null, factory: factoryOf(meta.get(c)?.group), bomCode: bom.bomCode, bomName: bom.bomName,
+      pendingSalesOrders: pending, salesOrders: so.get(c).orders, customers: so.get(c).customers, stock: r3(live),
       toProduce: r3(Math.max(0, pending - Math.max(0, live))),
     };
   }).sort((a, b) => b.toProduce - a.toProduce);
@@ -259,6 +295,8 @@ async function buildPlan(erpPool, lines, { netSemiFinishedStock = true } = {}) {
   const productRows = products.map(({ bom, qty }) => {
     const r = row(bom.itemCode);
     return { ...r, bomCode: bom.bomCode, bomName: bom.bomName, batchQty: bom.batchQty, planQty: r3(qty),
+      customers: so.get(bom.itemCode)?.customers || [],
+      factory: factoryOf(r.group),
       // what customers are still waiting for vs what's in stock
       salesOrderGap: r3(Math.max(0, r.pendingSalesOrders - Math.max(0, r.stock))) };
   });

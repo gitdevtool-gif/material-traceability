@@ -13,6 +13,9 @@ const router = express.Router();
 // the Busy PO line it is delivered against (or why it is not on a PO).
 
 const WEIGHABLE = ['GateReceived', 'WeighbridgePending'];
+// A ticket number used by another truck longer ago than this is a reuse of
+// the number, not a duplicate.
+const TICKET_REUSE_DAYS = 30;
 
 /** Weighed kg as a quantity in the item's own unit, where that is plain arithmetic. */
 function qtyFromWeight(uom, kg) {
@@ -64,9 +67,21 @@ router.post('/', authenticate, authorize('Weighbridge', 'Admin'), async (req, re
     if (!items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: 'items array is required (one entry per raw material)' });
     }
-    for (const it of items) {
-      if (it.firstWeight == null || it.secondWeight == null || it.netWeight == null) {
-        return res.status(400).json({ error: 'Each item requires firstWeight, secondWeight and netWeight' });
+    // Weighed together (2026-10-22): a supplier's several items go over the
+    // weighbridge as one load — one weighing, one record for the entry
+    // (EntryItemId NULL); each item still gets its PO line. Item quantities
+    // are then confirmed by Stores at the GRN.
+    const weighTogether = req.body.weighTogether === true && items.length > 1;
+    const combined = req.body.combined || {};
+    if (weighTogether) {
+      if (combined.firstWeight == null || combined.secondWeight == null || combined.netWeight == null) {
+        return res.status(400).json({ error: 'Enter the 1st and 2nd weight for the load' });
+      }
+    } else {
+      for (const it of items) {
+        if (it.firstWeight == null || it.secondWeight == null || it.netWeight == null) {
+          return res.status(400).json({ error: 'Each item requires firstWeight, secondWeight and netWeight' });
+        }
       }
     }
 
@@ -74,7 +89,7 @@ router.post('/', authenticate, authorize('Weighbridge', 'Admin'), async (req, re
 
     const entryResult = await pool.request()
       .input('entryNo', sql.VarChar(20), entryNo)
-      .query(`SELECT de.EntryId, de.Status, de.VersionNo, s.SupplierCode
+      .query(`SELECT de.EntryId, de.Status, de.VersionNo, de.ConsignmentNo, s.SupplierCode
               FROM dbo.DeliveryEntries de JOIN dbo.Suppliers s ON s.SupplierId = de.SupplierId
               WHERE de.EntryNo = @entryNo`);
 
@@ -96,13 +111,24 @@ router.post('/', authenticate, authorize('Weighbridge', 'Admin'), async (req, re
       return res.status(400).json({ error: 'An item does not belong to this entry — reload the entry and weigh again' });
     }
 
-    // One ticket belongs to one truck.
+    // One ticket belongs to one truck — shared only by the entries of that
+    // truck (several suppliers on one truck share the consignment number).
+    // The weighbridge's ticket numbers repeat (July's 9600–9790 came round
+    // again in October), so only a recent use is a clash.
     const dup = (await pool.request()
       .input('ticketNo', sql.VarChar(50), ticketNo)
       .input('id', sql.Int, entry.EntryId)
-      .query(`SELECT TOP 1 de.EntryNo FROM dbo.WeighbridgeRecords wr JOIN dbo.DeliveryEntries de ON de.EntryId = wr.EntryId
-              WHERE wr.TicketNo = @ticketNo AND wr.EntryId <> @id`)).recordset[0];
-    if (dup) return res.status(409).json({ error: `Ticket ${ticketNo} is already recorded on ${dup.EntryNo}` });
+      .input('consignment', sql.VarChar(50), entry.ConsignmentNo || '')
+      .input('days', sql.Int, TICKET_REUSE_DAYS)
+      .query(`SELECT TOP 1 de.EntryNo, wr.CreatedAt FROM dbo.WeighbridgeRecords wr JOIN dbo.DeliveryEntries de ON de.EntryId = wr.EntryId
+              WHERE LTRIM(RTRIM(wr.TicketNo)) = @ticketNo AND wr.EntryId <> @id
+                AND ISNULL(de.ConsignmentNo, '') <> @consignment
+                AND wr.CreatedAt >= DATEADD(DAY, -@days, GETUTCDATE())
+              ORDER BY wr.CreatedAt DESC`)).recordset[0];
+    if (dup) {
+      const on = new Date(dup.CreatedAt).toISOString().slice(0, 10);
+      return res.status(409).json({ error: `Ticket ${ticketNo} was already recorded on ${dup.EntryNo} (a different truck) on ${on} — check the ticket number` });
+    }
 
     let links = { lineByItem: new Map(), problems: [] };
     if (linkCols) {
@@ -121,23 +147,27 @@ router.post('/', authenticate, authorize('Weighbridge', 'Admin'), async (req, re
     try {
       let totalNet = 0;
       const wbIds = [];
+      const finalOf = (w) => parseFloat(w.finalNetWeight) || parseFloat(w.netWeight);
 
-      for (const it of items) {
-        const finalNetWeight = parseFloat(it.finalNetWeight) || parseFloat(it.netWeight);
-        const bagWeight = it.deductBagWeight ? (parseFloat(it.bagWeight) || 0) : null;
+      // One weighing per item, or one for the whole load when weighed together.
+      const weighings = weighTogether
+        ? [{ ...combined, entryItemId: null, remarks: combined.remarks || 'All items weighed together' }]
+        : items;
+      for (const w of weighings) {
+        const finalNetWeight = finalOf(w);
+        const bagWeight = w.deductBagWeight ? (parseFloat(w.bagWeight) || 0) : null;
 
-        const wbReq = new sql.Request(transaction);
-        const wbResult = await wbReq
+        const wbResult = await new sql.Request(transaction)
           .input('entryId',        sql.Int,           entry.EntryId)
-          .input('entryItemId',    sql.BigInt,        it.entryItemId || null)
+          .input('entryItemId',    sql.BigInt,        w.entryItemId || null)
           .input('ticketNo',       sql.VarChar(50),   ticketNo)
-          .input('firstWeight',    sql.Decimal(10,2), it.firstWeight)
-          .input('secondWeight',   sql.Decimal(10,2), it.secondWeight)
-          .input('netWeight',      sql.Decimal(10,2), it.netWeight)
+          .input('firstWeight',    sql.Decimal(10,2), w.firstWeight)
+          .input('secondWeight',   sql.Decimal(10,2), w.secondWeight)
+          .input('netWeight',      sql.Decimal(10,2), w.netWeight)
           .input('bagWeight',      sql.Decimal(10,2), bagWeight)
           .input('finalNetWeight', sql.Decimal(10,2), finalNetWeight)
           .input('operatorId',     sql.Int,           req.user.userId)
-          .input('remarks',        sql.NVarChar(500), it.remarks || null)
+          .input('remarks',        sql.NVarChar(500), w.remarks || null)
           .query(`INSERT INTO dbo.WeighbridgeRecords
             (EntryId, EntryItemId, TicketNo, FirstWeight, SecondWeight, NetWeight,
              BagWeight, FinalNetWeight, WeightVariance, OperatorId, Remarks)
@@ -148,14 +178,17 @@ router.post('/', authenticate, authorize('Weighbridge', 'Admin'), async (req, re
         wbIds.push(wbResult.recordset[0].WeighbridgeId);
         // Sum finalNetWeight so DeliveryEntries.NetWeight reflects true deducted weight
         totalNet += finalNetWeight;
+      }
 
-        // The item's PO line, and its quantity from the weight where the unit allows.
+      for (const it of items) {
+        // The item's PO line, and its quantity from its own weight where the unit
+        // allows (not when the load was weighed together — Stores confirm it at the GRN).
         const ei = entryItems.get(Number(it.entryItemId));
         if (ei) {
           const line = links.lineByItem.get(Number(it.entryItemId)) || null;
           const itemReq = new sql.Request(transaction)
             .input('entryItemId', sql.BigInt, ei.EntryItemId)
-            .input('quantity', sql.Decimal(12, 2), ei.Quantity ?? qtyFromWeight(ei.UOM, finalNetWeight));
+            .input('quantity', sql.Decimal(12, 2), ei.Quantity ?? (weighTogether ? null : qtyFromWeight(ei.UOM, finalOf(it))));
           if (linkCols) {
             itemReq
               .input('refCode', sql.Int, line?.refCode || null)
@@ -210,7 +243,7 @@ router.post('/', authenticate, authorize('Weighbridge', 'Admin'), async (req, re
       writeAuditLog({
         entityType: 'WeighbridgeRecord', entityId: wbIds[0],
         action: 'Create', userId: req.user.userId,
-        newValues: { entryNo, ticketNo, itemCount: items.length, totalNet, poNos, nonPOReason: nonPOReason || null },
+        newValues: { entryNo, ticketNo, itemCount: items.length, weighTogether, totalNet, poNos, nonPOReason: nonPOReason || null },
         ipAddress: req.ip, userAgent: req.get('User-Agent'),
       });
       writeStatusHistory({
@@ -279,10 +312,18 @@ router.get('/', authenticate, async (req, res, next) => {
       request.input('dateTo', sql.Date, dateTo);
     }
 
+    // SameTruck: the other suppliers' entries on this truck (same consignment
+    // number, created together at the gate); TruckTicket: the ticket already
+    // recorded for one of them, offered for the rest.
     const entriesResult = await request.query(`
       SELECT de.EntryId, de.EntryNo, de.ConsignmentNo, de.DeliveryDate, de.DeliveryTime,
              de.VehicleRegNo, de.DriverName, de.Notes, de.Status, de.CreatedAt AS GateEntryAt,
-             s.SupplierId, s.SupplierName, s.SupplierCode
+             s.SupplierId, s.SupplierName, s.SupplierCode,
+             (SELECT STRING_AGG(CONCAT(o.EntryNo, ' (', os.SupplierName, ')'), ', ')
+                FROM dbo.DeliveryEntries o JOIN dbo.Suppliers os ON os.SupplierId = o.SupplierId
+               WHERE o.ConsignmentNo = de.ConsignmentNo AND o.EntryId <> de.EntryId) AS SameTruck,
+             (SELECT TOP 1 wr.TicketNo FROM dbo.WeighbridgeRecords wr JOIN dbo.DeliveryEntries o ON o.EntryId = wr.EntryId
+               WHERE o.ConsignmentNo = de.ConsignmentNo AND o.EntryId <> de.EntryId AND wr.TicketNo IS NOT NULL) AS TruckTicket
       FROM dbo.DeliveryEntries de
       JOIN dbo.Suppliers s ON s.SupplierId = de.SupplierId
       WHERE de.Status IN ('GateReceived', 'WeighbridgePending')

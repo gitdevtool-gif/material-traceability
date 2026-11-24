@@ -22,7 +22,7 @@ const { authenticate, authorize } = require('../middleware/auth');
 const planning = require('../services/production-planning.service');
 
 const router = express.Router();
-const PRODUCTION_PLANNING_ROLES = ['Admin', 'Procurement', 'Director', 'ProductionManager', 'OpsManager', 'ProductionClerk'];
+const PRODUCTION_PLANNING_ROLES = ['Admin', 'Procurement', 'Director', 'ProductionManager', 'HeadOfProductionPlanning', 'OpsManager', 'ProductionClerk'];
 
 router.get('/products', authenticate, authorize(...PRODUCTION_PLANNING_ROLES), async (req, res, next) => {
   try {

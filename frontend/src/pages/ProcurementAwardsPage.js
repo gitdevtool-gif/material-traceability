@@ -35,7 +35,7 @@ export default function ProcurementAwardsPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const canMarkRaised = ['Admin', 'Procurement'].includes(user?.role);
-  const isViewer = user?.role === 'Viewer';
+  const isViewer = ['Viewer', 'GrnReviewer'].includes(user?.role);
   const [markTarget, setMarkTarget] = useState(null); // award row being marked raised
   const [raiseTarget, setRaiseTarget] = useState(null); // award row being raised in Busy from here
   const [successMsg, setSuccessMsg] = useState('');

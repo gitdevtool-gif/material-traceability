@@ -52,8 +52,29 @@ const { getErpPool } = require('../erpDb');
 const { getPool, sql } = require('../db');
 const logger = require('../logger');
 const stockService = require('./stock.service');
+const config = require('../config');
 
-async function syncAgingStock() {
+// The only stores Aging Analysis covers (business list, 2026-10-21) —
+// production factories, Central Stores, Big Cold and Sylvia's sales returns.
+// Exact Busy Material Centre names. Vehicles, departments, depots, Boiler,
+// Admin etc. are left out. Note "F9 F" is listed, not the separate "F9F";
+// F3F / F4F / F5F are not on the list.
+const AGING_STORES = [
+  'F1', 'F1w', 'F1F', 'F2P', 'F2W', 'F2F', 'F3', 'F4', 'F5',
+  'F6', 'F6F', 'F6 BULK STOCK', 'F7', 'F8', 'F9', 'F9 F', 'F10',
+  'CENTRAL STORES', 'sales returns sylvia', 'BIG COLD',
+];
+const agingStoreSet = new Set(AGING_STORES.map((s) => s.toLowerCase()));
+const isAgingStore = (name) => agingStoreSet.has(String(name || '').trim().toLowerCase());
+
+// One sync at a time: the hourly job and the Sync button share a run in progress.
+let syncInFlight = null;
+function syncAgingStock() {
+  if (!syncInFlight) syncInFlight = runAgingSync().finally(() => { syncInFlight = null; });
+  return syncInFlight;
+}
+
+async function runAgingSync() {
   logger.info('[AgingSync] Starting sync…');
 
   const [erpPool, localPool] = await Promise.all([getErpPool(), getPool()]);
@@ -64,15 +85,28 @@ async function syncAgingStock() {
   // view instead of the 255k in BatchwiseStock.) No Qty filter. Qty and
   // Amount are multiplied by -1 on the way in (per business request,
   // 2026-09-25); the frontend displays the stored values as-is (no Math.abs).
+  // FIFO (default since 2026-10-21) ages the stock the way Busy's stock-ageing
+  // report does: closing stock per item × store taken from the most recent
+  // receipts into that store, older years read from the previous Busy
+  // databases. Its quantities always equal Busy's closing stock, which the
+  // batch balances do not (1,099 of 5,552 item × store pairs differed on
+  // 2026-10-21). AGING_METHOD=batch returns to batch balances.
+  const method = String(process.env.AGING_METHOD || 'fifo').toLowerCase();
   let erpRows;
   try {
-    erpRows = await stockService.getAllBatchBalances(erpPool);
+    erpRows = method === 'batch'
+      ? await stockService.getAllBatchBalances(erpPool)
+      : await stockService.getFifoLayers(erpPool, {
+        storeNames: AGING_STORES, currentDb: config.erpDb.database, currentFy: config.busyCom.fy,
+      });
   } catch (erpErr) {
     logger.error('[AgingSync] ERP query failed:', erpErr);
     throw erpErr;
   }
 
-  logger.info(`[AgingSync] Busy: ${erpRows.length} batch(es) with stock remaining`);
+  const allCount = erpRows.length;
+  erpRows = erpRows.filter((b) => isAgingStore(b.store));
+  logger.info(`[AgingSync] Busy (${method}): ${allCount} row(s) with stock remaining, ${erpRows.length} in the ${AGING_STORES.length} aging stores`);
 
   // Batches with no priced receipt of their own (opening batches carried
   // into the year, stock that arrived by transfer) — value them at the
@@ -158,7 +192,11 @@ async function syncAgingStock() {
   try {
     // .batch(), not .query(): query() runs through sp_executesql, which
     // would drop the #temp table as soon as that call returned.
+    // A pooled connection can still hold #AgingStage from an earlier sync that
+    // failed mid-way ("There is already an object named '#AgingStage'",
+    // production 2026-10-21) — drop it first.
     await new sql.Request(tx).batch(`
+      IF OBJECT_ID('tempdb..#AgingStage') IS NOT NULL DROP TABLE #AgingStage;
       CREATE TABLE #AgingStage (
         ItemName    NVARCHAR(200) NOT NULL,
         Category    NVARCHAR(80)  NULL,
@@ -284,6 +322,7 @@ function stopAgingSyncJob() {
 }
 
 module.exports = {
+  AGING_STORES,
   syncAgingStock,
   startAgingSyncJob,
   stopAgingSyncJob,

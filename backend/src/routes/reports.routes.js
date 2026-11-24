@@ -1,6 +1,8 @@
 const express = require('express');
 const { getPool, sql } = require('../db');
-const { authenticate, authorizeStrict } = require('../middleware/auth');
+const { authenticate, authorize, authorizeStrict } = require('../middleware/auth');
+const { getErpPool } = require('../erpDb');
+const { buildRequisitionAudit } = require('../services/requisition-audit.service');
 
 const router = express.Router();
 
@@ -35,10 +37,13 @@ router.get('/traceability/:entryNo', authenticate, async (req, res, next) => {
                 WHERE dei.EntryId = @entryId`),
       pool.request()
         .input('entryId2', sql.Int, e.EntryId)
-        .query(`SELECT wr.*, u.FullName AS OperatorName
+        .query(`SELECT wr.*, u.FullName AS OperatorName, m.MaterialName
                 FROM dbo.WeighbridgeRecords wr
                 JOIN dbo.Users u ON u.UserId = wr.OperatorId
-                WHERE wr.EntryId = @entryId2`),
+                LEFT JOIN dbo.DeliveryEntryItems dei ON dei.EntryItemId = wr.EntryItemId
+                LEFT JOIN dbo.Materials m ON m.MaterialId = dei.MaterialId
+                WHERE wr.EntryId = @entryId2
+                ORDER BY wr.WeighbridgeId`),
       pool.request()
         .input('entryId3', sql.Int, e.EntryId)
         .query(`SELECT g.*, u.FullName AS ReceivedByName, sl.LocationName,
@@ -94,6 +99,7 @@ router.get('/traceability/:entryNo', authenticate, async (req, res, next) => {
       entry: e,
       items: items.recordset,
       weighbridge: wb.recordset[0] || null,
+      weighings: wb.recordset, // every weighing of the truck (one per material, or one for a load weighed together)
       qaInspection: qa.recordset[0] || null,
       qaTests,
       grns: grns.recordset,
@@ -174,6 +180,39 @@ router.get('/dashboard', authenticate, async (req, res, next) => {
       recentEntries: recentResult.recordset,
     });
   } catch (err) { next(err); }
+});
+
+// ──── GET /api/reports/requisition-audit?from=&to=&factory= ────
+// Every requisition line (all factories) with stock at the time of request,
+// its approval → award → PO → receipt chain and audit red flags.
+// Viewers may read it too (authorize lets them through on GET).
+const AUDIT_ROLES = ['Admin', 'Auditor', 'Director', 'OpsManager', 'Procurement', 'Viewer'];
+const auditCache = new Map();
+let auditInFlight = null;
+router.get('/requisition-audit', authenticate, authorize(...AUDIT_ROLES), async (req, res, next) => {
+  let mine = null;
+  try {
+    const now = new Date();
+    const fyStart = new Date(now.getMonth() >= 4 ? now.getFullYear() : now.getFullYear() - 1, 4, 1);
+    const parse = (v, d) => { const x = v ? new Date(v) : null; return x && !Number.isNaN(x.getTime()) ? x : d; };
+    const from = parse(req.query.from, fyStart);
+    const to = parse(req.query.to, now);
+    const factory = String(req.query.factory || '').trim() || null;
+    const key = `${from.toISOString().slice(0, 10)}|${to.toISOString().slice(0, 10)}|${factory || ''}`;
+    const hit = auditCache.get(key);
+    if (hit && Date.now() - hit.at < 3 * 60e3 && req.query.refresh !== '1') return res.json(hit.data);
+
+    // One build at a time — it reads the whole period's stock ledger from Busy.
+    while (auditInFlight) await auditInFlight.catch(() => {});
+    const again = auditCache.get(key); // built by the request we waited for
+    if (again && Date.now() - again.at < 3 * 60e3 && req.query.refresh !== '1') return res.json(again.data);
+    mine = buildRequisitionAudit(await getPool(), await getErpPool(), { from, to, factory });
+    auditInFlight = mine;
+    const data = { from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10), factory, generatedAt: new Date(), ...(await mine) };
+    if (auditCache.size > 20) auditCache.clear();
+    auditCache.set(key, { at: Date.now(), data });
+    res.json(data);
+  } catch (err) { next(err); } finally { if (mine && auditInFlight === mine) auditInFlight = null; }
 });
 
 module.exports = router;

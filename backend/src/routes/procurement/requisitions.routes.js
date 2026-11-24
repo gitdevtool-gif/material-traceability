@@ -32,6 +32,8 @@ const { getPool, sql } = require('../../db');
 const { authenticate, authorize } = require('../../middleware/auth');
 const { syncRequisitions } = require('../../services/procurement-sync.service');
 const { resolveCategoryForItemNames, resolveItemCodeLookup } = require('../../services/requisition-item-catalog.service');
+const { getDirectSupplyItems } = require('../../services/settings.service');
+const { rfqEligibleLineSql } = require('../../services/direct-supply.service');
 
 const router = express.Router();
 const PROC_ROLES = ['Admin', 'Procurement', 'Director'];
@@ -96,6 +98,12 @@ router.get('/', authenticate, authorize(...PROC_ROLES), async (req, res, next) =
     request.input('offset', sql.Int, offset);
     request.input('limit',  sql.Int, parseInt(limit));
 
+    // Direct-supply items (sawdust, 2026-11-24): a requisition whose every
+    // line is one of them is bought from standing suppliers — no RFQ.
+    const directItems = (await getDirectSupplyItems()).map((n) => n.toUpperCase());
+    directItems.forEach((n, i) => request.input(`ds${i}`, sql.NVarChar(100), n));
+    const directIn = directItems.length ? directItems.map((_, i) => `@ds${i}`).join(',') : 'NULL';
+
     // Count + data in parallel
     const countReq = pool.request();
     if (status)   countReq.input('status',   sql.VarChar(30),   status);
@@ -109,23 +117,40 @@ router.get('/', authenticate, authorize(...PROC_ROLES), async (req, res, next) =
         SELECT
           r.RequisitionId, r.BusyOrdNo, r.BusyDate, r.Warehouse, r.MatCenter,
           r.Status, r.SyncedAt, r.Notes, r.CreatedAt, r.RFQId,
-          r.OrderType, r.Vehicle,
+          r.OrderType, r.Vehicle, r.OpsApprovedAt, r.CentralStoresApprovedAt,
+          rel.ReleasedAt,
           (SELECT COUNT(*) FROM dbo.RequisitionItems ri
            WHERE ri.RequisitionId = r.RequisitionId) AS ItemCount,
           -- Items not yet sent in ANY RFQ — the real "can this still be
           -- picked for a new RFQ" signal now that RFQ linkage lives on
           -- RequisitionItems, not here. r.RFQId only shows the most
           -- recent RFQ this requisition has touched, for display.
+          -- Direct-supply lines (sawdust/offcuts) never go on an RFQ, so they
+          -- don't count as available for one (2026-11-24).
           (SELECT COUNT(*) FROM dbo.RequisitionItems ri
-           WHERE ri.RequisitionId = r.RequisitionId AND ri.RFQId IS NULL) AS AvailableItemCount,
+           WHERE ri.RequisitionId = r.RequisitionId AND ri.RFQId IS NULL AND ri.DirectOrderedAt IS NULL
+             AND ISNULL(UPPER(LTRIM(RTRIM(COALESCE(ri.ItemCode, ri.ItemName)))), '') NOT IN (${directIn})) AS AvailableItemCount,
+          (SELECT COUNT(*) FROM dbo.RequisitionItems ri
+           WHERE ri.RequisitionId = r.RequisitionId
+             AND (ri.DirectOrderedAt IS NOT NULL OR UPPER(LTRIM(RTRIM(COALESCE(ri.ItemCode, ri.ItemName)))) IN (${directIn}))) AS DirectLineCount,
+          (SELECT COUNT(*) FROM dbo.RequisitionItems ri
+           WHERE ri.RequisitionId = r.RequisitionId AND ri.DirectOrderedAt IS NULL
+             AND UPPER(LTRIM(RTRIM(COALESCE(ri.ItemCode, ri.ItemName)))) IN (${directIn})) AS DirectOpenCount,
+          (SELECT COUNT(*) FROM dbo.LPOReconciliation lr WHERE lr.RequisitionId = r.RequisitionId) AS LinkedPoCount,
           rfq.RFQNumber,
           (SELECT COUNT(*) FROM dbo.Quotations q
            JOIN dbo.RFQDispatches d ON d.RFQDispatchId = q.RFQDispatchId
            WHERE d.RFQId = rfq.RFQId AND q.IsWithdrawn = 0) AS QuotationCount
         FROM dbo.Requisitions r
         LEFT JOIN dbo.RFQs rfq ON rfq.RFQId = r.RFQId
+        -- When it reached Procurement: its last approval (Ops Manager or
+        -- Central Stores), else when it was created (fuel orders, old rows).
+        -- Newest first, so the latest Ops Manager approvals sit on top
+        -- whatever the requisition's own date (2026-10-21).
+        CROSS APPLY (SELECT MAX(d) AS ReleasedAt
+                     FROM (VALUES (r.OpsApprovedAt), (r.CentralStoresApprovedAt), (r.CreatedAt)) v(d)) rel
         WHERE ${where}
-        ORDER BY r.BusyDate DESC, r.BusyOrdNo DESC
+        ORDER BY rel.ReleasedAt DESC, r.BusyDate DESC, r.BusyOrdNo DESC
         OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY
       `),
     ]);
@@ -179,6 +204,32 @@ router.get('/categories', authenticate, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// Suppliers for an RFQ on the given requisition items (`itemWhere` filters
+// RequisitionItems ri): every active supplier whose categories overlap the
+// items, PLUS the supplier the requester named as preferred on any item
+// even when its categories don't match — that supplier used to be missing
+// from the picker (2026-10-30). Preferred ones come first, flagged
+// IsPreferred with the items they were asked for. An inactive preferred
+// supplier is still listed (IsActive = 0) so Procurement sees the request.
+const matchingSuppliersSql = (itemWhere) => `
+  WITH Pref AS (
+    SELECT ri.PreferredSupplierId AS SupplierId, STRING_AGG(ri.ItemName, ', ') AS PreferredForItems
+    FROM dbo.RequisitionItems ri
+    WHERE ${itemWhere} AND ri.PreferredSupplierId IS NOT NULL
+    GROUP BY ri.PreferredSupplierId
+  )
+  SELECT
+    s.SupplierId, s.SupplierCode, s.SupplierName, s.Phone, s.WhatsApp, s.Email, s.IsActive,
+    (SELECT STRING_AGG(sc.Category, ', ') FROM dbo.SupplierCategories sc WHERE sc.SupplierId = s.SupplierId) AS SupplierCategories,
+    CAST(CASE WHEN p.SupplierId IS NULL THEN 0 ELSE 1 END AS BIT) AS IsPreferred,
+    p.PreferredForItems
+  FROM dbo.Suppliers s
+  LEFT JOIN Pref p ON p.SupplierId = s.SupplierId
+  WHERE (p.SupplierId IS NOT NULL OR s.IsActive = 1 AND EXISTS (
+      SELECT 1 FROM dbo.SupplierCategories sc JOIN dbo.RequisitionItems ri ON ri.Category = sc.Category
+      WHERE sc.SupplierId = s.SupplierId AND ${itemWhere}))
+  ORDER BY CASE WHEN p.SupplierId IS NULL THEN 1 ELSE 0 END, s.SupplierName`;
+
 // ── GET /api/procurement/requisitions/matching-suppliers ─────────────────────
 // Combined supplier match across SEVERAL requisitions at once (query param
 // ids=1,2,3) — used by the new "bundle into one RFQ" flow on the list page,
@@ -203,19 +254,7 @@ router.get('/matching-suppliers', authenticate, authorize(...PROC_ROLES), async 
     const request = pool.request();
     ids.forEach((rid, i) => request.input(`r${i}`, sql.Int, rid));
 
-    const result = await request.query(`
-      SELECT DISTINCT
-        s.SupplierId, s.SupplierCode, s.SupplierName,
-        s.Phone, s.WhatsApp, s.Email, s.IsActive,
-        STRING_AGG(sc.Category, ', ') AS SupplierCategories
-      FROM dbo.Suppliers s
-      JOIN dbo.SupplierCategories sc ON sc.SupplierId = s.SupplierId
-      JOIN dbo.RequisitionItems ri ON ri.Category = sc.Category
-      WHERE ri.RequisitionId IN (${idPlaceholders})
-        AND s.IsActive = 1
-      GROUP BY s.SupplierId, s.SupplierCode, s.SupplierName, s.Phone, s.WhatsApp, s.Email, s.IsActive
-      ORDER BY s.SupplierName
-    `);
+    const result = await request.query(matchingSuppliersSql(`ri.RequisitionId IN (${idPlaceholders})`));
 
     res.json(result.recordset);
   } catch (err) { next(err); }
@@ -241,7 +280,8 @@ router.get('/:id', authenticate, authorize(...PROC_ROLES), async (req, res, next
           ri.RFQId, rfq.RFQNumber,
           ri.PreferredSupplierId,
           COALESCE(ps.SupplierName, ri.PreferredSupplierName) AS PreferredSupplierName,
-          ri.PreferredBrand, ri.PreferredQuality
+          ri.PreferredBrand, ri.PreferredQuality,
+          ri.DirectOrderedAt, ri.DirectPurOrdNos
         FROM dbo.RequisitionItems ri
         LEFT JOIN dbo.RFQs rfq ON rfq.RFQId = ri.RFQId
         LEFT JOIN dbo.Suppliers ps ON ps.SupplierId = ri.PreferredSupplierId
@@ -256,6 +296,12 @@ router.get('/:id', authenticate, authorize(...PROC_ROLES), async (req, res, next
 
     const req_ = reqResult.recordset[0];
     req_.items = itemsResult.recordset;
+    // Direct-supply lines (sawdust/offcuts, 2026-11-24): ordered from standing
+    // suppliers with "Raise direct POs", never put on an RFQ.
+    const directNames = new Set((await getDirectSupplyItems()).map((n) => n.toUpperCase()));
+    for (const it of req_.items) {
+      it.IsDirectSupply = !!it.DirectOrderedAt || directNames.has(String(it.ItemCode || it.ItemName || '').trim().toUpperCase());
+    }
     res.json(req_);
   } catch (err) { next(err); }
 });
@@ -446,19 +492,7 @@ router.get('/:id/matching-suppliers', authenticate, authorize(...PROC_ROLES), as
     const id = parseInt(req.params.id, 10);
     const pool = await getPool();
 
-    const result = await pool.request().input('id', sql.Int, id).query(`
-      SELECT DISTINCT
-        s.SupplierId, s.SupplierCode, s.SupplierName,
-        s.Phone, s.WhatsApp, s.Email, s.IsActive,
-        STRING_AGG(sc.Category, ', ') AS SupplierCategories
-      FROM dbo.Suppliers s
-      JOIN dbo.SupplierCategories sc ON sc.SupplierId = s.SupplierId
-      JOIN dbo.RequisitionItems ri ON ri.Category = sc.Category
-      WHERE ri.RequisitionId = @id
-        AND s.IsActive = 1
-      GROUP BY s.SupplierId, s.SupplierCode, s.SupplierName, s.Phone, s.WhatsApp, s.Email, s.IsActive
-      ORDER BY s.SupplierName
-    `);
+    const result = await pool.request().input('id', sql.Int, id).query(matchingSuppliersSql('ri.RequisitionId = @id'));
 
     res.json(result.recordset);
   } catch (err) { next(err); }
@@ -562,11 +596,15 @@ async function generateRFQNumber(pool) {
   return `RFQ-${year}-${String(next).padStart(4, '0')}`;
 }
 
+// Several suppliers at once (2026-10-22): body { supplierIds: [...] } — one
+// RFQ with one dispatch per supplier, so every quote in hand is captured on
+// the same RFQ and the Director compares them. { supplierId } still works.
 router.post('/:id/quick-rfq', authenticate, authorize('Admin', 'Procurement'), async (req, res, next) => {
   try {
     const id = parseInt(req.params.id, 10);
-    const supplierId = parseInt(req.body.supplierId, 10);
-    if (!supplierId) return res.status(400).json({ error: 'supplierId is required' });
+    const supplierIds = [...new Set((Array.isArray(req.body.supplierIds) ? req.body.supplierIds : [req.body.supplierId])
+      .map((s) => parseInt(s, 10)).filter(Boolean))].slice(0, 20);
+    if (!supplierIds.length) return res.status(400).json({ error: 'Choose at least one supplier' });
 
     const pool = await getPool();
 
@@ -580,19 +618,25 @@ router.post('/:id/quick-rfq', authenticate, authorize('Admin', 'Procurement'), a
     // Only items not yet sent in ANY RFQ are eligible — a requisition can
     // be partially committed to an earlier RFQ and still have some items
     // left over for this one.
-    const availableItems = await pool.request().input('id', sql.Int, id).query(
-      'SELECT RequisitionItemId FROM dbo.RequisitionItems WHERE RequisitionId = @id AND RFQId IS NULL'
+    // Direct-supply lines (sawdust/offcuts) are left out — no RFQ for them (2026-11-24).
+    const availReq = pool.request().input('id', sql.Int, id);
+    const eligible = await rfqEligibleLineSql(availReq, 'ri');
+    const availableItems = await availReq.query(
+      `SELECT RequisitionItemId FROM dbo.RequisitionItems ri WHERE ri.RequisitionId = @id AND ri.RFQId IS NULL AND ${eligible}`
     );
     if (availableItems.recordset.length === 0) {
-      return res.status(409).json({ error: `Every item on ${requisition.BusyOrdNo} is already part of an RFQ` });
+      return res.status(409).json({ error: `Every item on ${requisition.BusyOrdNo} is already part of an RFQ or is a direct-supply item (raise those with "Raise direct POs")` });
     }
     const availableItemIds = availableItems.recordset.map((r) => r.RequisitionItemId);
 
-    const supplierCheck = await pool.request().input('id', sql.Int, supplierId).query(
-      'SELECT SupplierId, SupplierName, IsActive FROM dbo.Suppliers WHERE SupplierId = @id'
-    );
-    if (supplierCheck.recordset.length === 0) return res.status(404).json({ error: 'Supplier not found' });
-    if (!supplierCheck.recordset[0].IsActive) return res.status(400).json({ error: 'Supplier is not active' });
+    const supReq = pool.request();
+    supplierIds.forEach((s, i) => supReq.input(`s${i}`, sql.Int, s));
+    const supplierRows = (await supReq.query(
+      `SELECT SupplierId, SupplierName, IsActive FROM dbo.Suppliers WHERE SupplierId IN (${supplierIds.map((_, i) => `@s${i}`).join(',')})`
+    )).recordset;
+    if (supplierRows.length !== supplierIds.length) return res.status(404).json({ error: 'Supplier not found' });
+    const inactive = supplierRows.filter((s) => !s.IsActive);
+    if (inactive.length) return res.status(400).json({ error: `Not active: ${inactive.map((s) => s.SupplierName).join(', ')}` });
 
     const rfqNumber = await generateRFQNumber(pool);
 
@@ -632,21 +676,24 @@ router.post('/:id/quick-rfq', authenticate, authorize('Admin', 'Procurement'), a
           WHERE RequisitionId = @id
         `);
 
-      const dispatchResult = await new sql.Request(transaction)
-        .input('RFQId', sql.Int, rfqId)
-        .input('SupplierId', sql.Int, supplierId)
-        .input('SentAt', sql.DateTime2, new Date())
-        .input('SentByUserId', sql.Int, req.user.userId)
-        .input('DispatchNotes', sql.NVarChar(500), 'Quote captured directly — not sent via email/portal')
-        .query(`
-          INSERT INTO dbo.RFQDispatches (RFQId, SupplierId, Channel, SentAt, SentByUserId, DispatchNotes)
-          OUTPUT INSERTED.RFQDispatchId
-          VALUES (@RFQId, @SupplierId, 'phone', @SentAt, @SentByUserId, @DispatchNotes)
-        `);
-      const dispatchId = dispatchResult.recordset[0].RFQDispatchId;
+      const dispatchIds = [];
+      for (const supplierId of supplierIds) {
+        const dispatchResult = await new sql.Request(transaction)
+          .input('RFQId', sql.Int, rfqId)
+          .input('SupplierId', sql.Int, supplierId)
+          .input('SentAt', sql.DateTime2, new Date())
+          .input('SentByUserId', sql.Int, req.user.userId)
+          .input('DispatchNotes', sql.NVarChar(500), 'Quote captured directly — not sent via email/portal')
+          .query(`
+            INSERT INTO dbo.RFQDispatches (RFQId, SupplierId, Channel, SentAt, SentByUserId, DispatchNotes)
+            OUTPUT INSERTED.RFQDispatchId
+            VALUES (@RFQId, @SupplierId, 'phone', @SentAt, @SentByUserId, @DispatchNotes)
+          `);
+        dispatchIds.push(dispatchResult.recordset[0].RFQDispatchId);
+      }
 
       await transaction.commit();
-      res.status(201).json({ rfqId, rfqNumber, dispatchId });
+      res.status(201).json({ rfqId, rfqNumber, dispatchId: dispatchIds[0], dispatchIds });
     } catch (trxErr) {
       await transaction.rollback();
       throw trxErr;

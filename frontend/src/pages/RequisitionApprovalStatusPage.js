@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import api from '../services/api';
+import { PreferredSupplierNote } from '../components/PreferredSupplier';
 import { useAuth } from '../context/AuthContext';
 
 /**
@@ -19,6 +20,9 @@ const UNRESOLVED_STATUSES = [
   'PendingOpsApproval', 'OnHold', 'RejectedByOps',
 ];
 
+// Workshop requisitions are approved by the Workshop HOD, the rest by the Ops Manager.
+const approverOf = (row) => (String(row?.MatCenter || '').trim().toLowerCase() === 'workshop' ? 'Workshop HOD' : 'Ops Manager');
+
 function statusInfo(row) {
   if (row.Status === 'PendingCentralStoresApproval') {
     return { label: 'Awaiting Central Stores Review', color: 'badge-gray' };
@@ -27,7 +31,7 @@ function statusInfo(row) {
     return { label: 'Rejected by Central Stores', color: 'badge-red' };
   }
   if (row.Status === 'PendingOpsApproval') {
-    return { label: 'Awaiting Ops Review', color: 'badge-gray' };
+    return { label: approverOf(row) === 'Workshop HOD' ? 'Awaiting Workshop HOD' : 'Awaiting Ops Review', color: 'badge-gray' };
   }
   if (row.Status === 'OnHold') {
     return { label: 'On Hold', color: 'badge-yellow' };
@@ -47,9 +51,121 @@ function statusInfo(row) {
     : { label: 'Approved (no review required)', color: 'badge-green' };
 }
 
+/**
+ * Rejected items of a PARTLY-approved requisition (2026-10-26): the approved
+ * items have gone on to Procurement, so the clerk resubmits the rejected
+ * ones — they go into a new follow-up requisition that returns to whoever
+ * rejected them. Each item can be resubmitted once.
+ */
+function ResubmitRejectedItems({ detail, canResubmit, onDone }) {
+  const rejected = detail.rejectedForResubmit || [];
+  const done = detail.resubmittedItems || [];
+  const [picked, setPicked] = useState({});   // key -> { on, qty }
+  const [note, setNote] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [result, setResult] = useState(null);
+
+  useEffect(() => {
+    setPicked(Object.fromEntries(rejected.map((r) => [`${r.source}:${r.decisionId}`, { on: true, qty: String(r.qty) }])));
+    setNote(''); setError(''); setResult(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detail.RequisitionId]);
+
+  if (!rejected.length && !done.length && !detail.resubmittedFrom) return null;
+  const chosen = rejected.filter((r) => picked[`${r.source}:${r.decisionId}`]?.on);
+
+  const submit = async () => {
+    setSaving(true);
+    setError('');
+    try {
+      const res = await api.post(`/procurement/requisition-approval/${detail.RequisitionId}/resubmit-rejected-items`, {
+        note,
+        items: chosen.map((r) => ({ source: r.source, decisionId: r.decisionId, qty: picked[`${r.source}:${r.decisionId}`].qty })),
+      });
+      setResult(res.data);
+      onDone && onDone();
+    } catch (e) {
+      setError(e.response?.data?.error || 'Could not resubmit the items');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div style={{ marginTop: 16 }}>
+      {detail.resubmittedFrom && (
+        <p style={{ fontSize: 13, margin: '0 0 10px', color: '#1e40af' }}>
+          ↩ This requisition resubmits items rejected on <strong>{detail.resubmittedFrom.BusyOrdNo}</strong>.
+        </p>
+      )}
+
+      {result && (
+        <div className="alert alert-success" style={{ marginBottom: 10 }}>
+          {result.items} item(s) resubmitted as <strong>{result.busyOrdNo}</strong> — now with the {result.approver} for review.
+        </div>
+      )}
+
+      {rejected.length > 0 && !result && (
+        <div style={{ border: '1px solid #fca5a5', background: '#fef2f2', borderRadius: 8, padding: 12 }}>
+          <h4 style={{ margin: '0 0 4px' }}>Rejected items — resubmit</h4>
+          <p style={{ margin: '0 0 8px', fontSize: 12, color: '#6b7280' }}>
+            The approved items have gone on to Procurement. Tick the rejected items that are still needed: they go into a
+            new requisition back to whoever rejected them.
+          </p>
+          <table className="data-table" style={{ fontSize: 12, background: '#fff' }}>
+            <thead><tr><th /><th>Item</th><th>Rejected by</th><th>Reason</th><th style={{ textAlign: 'right' }}>Qty to resubmit</th></tr></thead>
+            <tbody>
+              {rejected.map((r) => {
+                const k = `${r.source}:${r.decisionId}`;
+                const p = picked[k] || { on: false, qty: String(r.qty) };
+                return (
+                  <tr key={k}>
+                    <td><input type="checkbox" disabled={!canResubmit} checked={p.on} onChange={(e) => setPicked({ ...picked, [k]: { ...p, on: e.target.checked } })} /></td>
+                    <td>{r.itemName}</td>
+                    <td>{r.stage}{r.rejectedBy && r.rejectedBy !== r.stage ? <div style={{ color: '#6b7280' }}>{r.rejectedBy}</div> : null}</td>
+                    <td style={{ color: '#991b1b' }}>{r.reason || '—'}</td>
+                    <td style={{ textAlign: 'right' }}>
+                      <input type="number" min="0" step="any" value={p.qty} disabled={!canResubmit || !p.on}
+                        onChange={(e) => setPicked({ ...picked, [k]: { ...p, qty: e.target.value } })}
+                        style={{ width: 100, textAlign: 'right' }} /> {r.unit || ''}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          {canResubmit ? (
+            <>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, margin: '10px 0 4px' }}>
+                Why are these still needed? (required — the approver sees this)
+              </label>
+              <textarea className="form-input" rows={2} value={note} onChange={(e) => setNote(e.target.value)}
+                placeholder="e.g. Stock has since fallen below the reorder level; production run for KOL order next week" />
+              {error && <div className="alert alert-error" style={{ marginTop: 8 }}>{error}</div>}
+              <button className="btn btn-primary" style={{ marginTop: 8 }} disabled={saving || !chosen.length || note.trim().length < 3} onClick={submit}>
+                {saving ? 'Resubmitting…' : `↩ Resubmit ${chosen.length} item${chosen.length === 1 ? '' : 's'}`}
+              </button>
+            </>
+          ) : (
+            <p style={{ fontSize: 12, color: '#6b7280', margin: '8px 0 0' }}>The clerk who raised it (or Admin) can resubmit these.</p>
+          )}
+        </div>
+      )}
+
+      {done.length > 0 && (
+        <div style={{ marginTop: 10, fontSize: 12, color: '#374151' }}>
+          <strong>Already resubmitted:</strong>{' '}
+          {done.map((d) => `${d.itemName} → ${d.resubmittedInNo}`).join(' · ')}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function RequisitionApprovalStatusPage() {
   const { user } = useAuth();
-  const canResubmit = ['FactoryReceiving', 'Admin'].includes(user?.role);
+  const canResubmit = ['FactoryReceiving', 'FactoryQA', 'Admin'].includes(user?.role);
 
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -308,7 +424,7 @@ export default function RequisitionApprovalStatusPage() {
                       </>
                     )}
                     {detail.Status === 'PendingOpsApproval' && (
-                      <p style={{ margin: 0, fontSize: 13 }}>Cleared Central Stores — still waiting on the Ops Manager. Check back later.</p>
+                      <p style={{ margin: 0, fontSize: 13 }}>Cleared Central Stores — still waiting on the {approverOf(detail)}. Check back later.</p>
                     )}
                     {detail.Status === 'OnHold' && (
                       <p style={{ margin: 0, fontSize: 13 }}>
@@ -325,7 +441,7 @@ export default function RequisitionApprovalStatusPage() {
                         {canResubmit && (
                           resubmitDone ? (
                             <p style={{ margin: '10px 0 0', fontSize: 13, color: '#166534', fontWeight: 600 }}>
-                              ✓ Resubmitted — back with the Ops Manager for a fresh review.
+                              ✓ Resubmitted — back with the {approverOf(detail)} for a fresh review.
                             </p>
                           ) : (
                             <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #fca5a5' }}>
@@ -338,7 +454,7 @@ export default function RequisitionApprovalStatusPage() {
                                 style={{ marginBottom: 8 }} />
                               <button className="btn btn-primary" style={{ padding: '6px 14px', fontSize: 13 }}
                                 disabled={resubmitting} onClick={() => handleResubmit('resubmit')}>
-                                {resubmitting ? 'Resubmitting…' : '↩ Resubmit to Ops Manager'}
+                                {resubmitting ? 'Resubmitting…' : `↩ Resubmit to ${approverOf(detail)}`}
                               </button>
                             </div>
                           )
@@ -354,7 +470,7 @@ export default function RequisitionApprovalStatusPage() {
                       </p>
                     )}
                     {detail.CentralStoresNotes && <p style={{ margin: '8px 0 0', fontSize: 13 }}><strong>Central Stores notes:</strong> {detail.CentralStoresNotes}</p>}
-                    {detail.OpsNotes && <p style={{ margin: '8px 0 0', fontSize: 13 }}><strong>Ops Manager notes:</strong> {detail.OpsNotes}</p>}
+                    {detail.OpsNotes && <p style={{ margin: '8px 0 0', fontSize: 13 }}><strong>{approverOf(detail)} notes:</strong> {detail.OpsNotes}</p>}
                   </div>
 
                   {detail.centralStoresDecisions && detail.centralStoresDecisions.length > 0 && (
@@ -389,7 +505,7 @@ export default function RequisitionApprovalStatusPage() {
                     <tbody>
                       {(detail.items || []).map((it) => (
                         <tr key={it.RequisitionItemId}>
-                          <td>{it.ItemName}</td>
+                          <td>{it.ItemName}<PreferredSupplierNote item={it} /></td>
                           <td style={{ textAlign: 'center' }}>{Number(it.Qty).toLocaleString()}</td>
                           <td>
                             {it.ItemDecision
@@ -402,6 +518,12 @@ export default function RequisitionApprovalStatusPage() {
                       ))}
                     </tbody>
                   </table>
+
+                  <ResubmitRejectedItems
+                    detail={detail}
+                    canResubmit={['FactoryReceiving', 'FactoryQA', 'StoreReceiving', 'Admin'].includes(user?.role)}
+                    onDone={() => { load(); openDetail(selected); }}
+                  />
                 </>
               )}
             </div>

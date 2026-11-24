@@ -146,6 +146,12 @@ export default function GRNListPage() {
                   <td>{g.ReceivedByName}</td>
                   <td>{new Date(g.ReceivedAt).toLocaleString()}</td>
                   <td style={{ display: 'flex', gap: 4 }}>
+                    {(g.BusyGRNNo || /^njr-/i.test(g.GRNNo || '')) && (
+                      <button className="btn btn-primary" style={{ padding: '4px 10px', fontSize: 12 }}
+                        onClick={() => window.open(`/grn-print/${g.EntryId}`, '_blank')} title="GRN with Busy amounts — for Accounts">
+                        🖨️ Busy GRN
+                      </button>
+                    )}
                     <button className="btn btn-outline" style={{ padding: '4px 10px', fontSize: 12 }}
                       onClick={() => handlePrint(g.GRNNo)} title="Print GRN Receipt">
                       🖨️ Print

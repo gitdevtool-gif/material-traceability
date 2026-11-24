@@ -25,7 +25,7 @@ async function generateRejectionNo(transaction) {
 }
 
 // ──── POST /api/rejections — Create Goods Rejection Note ────
-router.post('/', authenticate, authorize('QAInspector', 'QAManager', 'Supervisor', 'Admin'), async (req, res, next) => {
+router.post('/', authenticate, authorize('QAInspector', 'QAManager', 'FactoryQA', 'Supervisor', 'Admin'), async (req, res, next) => {
   try {
     const { entryNo, rejectionReason, notes, items } = req.body;
     if (!entryNo || !rejectionReason) return res.status(400).json({ error: 'entryNo and rejectionReason are required' });

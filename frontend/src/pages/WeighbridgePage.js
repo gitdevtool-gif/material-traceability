@@ -59,6 +59,8 @@ export default function WeighbridgePage() {
   const [selected, setSelected] = useState(null);
   const [itemWeights, setItemWeights] = useState([]);
   const [entryForm, setEntryForm] = useState({ ticketNo: '', nonPOReason: '', destination: '', locationId: '', skipQA: false });
+  const [together, setTogether] = useState(false);              // weigh all items as one load
+  const [combined, setCombined] = useState(() => blankItemWeight(null));
   const [poLines, setPoLines] = useState([]);
   const [poState, setPoState] = useState({ loading: false, busySupplier: true, message: '' });
   const [saving, setSaving] = useState(false);
@@ -81,7 +83,10 @@ export default function WeighbridgePage() {
     setSelected(entry);
     const itemList = entry.items || [];
     setItemWeights(itemList.length > 0 ? itemList.map((i) => blankItemWeight(i)) : [blankItemWeight(null)]);
-    setEntryForm({ ticketNo: '', nonPOReason: '', destination: '', locationId: '', skipQA: false });
+    setTogether(false);
+    setCombined(blankItemWeight(null));
+    // Another supplier on the same truck already weighed: same ticket.
+    setEntryForm({ ticketNo: entry.TruckTicket || '', nonPOReason: '', destination: '', locationId: '', skipQA: false });
     setError('');
     setSuccess('');
 
@@ -113,37 +118,31 @@ export default function WeighbridgePage() {
 
   const isMultiItem = selected && (selected.items || []).length > 1;
 
+  // Net and final net (after bags) from the two weights.
+  const recalc = (row) => {
+    const f = parseFloat(row.firstWeight);
+    const s = parseFloat(row.secondWeight);
+    row.netWeight = !isNaN(f) && !isNaN(s) && (f > 0 || s > 0) ? Math.abs(f - s).toFixed(2) : '';
+    if (row.deductBagWeight) {
+      const bagW = parseFloat(row.bagWeight);
+      const net = parseFloat(row.netWeight);
+      row.finalNetWeight = !isNaN(bagW) && bagW > 0 && !isNaN(net) ? (net - bagW).toFixed(2) : row.netWeight;
+    } else {
+      row.finalNetWeight = row.netWeight;
+      row.bagWeight = '';
+    }
+    return row;
+  };
+
   const updateItemWeight = (idx, field, value) => {
     setItemWeights((prev) => {
       const updated = [...prev];
-      const row = { ...updated[idx], [field]: value };
-
-      // Recalculate netWeight
-      const f = parseFloat(row.firstWeight);
-      const s = parseFloat(row.secondWeight);
-      row.netWeight =
-        !isNaN(f) && !isNaN(s) && (f > 0 || s > 0)
-          ? Math.abs(f - s).toFixed(2)
-          : '';
-
-      // Recalculate finalNetWeight
-      if (row.deductBagWeight) {
-        const bagW = parseFloat(row.bagWeight);
-        const net = parseFloat(row.netWeight);
-        if (!isNaN(bagW) && bagW > 0 && !isNaN(net)) {
-          row.finalNetWeight = (net - bagW).toFixed(2);
-        } else {
-          row.finalNetWeight = row.netWeight;
-        }
-      } else {
-        row.finalNetWeight = row.netWeight;
-        row.bagWeight = '';
-      }
-
-      updated[idx] = row;
+      updated[idx] = recalc({ ...updated[idx], [field]: value });
       return updated;
     });
   };
+  // "Weigh all items together": one weighing for the whole load (one ticket, one set of weights).
+  const updateCombined = (field, value) => setCombined((c) => recalc({ ...c, [field]: value }));
 
   const linesFor = (row) => poLines.filter((l) => l.itemCode === row.busyItemCode);
   // Busy items that go through without a PO line need a reason.
@@ -157,7 +156,8 @@ export default function WeighbridgePage() {
     setSuccess('');
 
     if (!entryForm.ticketNo.trim()) { setError('Enter the weighbridge ticket number'); return; }
-    for (const it of itemWeights) {
+    const weighed = isMultiItem && together ? [{ ...combined, materialName: 'the load' }] : itemWeights;
+    for (const it of weighed) {
       if (!it.firstWeight || !it.secondWeight) {
         setError(isMultiItem ? `Enter weights for: ${it.materialName}` : 'Enter 1st and 2nd weight');
         return;
@@ -189,6 +189,16 @@ export default function WeighbridgePage() {
         destination: entryForm.destination,
         locationId: entryForm.locationId ? parseInt(entryForm.locationId, 10) : null,
         skipQA: entryForm.skipQA,
+        weighTogether: Boolean(isMultiItem && together),
+        combined: isMultiItem && together ? {
+          firstWeight: parseFloat(combined.firstWeight),
+          secondWeight: parseFloat(combined.secondWeight),
+          netWeight: parseFloat(combined.netWeight),
+          deductBagWeight: combined.deductBagWeight,
+          bagWeight: combined.deductBagWeight ? parseFloat(combined.bagWeight) || 0 : null,
+          finalNetWeight: parseFloat(combined.finalNetWeight) || parseFloat(combined.netWeight),
+          remarks: combined.remarks || null,
+        } : undefined,
         items: itemWeights.map((it) => {
           const base = {
             entryItemId: it.entryItemId || null,
@@ -249,7 +259,10 @@ export default function WeighbridgePage() {
         <option value="">— Not on a PO —</option>
         {lines.map((l) => (
           <option key={l.refCode} value={l.refCode}>
-            {l.poNo} · pending {fmtQty(l.pending)} {l.unitName || ''}
+            {/* date + price so an old PO at another price stands out (Pur-155 vs Pur-2946, 2026-11-02) */}
+            {l.refNo && l.refNo !== l.poNo ? `${l.poNo} line ${Number(l.refNo.split('/').pop()) + 1}` : l.poNo}
+            {l.poDate ? ` (${new Date(l.poDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })})` : ''}
+            {` · @${l.price} · pending ${fmtQty(l.pending)} ${l.unitName || ''}`}
             {!l.approved ? ' · awaiting approval' : ''}
             {l.atGate ? ` · already on ${l.atGate.entryNos}` : ''}
           </option>
@@ -338,6 +351,64 @@ export default function WeighbridgePage() {
       </>
     );
   };
+
+  // ── All items weighed together (one load, one ticket, one set of weights) ──
+  const renderTogether = () => (
+    <>
+      <h4 style={{ marginBottom: 10 }}>Load weight (all {itemWeights.length} materials together)</h4>
+      <div className="form-row">
+        <div className="form-group">
+          <label>1st Weight (kg) *</label>
+          <input type="number" step="0.01" required value={combined.firstWeight}
+            onChange={(e) => updateCombined('firstWeight', e.target.value)} />
+        </div>
+        <div className="form-group">
+          <label>2nd Weight (kg) *</label>
+          <input type="number" step="0.01" required value={combined.secondWeight}
+            onChange={(e) => updateCombined('secondWeight', e.target.value)} />
+        </div>
+        <div className="form-group">
+          <label>Net Weight (kg)</label>
+          <input type="number" step="0.01" value={combined.netWeight} readOnly style={{ background: '#f3f4f6', fontWeight: 600 }} />
+        </div>
+      </div>
+      <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <input type="checkbox" id="deductBagTogether" checked={combined.deductBagWeight}
+          onChange={(e) => updateCombined('deductBagWeight', e.target.checked)} />
+        <label htmlFor="deductBagTogether" style={{ margin: 0 }}>Deduct bag weight from net weight?</label>
+      </div>
+      {combined.deductBagWeight && (
+        <div className="form-row">
+          <div className="form-group">
+            <label>Bag Weight to Deduct (kg)</label>
+            <input type="number" step="0.01" value={combined.bagWeight} onChange={(e) => updateCombined('bagWeight', e.target.value)} />
+          </div>
+          <div className="form-group">
+            <label>Final Net Weight (kg)</label>
+            <input type="number" step="0.01" value={combined.finalNetWeight} readOnly style={{ background: '#e8f5e9', fontWeight: 600, color: '#2e7d32' }} />
+          </div>
+        </div>
+      )}
+      <table className="data-table" style={{ marginBottom: 12 }}>
+        <thead><tr><th>Material</th><th>Busy PO</th></tr></thead>
+        <tbody>
+          {itemWeights.map((row, idx) => (
+            <tr key={row.entryItemId || idx}>
+              <td style={{ fontWeight: 500 }}>{row.materialName}</td>
+              <td>{renderPoSelect(row, idx, true)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 12 }}>
+        Each material's own quantity is confirmed by Stores when they receive it (GRN).
+      </div>
+      <div className="form-group">
+        <label>Remarks</label>
+        <textarea rows="2" value={combined.remarks} onChange={(e) => updateCombined('remarks', e.target.value)} />
+      </div>
+    </>
+  );
 
   // ── Per-item table (multiple materials) ───────────────────────────────────
   const renderMultiTable = () => (
@@ -494,6 +565,7 @@ export default function WeighbridgePage() {
                     <td style={{ whiteSpace: 'nowrap' }}>
                       <strong>{p.VehicleRegNo}</strong>
                       {p.DriverName && <div style={{ fontSize: 11, color: 'var(--gray-500)' }}>{p.DriverName}</div>}
+                      {p.SameTruck && <div style={{ fontSize: 11, color: '#92400e' }} title={`Same truck: ${p.SameTruck}`}>🚚 shared truck</div>}
                     </td>
                     <td style={{ fontSize: 12, whiteSpace: 'nowrap', color: 'var(--gray-600)' }}>
                       {p.DeliveryDate ? fmtDate(p.DeliveryDate) : '—'}
@@ -548,6 +620,12 @@ export default function WeighbridgePage() {
                   Vehicle: {selected.VehicleRegNo}{selected.DriverName ? ` · Driver: ${selected.DriverName}` : ''}
                 </span>
                 {selected.Notes && <div style={{ fontSize: 12, color: 'var(--gray-600)', marginTop: 4 }}>Gate notes: {selected.Notes}</div>}
+                {selected.SameTruck && (
+                  <div style={{ fontSize: 12, color: '#92400e', marginTop: 4 }}>
+                    🚚 Same truck also carries: {selected.SameTruck} — they share this truck's ticket
+                    {selected.TruckTicket ? ` (${selected.TruckTicket}, filled in below)` : ''}.
+                  </div>
+                )}
                 {isMultiItem && (
                   <div style={{ color: 'var(--primary)', fontSize: 13, marginTop: 4 }}>
                     {selected.items.length} materials — weigh each separately below
@@ -571,7 +649,13 @@ export default function WeighbridgePage() {
               )}
 
               {/* Weight input */}
-              {isMultiItem ? renderMultiTable() : renderSingleForm()}
+              {isMultiItem && (
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, cursor: 'pointer', fontSize: 14 }}>
+                  <input type="checkbox" checked={together} onChange={(e) => setTogether(e.target.checked)} />
+                  Weigh all {selected.items.length} materials together (one weighing for the load)
+                </label>
+              )}
+              {isMultiItem ? (together ? renderTogether() : renderMultiTable()) : renderSingleForm()}
 
               {offPoItems.length > 0 && !poState.loading && (
                 <div className="form-group">

@@ -5,6 +5,7 @@
  * in Busy). Read-only against Busy; see services/stock.service.js.
  *
  *   POST /api/stock/picture   { itemNames?: string[], itemCodes?: number[] }
+ *   POST /api/stock/purchase-history { itemNames?, itemCodes?, months? }
  *   GET  /api/stock/batches?itemCode=&store=
  */
 const express = require('express');
@@ -39,6 +40,30 @@ router.post('/picture', authenticate, async (req, res, next) => {
       asOf: new Date().toISOString(),
     };
     cache.set(key, { value, expires: Date.now() + CACHE_MS });
+    if (cache.size > 500) cache.delete(cache.keys().next().value);
+    res.json(value);
+  } catch (err) { next(err); }
+});
+
+// ── POST /api/stock/purchase-history { itemNames?, itemCodes?, months? } ──
+// Busy purchase analysis per item: purchases in the last N months (default 3,
+// max 12) with supplier, qty and price per unit, plus avg / min / max / latest.
+router.post('/purchase-history', authenticate, async (req, res, next) => {
+  try {
+    const itemNames = Array.isArray(req.body.itemNames) ? req.body.itemNames.map(String).slice(0, 200) : [];
+    const itemCodes = Array.isArray(req.body.itemCodes) ? req.body.itemCodes.map((c) => parseInt(c, 10)).filter(Number.isFinite).slice(0, 200) : [];
+    const months = Math.min(12, Math.max(1, parseInt(req.body.months, 10) || 3));
+    if (!itemNames.length && !itemCodes.length) return res.json({ items: [], months });
+
+    const key = `ph:${months}:${JSON.stringify([itemNames.map((n) => n.trim().toUpperCase()).sort(), [...itemCodes].sort()])}`;
+    const hit = cache.get(key);
+    if (hit && hit.expires > Date.now()) return res.json(hit.value);
+
+    const erpPool = await getErpPool();
+    const items = await stock.resolveItems(erpPool, { itemNames, itemCodes });
+    const history = await stock.getPurchaseHistory(erpPool, items, { months });
+    const value = { months, items: items.map((i) => history.get(i.itemCode)), asOf: new Date().toISOString() };
+    cache.set(key, { value, expires: Date.now() + CACHE_MS * 5 });
     if (cache.size > 500) cache.delete(cache.keys().next().value);
     res.json(value);
   } catch (err) { next(err); }

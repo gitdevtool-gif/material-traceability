@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import ReceiveInBusyModal from '../components/ReceiveInBusyModal';
 
 const fmtDT = (v) => {
   if (!v) return '—';
@@ -23,6 +24,28 @@ export default function ReceivingPage() {
   const [erpResults, setErpResults] = useState([]);
   const [erpLoading, setErpLoading] = useState(false);
   const [selectedErpVchNo, setSelectedErpVchNo] = useState('');
+  const [busyReceive, setBusyReceive] = useState(null); // entry being received in Busy from here
+  const [received, setReceived] = useState([]);         // recently received — for printing the GRN
+  const [search, setSearch] = useState('');
+  const [factoryFilter, setFactoryFilter] = useState('');
+  const [myFactory, setMyFactory] = useState(null);     // set when this user only sees their own factory
+
+  const factoryOf = (e) => e.LocationName || (e.Destination === 'CentralStore' ? 'CENTRAL STORES' : e.Destination) || '—';
+  const words = search.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const shownEntries = entries.filter((e) => {
+    if (factoryFilter && factoryOf(e) !== factoryFilter) return false;
+    if (!words.length) return true;
+    const hay = [e.EntryNo, e.SupplierName, e.SupplierCode, e.VehicleRegNo, e.ConsignmentNo, e.PurchaseOrderNo, factoryOf(e)].join(' ').toLowerCase();
+    return words.every((w) => hay.includes(w));
+  });
+  const factoryOptions = [...new Set(entries.map(factoryOf))].sort();
+
+  const loadReceived = () => {
+    api.get('/entries', { params: { status: 'GRNCreated', limit: 15 } })
+      .then((r) => setReceived((r.data.data || []).filter((e) => e.BusyGRNNo)))
+      .catch(() => {});
+  };
+  useEffect(() => { loadReceived(); }, []);
 
   const loadPendingEntries = async () => {
     const statuses = ['OpsManagerApproved', 'CentralStoreReceived'];
@@ -31,8 +54,11 @@ export default function ReceivingPage() {
       statuses.push('QAAccepted');
     }
 
+    // mine=1: factory receiving clerks only get deliveries for their own factory.
     const results = await Promise.all(
-      statuses.map((status) => api.get(`/entries?status=${status}`).then(r => r.data.data).catch(() => []))
+      statuses.map((status) => api.get('/entries', { params: { status, mine: 1, limit: 300 } })
+        .then((r) => { if (r.data.myFactory) setMyFactory(r.data.myFactory); return r.data.data; })
+        .catch(() => []))
     );
 
     // Deduplicate by EntryId when an entry may appear in overlapping status fetches.
@@ -190,14 +216,31 @@ export default function ReceivingPage() {
 
       {/* Pending entries */}
       <div className="card">
-        <h3 style={{ marginBottom: 12 }}>Entries Awaiting GRN ({entries.length})</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
+          <h3 style={{ margin: 0 }}>
+            Entries Awaiting GRN ({words.length || factoryFilter ? `${shownEntries.length} of ${entries.length}` : entries.length})
+            {myFactory && <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--gray-500)' }}> · your factory {myFactory} only</span>}
+          </h3>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <input type="search" value={search} onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter' && shownEntries.length === 1) { setSuccess(''); setBusyReceive(shownEntries[0]); } }}
+              placeholder="Search supplier, entry no, vehicle, PO…"
+              style={{ minWidth: 260, padding: '6px 10px', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius)' }} />
+            {!myFactory && (
+              <select value={factoryFilter} onChange={(e) => setFactoryFilter(e.target.value)} style={{ minWidth: 150 }}>
+                <option value="">All factories</option>
+                {factoryOptions.map((f) => <option key={f} value={f}>{f}</option>)}
+              </select>
+            )}
+          </div>
+        </div>
         <div className="table-wrapper">
           <table className="data-table">
             <thead>
               <tr><th>Entry No</th><th>Supplier</th><th>Consignment</th><th>Vehicle</th><th>Delivery Date</th><th>Net Wt</th><th>Destination</th><th></th></tr>
             </thead>
             <tbody>
-              {entries.map((e) => (
+              {shownEntries.map((e) => (
                 <tr key={e.EntryId}>
                   <td><strong>{e.EntryNo}</strong></td>
                   <td>{e.SupplierName}</td>
@@ -209,21 +252,65 @@ export default function ReceivingPage() {
                   </td>
                   <td>{e.NetWeight} kg</td>
                   <td><span className={`badge ${e.Status === 'OpsManagerApproved' ? 'badge-green' : 'badge-blue'}`}>
-                    {e.Status === 'OpsManagerApproved' ? 'Factory (Ops Approved)' : 'Central Store'}
+                    {factoryOf(e)}{e.Status === 'OpsManagerApproved' ? ' · Ops approved' : e.Status === 'QAAccepted' ? ' · QA accepted' : ''}
                   </span></td>
-                  <td>
-                    <button className="btn btn-primary" style={{ padding: '4px 12px', fontSize: 13, whiteSpace: 'nowrap' }}
-                      onClick={() => handleSelect(e)}>Receive</button>
+                  <td style={{ whiteSpace: 'nowrap' }}>
+                    <button className="btn btn-primary" style={{ padding: '4px 12px', fontSize: 13, marginRight: 6 }}
+                      onClick={() => { setSuccess(''); setBusyReceive(e); }}
+                      title="Make the Busy GRN from here against the supplier's PO — no re-typing in Busy">Receive in Busy</button>
+                    <button className="btn btn-outline" style={{ padding: '4px 10px', fontSize: 12 }}
+                      onClick={() => handleSelect(e)} title="Already received in Busy by hand — link that GRN">Link Busy GRN</button>
                   </td>
                 </tr>
               ))}
-              {entries.length === 0 && (
-                <tr><td colSpan="8" className="text-center text-muted">No entries pending receiving</td></tr>
+              {shownEntries.length === 0 && (
+                <tr><td colSpan="8" className="text-center text-muted">
+                  {entries.length ? 'Nothing matches the search / factory' : 'No entries pending receiving'}
+                </td></tr>
               )}
             </tbody>
           </table>
         </div>
       </div>
+
+      {/* Received — print the GRN for Accounts */}
+      {received.length > 0 && (
+        <div className="card">
+          <h3 style={{ marginBottom: 12 }}>Recently received — print GRN for Accounts</h3>
+          <div className="table-wrapper">
+            <table className="data-table">
+              <thead><tr><th>Busy GRN</th><th>Entry No</th><th>Supplier</th><th>Vehicle</th><th>Delivery Date</th><th></th></tr></thead>
+              <tbody>
+                {received.map((e) => (
+                  <tr key={e.EntryId}>
+                    <td><strong>{e.BusyGRNNo}</strong></td>
+                    <td>{e.EntryNo}</td>
+                    <td>{e.SupplierName}</td>
+                    <td>{e.VehicleRegNo}</td>
+                    <td>{fmtDate(e.DeliveryDate)}</td>
+                    <td>
+                      <button className="btn btn-outline" style={{ padding: '4px 12px', fontSize: 13 }}
+                        onClick={() => window.open(`/grn-print/${e.EntryId}`, '_blank')}>🖨 Print GRN</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {busyReceive && (
+        <ReceiveInBusyModal
+          entry={busyReceive}
+          onClose={() => setBusyReceive(null)}
+          onReceived={(r) => {
+            setSuccess(`${busyReceive.EntryNo} received in Busy as ${r.grnNo}.`);
+            loadPendingEntries();
+            loadReceived();
+          }}
+        />
+      )}
 
       {/* GRN Form Modal */}
       {selected && (

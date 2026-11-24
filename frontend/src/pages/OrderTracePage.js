@@ -151,7 +151,7 @@ export default function OrderTracePage() {
                           <tr key={`${r.voucher}-${r.date}`}>
                             <td>{r.voucher}<div style={{ color: '#6b7280' }}>{date(r.date)}{r.vehicle ? ` · ${r.vehicle}` : ''}</div></td>
                             <td>{num(r.qty)}</td>
-                            <td>{r.gateEntries.length ? r.gateEntries.map((e) => <div key={e.entryNo}>{e.entryNo}{e.qa ? ` · QA ${e.qa}` : ''}{e.netWeight ? ` · ${num(e.netWeight)} kg` : ''}</div>)
+                            <td>{r.gateEntries.length ? r.gateEntries.map((e) => <div key={e.entryNo}>{e.entryNo}{e.ticketNo ? ` · ticket ${e.ticketNo}` : ''}{e.qa ? ` · QA ${e.qa}` : ''}{e.netWeight ? ` · ${num(e.netWeight)} kg` : ''}</div>)
                               : <span style={{ color: '#991b1b' }}>no gate entry</span>}</td>
                             <td>{r.bills.length ? r.bills.map((b) => <div key={b.vchCode}>{b.billNo}{b.supplierInvoiceNo ? ` · inv ${b.supplierInvoiceNo}` : ''}</div>) : r.billed}</td>
                             <td>{r.paid || '—'}</td>
@@ -161,7 +161,7 @@ export default function OrderTracePage() {
                     </table>
                   )}
                   {it.atGate.length > 0 && (
-                    <div style={{ fontSize: 12, marginTop: 6 }}>On a truck at the gate now: {it.atGate.map((e) => `${e.entryNo} (${e.status})`).join(', ')}</div>
+                    <div style={{ fontSize: 12, marginTop: 6 }}>On a truck at the gate now: {it.atGate.map((e) => `${e.entryNo}${e.ticketNo ? ` · ticket ${e.ticketNo}` : ''} (${e.status})`).join(', ')}</div>
                   )}
                 </div>
               </div>

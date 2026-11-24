@@ -209,7 +209,7 @@ export default function CreateRequisitionPage() {
     }
     const missingUnit = rows.some((r) => r.itemOption && !r.unit);
     if (missingUnit) {
-      setError('Every item needs a unit of measure (Kgs, Pcs, Metres, Litres, Set, or Rim)');
+      setError(`Every item needs a unit of measure (${unitOptions.join(', ')})`);
       return;
     }
 
@@ -271,7 +271,7 @@ export default function CreateRequisitionPage() {
             Requisition <strong>{success.busyOrdNo}</strong> submitted — {
               success.orderType === 'Fuel'                       ? "fuel order sent straight to Procurement to raise the PO in Busy."
               : success.status === 'PendingCentralStoresApproval' ? "it's now with Central Stores for review."
-              : success.status === 'PendingOpsApproval'         ? "it's now with the Ops Manager for review."
+              : success.status === 'PendingOpsApproval'         ? `it's now with the ${String(matCenter).trim().toLowerCase() === 'workshop' ? 'Workshop HOD' : 'Ops Manager'} for review.`
               : "it's now visible to Procurement."
             }
           </span>

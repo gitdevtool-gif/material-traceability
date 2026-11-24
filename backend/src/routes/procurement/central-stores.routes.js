@@ -23,6 +23,7 @@ const express = require('express');
 const { getPool, sql } = require('../../db');
 const { authenticate, authorize } = require('../../middleware/auth');
 const { matCenterRequiresOpsApproval } = require('../../services/procurement-sync.service');
+const { isWorkshopMatCenter } = require('../../services/requisition-gate');
 
 const router = express.Router();
 const ROLES = ['StoreReceiving', 'Admin'];
@@ -198,9 +199,18 @@ router.patch('/:id/decision', authenticate, authorize(...ROLES), async (req, res
 
       await transaction.commit();
 
+      // Workshop requisitions go to the Workshop HOD, never the Ops Manager —
+      // email the HOD the same Approve All / Hold links the gate uses (2026-10-30).
+      const workshop = isWorkshopMatCenter(matCenter);
+      if (newStatus === 'PendingOpsApproval' && workshop) {
+        const { sendApprovalEmailForRequisition } = require('./requisition-approval.routes');
+        sendApprovalEmailForRequisition(id).catch(() => {});
+      }
+
       res.json({
         ok: true,
         status: newStatus,
+        approver: newStatus === 'PendingOpsApproval' ? (workshop ? 'Workshop HOD' : 'Ops Manager') : null,
         approvedCount: items.filter((it) => it.decision === 'Approved').length,
         rejectedCount: items.filter((it) => it.decision === 'Rejected').length,
       });

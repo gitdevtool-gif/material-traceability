@@ -26,6 +26,7 @@ const { getPool, sql } = require('../../db');
 const { getErpPool, sql: erpSql } = require('../../erpDb');
 const { authenticate, authorize } = require('../../middleware/auth');
 const { scoreQuotations } = require('../../services/quote-scoring.service');
+const { writeAuditLog } = require('../../services/audit.service');
 
 const router = express.Router();
 
@@ -243,27 +244,25 @@ router.get('/held', authenticate, authorize('Admin', 'Procurement', 'Director'),
 // remaining active item, the whole requisition is cancelled as a side
 // effect (mirrors RejectedByOps/RejectedByCentralStores dead-ending when
 // zero items survive elsewhere in this system).
-router.post('/held/:requisitionItemId/cancel', authenticate, authorize('Admin', 'Procurement'), async (req, res, next) => {
-  try {
-    const requisitionItemId = parseInt(req.params.requisitionItemId, 10);
-    const { reason } = req.body;
-    if (!reason || !reason.trim()) {
-      return res.status(400).json({ error: 'A reason is required to cancel this item' });
-    }
+// The Director may cancel long-held items too (2026-10-22), one at a time
+// or in bulk (POST /held/cancel-bulk), so the approval list stays short.
+const CANCEL_HOLD_ROLES = ['Admin', 'Procurement', 'Director'];
+const byRole = { Director: 'Director', Procurement: 'Procurement', Admin: 'Admin' };
 
-    const pool = await getPool();
+/** Cancel one held item. Returns { ok, status?, error?, requisitionCancelled?, itemName? }. */
+async function cancelHeldItem(pool, requisitionItemId, reason, user) {
     const itemResult = await pool.request().input('id', sql.Int, requisitionItemId).query(
       'SELECT RequisitionItemId, RequisitionId, RFQId, ItemName FROM dbo.RequisitionItems WHERE RequisitionItemId = @id'
     );
-    if (!itemResult.recordset[0]) return res.status(404).json({ error: 'Item not found' });
+    if (!itemResult.recordset[0]) return { ok: false, status: 404, error: 'Item not found' };
     const item = itemResult.recordset[0];
-    if (!item.RFQId) return res.status(400).json({ error: 'This item is not linked to an RFQ' });
+    if (!item.RFQId) return { ok: false, status: 400, error: 'This item is not linked to an RFQ' };
 
     const holdCheck = await pool.request()
       .input('rfqId', sql.Int, item.RFQId).input('itemId', sql.Int, requisitionItemId)
       .query('SELECT RFQItemHoldId FROM dbo.RFQItemHolds WHERE RFQId = @rfqId AND RequisitionItemId = @itemId');
     if (holdCheck.recordset.length === 0) {
-      return res.status(400).json({ error: 'This item is not currently on hold' });
+      return { ok: false, status: 400, error: `"${item.ItemName}" is not currently on hold` };
     }
 
     const transaction = new sql.Transaction(pool);
@@ -280,8 +279,8 @@ router.post('/held/:requisitionItemId/cancel', authenticate, authorize('Admin', 
         .query('DELETE FROM dbo.RequisitionItemApprovals WHERE RequisitionItemId = @itemId');
       await new sql.Request(transaction)
         .input('itemId', sql.Int, requisitionItemId)
-        .input('reason', sql.NVarChar(500), `Cancelled by Procurement: ${reason.trim()}`)
-        .input('userId', sql.Int, req.user.userId)
+        .input('reason', sql.NVarChar(500), `Cancelled by ${byRole[user.role] || 'Procurement'}: ${reason.trim()}`)
+        .input('userId', sql.Int, user.userId)
         .query(`
           INSERT INTO dbo.RequisitionItemApprovals (RequisitionItemId, Decision, RejectionReason, DecidedByUserId)
           VALUES (@itemId, 'Rejected', @reason, @userId)
@@ -325,11 +324,55 @@ router.post('/held/:requisitionItemId/cancel', authenticate, authorize('Admin', 
       }
 
       await transaction.commit();
-      res.json({ ok: true, requisitionCancelled });
+      writeAuditLog({
+        entityType: 'RequisitionItem', entityId: requisitionItemId, action: 'StatusChange', userId: user.userId,
+        newValues: { event: 'HeldItemCancelled', rfqId: item.RFQId, item: item.ItemName, reason: reason.trim(), requisitionCancelled },
+        ipAddress: user.ip, userAgent: user.userAgent,
+      });
+      return { ok: true, requisitionCancelled, itemName: item.ItemName };
     } catch (txErr) {
       await transaction.rollback().catch(() => {});
       throw txErr;
     }
+}
+
+const auditUser = (req) => ({ userId: req.user.userId, role: req.user.role, ip: req.ip, userAgent: req.get('User-Agent') });
+
+router.post('/held/:requisitionItemId/cancel', authenticate, authorize(...CANCEL_HOLD_ROLES), async (req, res, next) => {
+  try {
+    const { reason } = req.body;
+    if (!reason || !reason.trim()) {
+      return res.status(400).json({ error: 'A reason is required to cancel this item' });
+    }
+    const outcome = await cancelHeldItem(await getPool(), parseInt(req.params.requisitionItemId, 10), reason, auditUser(req));
+    if (!outcome.ok) return res.status(outcome.status).json({ error: outcome.error });
+    res.json({ ok: true, requisitionCancelled: outcome.requisitionCancelled });
+  } catch (err) { next(err); }
+});
+
+// ── POST /api/procurement/evaluation/held/cancel-bulk ──────────────────────
+// { requisitionItemIds: [...], reason } — cancel several held items at once
+// (e.g. everything held for over 30 days). Each item in its own transaction;
+// reports which were cancelled and which could not be.
+router.post('/held/cancel-bulk', authenticate, authorize(...CANCEL_HOLD_ROLES), async (req, res, next) => {
+  try {
+    const ids = [...new Set((Array.isArray(req.body.requisitionItemIds) ? req.body.requisitionItemIds : [])
+      .map((x) => parseInt(x, 10)).filter(Boolean))].slice(0, 200);
+    const reason = String(req.body.reason || '').trim();
+    if (!ids.length) return res.status(400).json({ error: 'Choose the held items to cancel' });
+    if (!reason) return res.status(400).json({ error: 'A reason is required to cancel these items' });
+    const pool = await getPool();
+    const cancelled = [];
+    const failed = [];
+    for (const id of ids) {
+      try {
+        const o = await cancelHeldItem(pool, id, reason, auditUser(req));
+        (o.ok ? cancelled : failed).push({ requisitionItemId: id, item: o.itemName || null, error: o.error, requisitionCancelled: o.requisitionCancelled });
+      } catch (e) {
+        failed.push({ requisitionItemId: id, error: e.message });
+      }
+    }
+    res.json({ cancelled, failed });
   } catch (err) { next(err); }
 });
 
@@ -606,9 +649,11 @@ router.get('/by-rfq/:rfqId', authenticate, authorize('Admin', 'Procurement', 'Di
     // though in practice they'd never have an RFQId set in the first
     // place (rfq.routes.js never links them).
     const allItemsResult = await pool.request().input('id', sql.Int, rfqId).query(`
-      SELECT ri.RequisitionItemId, ri.ItemName, ri.ItemCode, ri.Qty AS RequiredQty, ri.Category
+      SELECT ri.RequisitionItemId, ri.ItemName, ri.ItemCode, ri.Qty AS RequiredQty, ri.Category,
+             ri.PreferredSupplierId, COALESCE(ps.SupplierName, ri.PreferredSupplierName) AS PreferredSupplierName
       FROM dbo.RequisitionItems ri
       LEFT JOIN dbo.RequisitionItemApprovals ia ON ia.RequisitionItemId = ri.RequisitionItemId
+      LEFT JOIN dbo.Suppliers ps ON ps.SupplierId = ri.PreferredSupplierId
       WHERE ri.RFQId = @id AND ISNULL(ia.Decision, 'Approved') = 'Approved'
       ORDER BY ri.ItemName
     `);
@@ -703,7 +748,10 @@ router.get('/by-rfq/:rfqId', authenticate, authorize('Admin', 'Procurement', 'Di
 // cover those still-undecided items (already-awarded ones are immutable
 // and excluded from what's required this time). Requisitions only flip
 // to Status = 'Approved' once ZERO holds remain for the RFQ.
-router.post('/', authenticate, authorize('Admin', 'Director'), async (req, res, next) => {
+// Director only (2026-10-22): Admin was allowed here, so 3 awards approved
+// while signed in as the admin account (RFQ-2026-0112/0113/0116, 19–21 Oct)
+// show "approved by" the admin user. Every approval is now audited too.
+router.post('/', authenticate, authorize('Director'), async (req, res, next) => {
   try {
     const { rfqId, notes, awards, holds } = req.body;
     const rfqIdInt = parseInt(rfqId, 10);
@@ -921,6 +969,13 @@ router.post('/', authenticate, authorize('Admin', 'Director'), async (req, res, 
       }
 
       await transaction.commit();
+      // Who approved, from where — approvals were never audited before 2026-10-22.
+      writeAuditLog({
+        entityType: 'QuoteEvaluation', entityId: evaluation?.QuoteEvaluationId ?? rfqIdInt, action: 'Create',
+        userId: req.user.userId,
+        newValues: { event: 'AwardsApproved', rfqId: rfqIdInt, awards: awardsArr.length, holds: holdsArr.length, fullyResolved, notes: notes || null },
+        ipAddress: req.ip, userAgent: req.get('User-Agent'),
+      });
       res.status(existingEvalId ? 200 : 201).json({
         ...evaluation,
         awardedCount: awardsArr.length,
@@ -993,6 +1048,11 @@ router.delete('/:rfqId', authenticate, authorize('Admin', 'Director'), async (re
       throw trxErr;
     }
 
+    writeAuditLog({
+      entityType: 'QuoteEvaluation', entityId: req.params.rfqId, action: 'Delete', userId: req.user.userId,
+      newValues: { event: 'AwardsApprovalUndone', rfqId: parseInt(req.params.rfqId, 10) },
+      ipAddress: req.ip, userAgent: req.get('User-Agent'),
+    });
     res.status(204).send();
   } catch (err) { next(err); }
 });

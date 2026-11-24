@@ -14,6 +14,32 @@ import * as XLSX from 'xlsx';
  *    still short — i.e. what to produce and what to buy.
  */
 const fmt = (n, dp = 3) => (n === null || n === undefined ? '—' : Number(n).toLocaleString(undefined, { maximumFractionDigits: dp }));
+
+/** "SUPERMARKET A (120), SUPERMARKET B (40)" — for Excel. */
+const customerText = (customers) => (customers || []).map((c) => `${c.name} (${fmt(c.pending)})`).join(', ');
+
+/** Customers waiting for one product, largest pending first; the rest folded after 3. */
+function CustomerList({ customers }) {
+  const [open, setOpen] = React.useState(false);
+  const list = customers || [];
+  if (!list.length) return <span style={{ color: '#9ca3af' }}>—</span>;
+  const shown = open ? list : list.slice(0, 3);
+  return (
+    <div style={{ fontSize: 12, lineHeight: 1.5 }}>
+      {shown.map((c) => (
+        <div key={c.name} title={c.soNos.length ? `Sales order(s): ${c.soNos.join(', ')}` : undefined}>
+          {c.name} <span style={{ color: '#6b7280' }}>· {fmt(c.pending)}</span>
+        </div>
+      ))}
+      {list.length > 3 && (
+        <button type="button" onClick={() => setOpen(!open)}
+          style={{ border: 'none', background: 'none', padding: 0, color: '#2563eb', cursor: 'pointer', fontSize: 11 }}>
+          {open ? 'show fewer' : `+ ${list.length - 3} more`}
+        </button>
+      )}
+    </div>
+  );
+}
 const STATUS_COLOR = {
   'In stock': '#065f46', 'Covered by open PO': '#1d4ed8', 'Short — buy': '#b91c1c', 'Overhead (not stocked)': '#6b7280',
 };
@@ -22,6 +48,7 @@ export default function ProductionPlanningPage() {
   const [demand, setDemand] = useState(null);
   const [demandError, setDemandError] = useState('');
   const [demandFilter, setDemandFilter] = useState('');
+  const [factoryFilter, setFactoryFilter] = useState(''); // '' = all factories
 
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
@@ -82,9 +109,26 @@ export default function ProductionPlanningPage() {
     }
   }, [lines, netSemi]);
 
+  // Filter matches the product or any customer waiting for it, within the chosen factory.
   const demandRows = useMemo(() => (demand || [])
-    .filter((d) => !demandFilter || d.itemName.toLowerCase().includes(demandFilter.toLowerCase()))
-    .slice(0, 200), [demand, demandFilter]);
+    .filter((d) => !factoryFilter || d.factory === factoryFilter)
+    .filter((d) => {
+      const q = demandFilter.trim().toLowerCase();
+      return !q || d.itemName.toLowerCase().includes(q)
+        || (d.customers || []).some((c) => c.name.toLowerCase().includes(q));
+    })
+    .slice(0, 200), [demand, demandFilter, factoryFilter]);
+  // Per factory: products waiting and how many need producing.
+  const factorySummary = useMemo(() => {
+    const m = new Map();
+    for (const d of demand || []) {
+      const f = m.get(d.factory) || { factory: d.factory, products: 0, toMake: 0 };
+      f.products += 1;
+      if (d.toProduce > 0) f.toMake += 1;
+      m.set(d.factory, f);
+    }
+    return [...m.values()].sort((a, b) => (a.factory === 'Other') - (b.factory === 'Other') || a.factory.localeCompare(b.factory, undefined, { numeric: true }));
+  }, [demand]);
 
   const materials = plan ? plan.materials.filter((m) => !shortOnly || m.shortage > 0) : [];
   const shortCount = plan ? plan.materials.filter((m) => m.shortage > 0).length : 0;
@@ -93,8 +137,9 @@ export default function ProductionPlanningPage() {
     if (!plan) return;
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(plan.products.map((p) => ({
-      Product: p.itemName, Recipe: p.bomName, 'Plan qty': p.planQty, Unit: p.unitName, Stock: p.stock,
+      Product: p.itemName, Factory: p.factory, Recipe: p.bomName, 'Plan qty': p.planQty, Unit: p.unitName, Stock: p.stock,
       'Pending sales orders': p.pendingSalesOrders, 'Sales order gap': p.salesOrderGap,
+      Customers: customerText(p.customers),
     }))), 'Products');
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(plan.semiFinished.map((s) => ({
       Level: s.level, Item: s.itemName, Unit: s.unitName, Required: s.required, Stock: s.stock, 'To produce': s.toProduce,
@@ -120,19 +165,39 @@ export default function ProductionPlanningPage() {
       {/* 1. Demand */}
       <div className="card" style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
-          <h3 style={{ margin: 0, fontSize: 15 }}>Customers waiting — pending sales orders vs stock</h3>
-          <input className="form-input" style={{ maxWidth: 260 }} placeholder="Filter products" value={demandFilter} onChange={(e) => setDemandFilter(e.target.value)} />
+          <h3 style={{ margin: 0, fontSize: 15 }}>
+            Customers waiting — pending sales orders vs stock
+            <span style={{ fontWeight: 400, fontSize: 12, color: '#6b7280' }}> · approved sales orders only</span>
+          </h3>
+          <input className="form-input" style={{ maxWidth: 260 }} placeholder="Filter by product or customer" value={demandFilter} onChange={(e) => setDemandFilter(e.target.value)} />
         </div>
+        {factorySummary.length > 0 && (
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+            <button type="button" className={factoryFilter ? 'btn btn-outline btn-sm' : 'btn btn-primary btn-sm'} onClick={() => setFactoryFilter('')}>
+              All factories
+            </button>
+            {factorySummary.map((f) => (
+              <button key={f.factory} type="button"
+                className={factoryFilter === f.factory ? 'btn btn-primary btn-sm' : 'btn btn-outline btn-sm'}
+                onClick={() => setFactoryFilter(factoryFilter === f.factory ? '' : f.factory)}
+                title={`${f.products} product(s) on order · ${f.toMake} need producing`}>
+                {f.factory} <span style={{ opacity: 0.75 }}>· {f.toMake}/{f.products}</span>
+              </button>
+            ))}
+          </div>
+        )}
         {demandError && <div className="alert alert-error">{demandError}</div>}
         {!demand && !demandError && <div style={{ color: '#6b7280', fontSize: 13 }}>Reading sales orders from Busy…</div>}
         {demand && (
           <div style={{ maxHeight: 280, overflowY: 'auto' }}>
             <table className="data-table" style={{ fontSize: 13 }}>
-              <thead><tr><th>Product</th><th style={{ textAlign: 'right' }}>Pending sales orders</th><th style={{ textAlign: 'right' }}>In stock</th><th style={{ textAlign: 'right' }}>To produce</th><th /></tr></thead>
+              <thead><tr><th>Product</th><th>Factory</th><th>Customer(s)</th><th style={{ textAlign: 'right' }}>Pending sales orders</th><th style={{ textAlign: 'right' }}>In stock</th><th style={{ textAlign: 'right' }}>To produce</th><th /></tr></thead>
               <tbody>
                 {demandRows.map((d) => (
                   <tr key={d.itemCode}>
                     <td>{d.itemName}<div style={{ fontSize: 11, color: '#6b7280' }}>{d.salesOrders} order(s) · {d.unitName}</div></td>
+                    <td><span className="badge badge-blue">{d.factory}</span></td>
+                    <td><CustomerList customers={d.customers} /></td>
                     <td style={{ textAlign: 'right' }}>{fmt(d.pendingSalesOrders)}</td>
                     <td style={{ textAlign: 'right' }}>{fmt(d.stock)}</td>
                     <td style={{ textAlign: 'right', fontWeight: 600, color: d.toProduce > 0 ? '#b91c1c' : '#065f46' }}>{fmt(d.toProduce)}</td>
@@ -206,11 +271,13 @@ export default function ProductionPlanningPage() {
               <button className="btn btn-secondary btn-sm" onClick={exportExcel}>Export to Excel</button>
             </div>
             <table className="data-table" style={{ fontSize: 13 }}>
-              <thead><tr><th>Product</th><th style={{ textAlign: 'right' }}>Plan</th><th style={{ textAlign: 'right' }}>In stock</th><th style={{ textAlign: 'right' }}>Pending sales orders</th><th style={{ textAlign: 'right' }}>Still owed to customers</th></tr></thead>
+              <thead><tr><th>Product</th><th>Factory</th><th>Customer(s)</th><th style={{ textAlign: 'right' }}>Plan</th><th style={{ textAlign: 'right' }}>In stock</th><th style={{ textAlign: 'right' }}>Pending sales orders</th><th style={{ textAlign: 'right' }}>Still owed to customers</th></tr></thead>
               <tbody>
                 {plan.products.map((p) => (
                   <tr key={p.bomCode}>
                     <td>{p.itemName}<div style={{ fontSize: 11, color: '#6b7280' }}>recipe: {p.bomName}{p.batchQty !== 1 ? ` (batch ${p.batchQty})` : ''}</div></td>
+                    <td><span className="badge badge-blue">{p.factory}</span></td>
+                    <td>{p.customers?.length ? <CustomerList customers={p.customers} /> : <span style={{ color: '#9ca3af', fontSize: 12 }}>No pending order</span>}</td>
                     <td style={{ textAlign: 'right' }}>{fmt(p.planQty)} {p.unitName}</td>
                     <td style={{ textAlign: 'right' }}>{fmt(p.stock)}</td>
                     <td style={{ textAlign: 'right' }}>{fmt(p.pendingSalesOrders)}</td>

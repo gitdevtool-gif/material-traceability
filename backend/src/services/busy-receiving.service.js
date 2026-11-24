@@ -29,6 +29,14 @@ const VCH = { PURCHASE: 2, GRN: 4, PO: 13, PAYMENT: 19 };
 // Busy's GRN series ("04GRN"); type 4 also has a customer-returns series we ignore.
 const GRN_SERIES_CODE = parseInt(process.env.BUSY_GRN_SERIES_CODE, 10) || 12076;
 
+/** Ticket numbers on a Busy GRN: digit runs (3+) in OF1, plus "Ticket No.NNNN" in the narration. */
+function grnTickets(of1, narration) {
+  const out = new Set();
+  for (const m of String(of1 || '').matchAll(/\d{3,}/g)) out.add(String(parseInt(m[0], 10)));
+  for (const m of String(narration || '').matchAll(/ticket\s*no\.?\s*(\d{3,})/gi)) out.add(String(parseInt(m[1], 10)));
+  return [...out];
+}
+
 const round = (n, dp = 2) => Math.round((Number(n) || 0) * 10 ** dp) / 10 ** dp;
 const inList = (req, prefix, values, type = erpSql.Int) => {
   values.forEach((v, i) => req.input(`${prefix}${i}`, type, v));
@@ -63,7 +71,7 @@ async function getOpenPoLines(erpPool, { partyCode, refCodes, itemCodes, include
   const result = await req.query(`
     WITH po AS (
       SELECT t3.RefCode, t3.VchCode, t3.MasterCode1 AS ItemCode, t3.MasterCode2 AS PartyCode, t3.CM1 AS StoreCode,
-             ABS(t3.Value1) AS Ordered, t3.Value3 AS Price, t3.DueDate, t3.ItemSrNo
+             ABS(t3.Value1) AS Ordered, t3.Value3 AS Price, t3.DueDate, t3.ItemSrNo, LTRIM(RTRIM(t3.No)) AS RefNo
       FROM dbo.Tran3 t3
       WHERE t3.VchType = @poType AND t3.Method = 1 AND t3.RecType = 4 ${where}
     ), rc AS (
@@ -72,7 +80,7 @@ async function getOpenPoLines(erpPool, { partyCode, refCodes, itemCodes, include
       WHERE x.RecType = 4 AND x.Method = 2 AND x.RefCode IN (SELECT RefCode FROM po)
       GROUP BY x.RefCode
     )
-    SELECT po.RefCode, po.VchCode, po.ItemCode, po.PartyCode, po.StoreCode, po.Ordered, po.Price, po.DueDate, po.ItemSrNo,
+    SELECT po.RefCode, po.VchCode, po.ItemCode, po.PartyCode, po.StoreCode, po.Ordered, po.Price, po.DueDate, po.ItemSrNo, po.RefNo,
            ISNULL(rc.Received, 0) AS Received, po.Ordered - ISNULL(rc.Received, 0) AS Pending,
            LTRIM(RTRIM(t1.VchNo)) AS PONo, t1.[Date] AS PODate, t1.ApprovalStatus,
            LTRIM(RTRIM(it.Name)) AS ItemName, LTRIM(RTRIM(u.Name)) AS UnitName, LTRIM(RTRIM(mc.Name)) AS Store,
@@ -92,6 +100,10 @@ async function getOpenPoLines(erpPool, { partyCode, refCodes, itemCodes, include
     refCode: r.RefCode,
     poVchCode: r.VchCode,
     poNo: r.PONo,
+    // Busy's own reference for this PO line: the PO number, then "/001", "/002"…
+    // on further lines of the same item (Pur-2946---2026-27/001). A GRN must
+    // send this, not the bare PO number, or Busy books it on the first line.
+    refNo: r.RefNo || r.PONo,
     poDate: r.PODate,
     approved: r.ApprovalStatus === 1,
     dueDate: r.DueDate,
@@ -161,7 +173,8 @@ async function getGrns(erpPool, { vchCodes, grnNos, partyCode, since, until } = 
   const head = await req.query(`
     SELECT t1.VchCode, LTRIM(RTRIM(t1.VchNo)) AS VchNo, t1.[Date], t1.MasterCode1 AS PartyCode,
            LTRIM(RTRIM(p.Name)) AS Party, t1.VchAmtBaseCur AS Amount, t1.ApprovalStatus,
-           LTRIM(RTRIM(oi.Transport)) AS Vehicle, LTRIM(RTRIM(oi.Narration1)) AS Narration
+           LTRIM(RTRIM(oi.Transport)) AS Vehicle, LTRIM(RTRIM(oi.Narration1)) AS Narration,
+           LTRIM(RTRIM(oi.OF1)) AS TicketRef
     FROM dbo.Tran1 t1
     LEFT JOIN dbo.Master1 p ON p.Code = t1.MasterCode1
     LEFT JOIN dbo.VchOtherInfo oi ON oi.VchCode = t1.VchCode
@@ -208,6 +221,11 @@ async function getGrns(erpPool, { vchCodes, grnNos, partyCode, since, until } = 
     approved: g.ApprovalStatus !== 2,
     vehicle: g.Vehicle && g.Vehicle !== '.' ? g.Vehicle : null,
     narration: g.Narration || null,
+    // Weighbridge ticket(s) Stores typed on the Busy GRN: OF1 is Busy's
+    // ticket field ("9867", "28926 g/p"); older farm GRNs put it in the
+    // narration instead ("Ticket No.9639").
+    ticketRef: g.TicketRef || null,
+    tickets: grnTickets(g.TicketRef, g.Narration),
     poNos: posByVch[g.VchCode] || [],
     lines: (linesByVch[g.VchCode] || []).map((l) => ({
       srNo: l.SrNo, itemCode: l.ItemCode, itemName: l.ItemName, unitName: l.UnitName,
@@ -451,6 +469,7 @@ module.exports = {
   getOpenPoLines,
   getPoTracker,
   getGrns,
+  grnTickets,
   getGrnLifecycle,
   getBillPayments,
   getUnbilledGrns,

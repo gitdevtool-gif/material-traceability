@@ -80,12 +80,12 @@ export default function AgingAnalysis() {
   const [resetSyncing, setResetSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState(null);
 
-  // Known-factory/category seed list, widened as real rows come in. Starts
-  // with what we already know exists from the ERP sample so dropdowns aren't
-  // empty on first paint.
+  // The stores Aging Analysis covers — the server's list (summary.stores)
+  // replaces this seed once loaded. Categories widen as real rows come in.
   const [knownFactories, setKnownFactories] = useState([
-    'F1', 'F1F', 'F1w', 'F2', 'F2P', 'F2F', 'F2W', 'F3', 'F4',
-    'F5', 'F6', 'F6F', 'F6 BULK STOCK', 'F7', 'F8', 'F9', 'F9 F', 'F10',
+    'F1', 'F1w', 'F1F', 'F2P', 'F2W', 'F2F', 'F3', 'F4', 'F5',
+    'F6', 'F6F', 'F6 BULK STOCK', 'F7', 'F8', 'F9', 'F9 F', 'F10',
+    'CENTRAL STORES', 'sales returns sylvia', 'BIG COLD',
   ]);
   const [knownCategories, setKnownCategories] = useState([]);
 
@@ -101,6 +101,7 @@ export default function AgingAnalysis() {
       const qs = params.toString();
       const result = await api(`/summary${qs ? `?${qs}` : ''}`);
       setSummary(result);
+      if (Array.isArray(result.stores) && result.stores.length) setKnownFactories(result.stores);
     } catch (err) {
       setSummaryError(err.message);
     }
@@ -125,11 +126,6 @@ export default function AgingAnalysis() {
       const result = await api(`/?${params.toString()}`);
       setTableData(result);
 
-      setKnownFactories(prev => {
-        const next = new Set(prev);
-        result.data.forEach(r => r.Factory && next.add(r.Factory));
-        return Array.from(next).sort();
-      });
       setKnownCategories(prev => {
         const next = new Set(prev);
         result.data.forEach(r => r.Category && next.add(r.Category));
@@ -196,6 +192,52 @@ export default function AgingAnalysis() {
     setFactory(''); setCategory(''); setItemName(''); setBucket(''); setMinAge('');
   };
 
+  // ── Excel export (2026-11-24) ─────────────────────────────────────────
+  // Every batch matching the active filters and sort (not just this page),
+  // e.g. CENTRAL STORES + 180+ days for the dead-stock review. Sheet 1 is
+  // the batches; sheet 2 records the filters, the totals per bucket and
+  // when the data was synced, so the file explains itself when shared.
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState(null);
+  const handleExport = async () => {
+    setExporting(true);
+    setExportError(null);
+    try {
+      const params = new URLSearchParams({ sortBy, sortDir });
+      if (factory)  params.set('factory', factory);
+      if (category) params.set('category', category);
+      if (itemName) params.set('itemName', itemName);
+      if (bucket)   params.set('bucket', bucket);
+      if (minAge)   params.set('minAge', minAge);
+      const result = await api(`/export?${params.toString()}`);
+      const rows = result.data || [];
+      if (rows.length === 0) { setExportError('No batches match these filters — nothing to export.'); return; }
+
+      // Styled like the page (colours, frozen header, KES / date formats) —
+      // see utils/agingExcel.js. ExcelJS is loaded only when exporting.
+      const [{ default: ExcelJS }, { buildAgingWorkbook, agingFileName }] = await Promise.all([
+        import('exceljs'), import('../utils/agingExcel'),
+      ]);
+      const filters = { factory, category, itemName, bucket, minAge, sortBy, sortDir };
+      const wb = buildAgingWorkbook(ExcelJS, {
+        rows, lastSyncedAt: result.lastSyncedAt, truncated: result.truncated, maxRows: result.maxRows, filters,
+      });
+      const buf = await wb.xlsx.writeBuffer();
+      const url = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = agingFileName(filters);
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    } catch (err) {
+      setExportError(`Export failed: ${err.message}`);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   // Bar widths only: bucket amounts are signed, so proportions use magnitude.
   const bucketTotalAmount = useMemo(() => {
     if (!summary) return 0;
@@ -209,7 +251,8 @@ export default function AgingAnalysis() {
         <div>
           <h1 style={{ margin: 0, fontSize: 22 }}>Aging Analysis</h1>
           <div style={{ color: '#666', fontSize: 13, marginTop: 4 }}>
-            Stock by age — sourced from ERP view BatchwiseStock.
+            Stock by age, First In First Out (as Busy's stock ageing): each store's closing stock is taken
+            from its most recent receipts; "Received on" is the receipt voucher, older years marked (2025-26).
             {summary?.lastSyncedAt && (
               <> Last synced {new Date(summary.lastSyncedAt).toLocaleString('en-KE')}.</>
             )}
@@ -251,9 +294,9 @@ export default function AgingAnalysis() {
           <SummaryCard label="Oldest batch" value={summary.totals.OldestBatchAgeDays != null ? `${summary.totals.OldestBatchAgeDays} days` : '—'} />
           {summary.unknownBucket && summary.unknownBucket.BatchCount > 0 && (
             <SummaryCard
-              label="Unknown batch date"
-              value={summary.unknownBucket.BatchCount.toLocaleString()}
-              sub="Data-quality flag — excluded from bucket %"
+              label="Negative stock (no date)"
+              value={fmtMoney(summary.unknownBucket.TotalAmount)}
+              sub={`${summary.unknownBucket.BatchCount.toLocaleString()} item line(s) issued before received — netted off the total as Busy does; fix in Busy`}
               warn
             />
           )}
@@ -303,7 +346,7 @@ export default function AgingAnalysis() {
           <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ textAlign: 'left', color: '#666' }}>
-                <th>Item</th><th>Factory</th><th>Batch</th><th>Age</th><th style={{ textAlign: 'right' }}>Qty</th><th style={{ textAlign: 'right' }}>Amount</th>
+                <th>Item</th><th>Factory</th><th>Received on</th><th>Age</th><th style={{ textAlign: 'right' }}>Qty</th><th style={{ textAlign: 'right' }}>Amount</th>
               </tr>
             </thead>
             <tbody>
@@ -329,7 +372,7 @@ export default function AgingAnalysis() {
       {/* ── Filters ───────────────────────────────────────────────────── */}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12, alignItems: 'center' }}>
         <select value={factory} onChange={e => setFactory(e.target.value)}>
-          <option value="">All factories</option>
+          <option value="">All aging stores</option>
           {knownFactories.map(f => <option key={f} value={f}>{f}</option>)}
         </select>
         <select value={category} onChange={e => setCategory(e.target.value)}>
@@ -342,6 +385,10 @@ export default function AgingAnalysis() {
           onChange={e => setItemName(e.target.value)}
           style={{ minWidth: 180 }}
         />
+        <select value={bucket} onChange={e => setBucket(e.target.value)} title="Age bucket (also set by clicking the bar above)">
+          <option value="">All ages</option>
+          {['0-30', '31-60', '61-90', '91-180', '180+'].map(b => <option key={b} value={b}>{b} days</option>)}
+        </select>
         <input
           type="number"
           placeholder="Min age (days)"
@@ -352,9 +399,26 @@ export default function AgingAnalysis() {
         {(factory || category || itemName || bucket || minAge) && (
           <button onClick={clearFilters}>Clear filters</button>
         )}
+        <div style={{ flex: 1 }} />
+        <button
+          onClick={handleExport}
+          disabled={exporting || loading || tableData.total === 0}
+          title="Download every batch matching the current filters (not just this page) as an Excel file"
+          style={{ fontWeight: 600 }}
+        >
+          {exporting ? 'Exporting…' : `⬇ Export to Excel${tableData.total ? ` (${tableData.total.toLocaleString()})` : ''}`}
+        </button>
       </div>
+      {(factory || category || itemName || bucket || minAge) && (
+        <div style={{ fontSize: 12, color: '#666', marginTop: -6, marginBottom: 12 }}>
+          Filtered: {[factory && `store ${factory}`, category && `category ${category}`, itemName && `item “${itemName}”`,
+            bucket && `${bucket} days`, minAge && `at least ${minAge} days old`].filter(Boolean).join(' · ')}
+          {' '}— the export includes exactly these batches.
+        </div>
+      )}
+      {exportError && <div style={{ color: '#c62828', marginBottom: 12 }}>{exportError}</div>}
 
-      {tableError && <div style={{ color: '#c62828', marginBottom: 12 }}>Couldn't load batches: {tableError}</div>}
+      {tableError &&<div style={{ color: '#c62828', marginBottom: 12 }}>Couldn't load batches: {tableError}</div>}
 
       {/* ── Table ─────────────────────────────────────────────────────── */}
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
@@ -363,7 +427,7 @@ export default function AgingAnalysis() {
             <SortableTh label="Item" col="ItemName" sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
             <th>Category</th>
             <th>Factory</th>
-            <th>Batch No</th>
+            <th>Received on (voucher)</th>
             <th>Date</th>
             <th>Due Date</th>
             <SortableTh label="Age" col="AgeDays" sortBy={sortBy} sortDir={sortDir} onSort={handleSort} align="right" />

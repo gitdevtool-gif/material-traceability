@@ -87,11 +87,27 @@ export default function SuppliersPage() {
     setModalEmailError('');
   };
 
+  // Supply categories chosen in the Add/Edit form (2026-10-22): pick from the
+  // categories in use, or type a new one. Saved with the supplier.
+  const [modalCats, setModalCats] = useState([]);       // category names on the form
+  const [modalCatsOrig, setModalCatsOrig] = useState([]); // as loaded (edit mode) — to work out adds/removes
+  const [modalNewCat, setModalNewCat] = useState('');
+  const addModalCat = (name) => {
+    const c = String(name || '').trim();
+    if (!c) return;
+    setModalCats((prev) => (prev.some((x) => x.toLowerCase() === c.toLowerCase()) ? prev : [...prev, c]));
+    setModalNewCat('');
+  };
+  const removeModalCat = (c) => setModalCats((prev) => prev.filter((x) => x !== c));
+
   const openAdd = () => {
     setForm(EMPTY_FORM);
     setFormError('');
     setModalEmails([]);
     resetModalEmailFields();
+    setModalCats([]);
+    setModalCatsOrig([]);
+    setModalNewCat('');
     setModal('add');
   };
 
@@ -110,12 +126,20 @@ export default function SuppliersPage() {
     setModalEmails([]);
     resetModalEmailFields();
     setModal({ type: 'edit', id: s.SupplierId });
+    setModalCats([]);
+    setModalCatsOrig([]);
+    setModalNewCat('');
     try {
       const res = await api.get(`/suppliers/${s.SupplierId}/emails`);
       setModalEmails(res.data);
     } catch (e) {
       setModalEmails([]);
     }
+    try {
+      const cats = (await api.get(`/suppliers/${s.SupplierId}/categories`)).data.map((c) => c.Category);
+      setModalCats(cats);
+      setModalCatsOrig(cats);
+    } catch (e) { /* categories stay editable from the Categories button */ }
   };
 
   const closeModal = () => {
@@ -176,7 +200,7 @@ export default function SuppliersPage() {
     setFormError('');
     try {
       if (modal === 'add') {
-        const res = await api.post('/suppliers', form);
+        const res = await api.post('/suppliers', { ...form, categories: modalCats });
         const newSupplierId = res.data?.SupplierId;
         if (newSupplierId && modalEmails.length > 0) {
           for (const item of modalEmails) {
@@ -185,6 +209,12 @@ export default function SuppliersPage() {
         }
       } else {
         await api.put(`/suppliers/${modal.id}`, form);
+        for (const c of modalCats.filter((x) => !modalCatsOrig.includes(x))) {
+          await api.post(`/suppliers/${modal.id}/categories`, { category: c });
+        }
+        for (const c of modalCatsOrig.filter((x) => !modalCats.includes(x))) {
+          await api.delete(`/suppliers/${modal.id}/categories/${encodeURIComponent(c)}`);
+        }
       }
       closeModal();
       loadSuppliers();
@@ -233,6 +263,21 @@ export default function SuppliersPage() {
       loadSuppliers();
     } catch (e) {
       alert(e.response?.data?.error || 'Failed to add categories');
+    }
+  };
+
+  const [catNew, setCatNew] = useState('');
+  const addNewCategory = async () => {
+    const cat = catNew.trim();
+    if (!cat || !catSupplier) return;
+    try {
+      await api.post(`/suppliers/${catSupplier.SupplierId}/categories`, { category: cat });
+      const res = await api.get(`/suppliers/${catSupplier.SupplierId}/categories`);
+      setCategories(res.data);
+      setCatNew('');
+      loadSuppliers();
+    } catch (e) {
+      alert(e.response?.data?.error || 'Failed to add category');
     }
   };
 
@@ -474,6 +519,34 @@ export default function SuppliersPage() {
                 <label className="form-label">Address</label>
                 <textarea className="form-control" rows={2} value={form.address} onChange={f('address')} placeholder="Physical / postal address" />
               </div>
+              <div className="form-group" style={{ gridColumn: '1 / -1', margin: 0 }}>
+                <label className="form-label">Supply Categories</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>
+                  {modalCats.length === 0 && <span style={{ fontSize: 12, color: '#9ca3af' }}>None yet — pick or type below</span>}
+                  {modalCats.map((c) => (
+                    <span key={c} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#e8f0fe', color: '#1a56db', borderRadius: 12, padding: '2px 10px', fontSize: 12 }}>
+                      {c}
+                      <button type="button" onClick={() => removeModalCat(c)} title="Remove"
+                        style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#1a56db', padding: 0, fontSize: 13 }}>×</button>
+                    </span>
+                  ))}
+                </div>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  <select className="form-control" style={{ flex: '1 1 200px' }} value=""
+                    onChange={(e) => addModalCat(e.target.value)}>
+                    <option value="">+ Add a category in use…</option>
+                    {allCategoryOptions.filter((c) => !modalCats.includes(c)).map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  <input className="form-control" style={{ flex: '1 1 180px' }} value={modalNewCat}
+                    onChange={(e) => setModalNewCat(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addModalCat(modalNewCat); } }}
+                    placeholder="…or type a new category" />
+                  <button type="button" className="btn btn-secondary btn-sm" disabled={!modalNewCat.trim()} onClick={() => addModalCat(modalNewCat)}>Add</button>
+                </div>
+                <div style={{ fontSize: 11, color: '#6b7280', marginTop: 4 }}>
+                  Categories link the supplier to requisition items, so they are suggested for RFQs on those items.
+                </div>
+              </div>
               {modal !== 'add' && (
                 <div className="form-group" style={{ margin: 0 }}>
                   <label className="form-label">Status</label>
@@ -618,6 +691,14 @@ export default function SuppliersPage() {
                 </div>
               </>
             )}
+
+            {/* A category not in use yet (2026-10-22) */}
+            <div style={{ display: 'flex', gap: 6, marginTop: 12 }}>
+              <input className="form-control" value={catNew} onChange={(e) => setCatNew(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') addNewCategory(); }}
+                placeholder="New category not in the list…" />
+              <button className="btn btn-secondary" onClick={addNewCategory} disabled={!catNew.trim()}>Add new</button>
+            </div>
 
             <div style={{ marginTop: 20, textAlign: 'right' }}>
               <button className="btn btn-secondary" onClick={closeCatModal}>Close</button>

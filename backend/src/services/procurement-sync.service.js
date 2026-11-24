@@ -42,6 +42,7 @@ const { getPool, sql } = require('../db');
 const logger = require('../logger');
 const { autoReconcilePendingAwards } = require('./lpo-reconciliation.service');
 const { applyItemCodeLookupToRequisitionItems } = require('./requisition-item-catalog.service');
+const { isWorkshopMatCenter } = require('./requisition-gate');
 // sendApprovalEmailForRequisition is required lazily inside
 // syncRequisitions() below, right where it's used, rather than importing
 // the whole Express route module (requisition-approval.routes.js) at
@@ -63,7 +64,7 @@ const SYNC_INTERVAL_MS =
 // immediately followed by another digit, so "F1"/"F10"/"F1w"/"F2P" all
 // match but "F11" (if it ever exists) and the buckets above don't.
 function matCenterRequiresOpsApproval(matCenter) {
-  return /^f(10|[1-9])(?!\d)/i.test(String(matCenter || '').trim());
+  return /^f(10|[1-9])(?!\d)/i.test(String(matCenter || '').trim()) || isWorkshopMatCenter(matCenter);
 }
 
 /**
@@ -236,6 +237,14 @@ async function runAutoReconcile() {
   } catch (err) {
     logger.error('[ProcurementSync] LPO auto-reconcile error:', err);
   }
+  // Pushed POs approved in Busy show "approved by Supervisor" — put the real approver back.
+  try {
+    const { fixApprovalAttribution } = require('./busy-po.service');
+    const fixed = await fixApprovalAttribution(await getErpPool());
+    for (const f of fixed) logger.info(`[ProcurementSync] ${f.vchNo}: Busy approval now shows ${f.user} (from ${f.source})`);
+  } catch (err) {
+    logger.error('[ProcurementSync] Busy approver fix error:', err.message || err);
+  }
 }
 
 // In-system purchase indent creation (2026-09-15): syncRequisitions() is
@@ -265,4 +274,4 @@ function stopSyncJob() {
   }
 }
 
-module.exports = { syncRequisitions, startSyncJob, stopSyncJob, matCenterRequiresOpsApproval };
+module.exports = { syncRequisitions, startSyncJob, stopSyncJob, matCenterRequiresOpsApproval, isWorkshopMatCenter };

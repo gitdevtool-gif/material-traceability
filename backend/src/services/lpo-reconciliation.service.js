@@ -72,6 +72,9 @@ async function getRfqReferenceColumnIfPresent(erpPool) {
 async function createReconciliation(pool, {
   busyPurOrdNo, rfqId, requisitionId, quoteEvaluationId, supplierId,
   busySupplier, busyDate, totalActualAmt, notes, reconciledByUserId,
+  // false: the caller sets the requisition status itself (direct-supply
+  // orders close line by line, see direct-supply.service closeDirectLines)
+  markRequisitionsReconciled = true,
 }) {
   const existing = await pool.request()
     .input('ordno', sql.VarChar(50), String(busyPurOrdNo).trim())
@@ -190,7 +193,7 @@ async function createReconciliation(pool, {
 
   // Mark every covered requisition as reconciled — one for the legacy
   // path, all linked requisitions together for a combined RFQ.
-  if (requisitionIds.length > 0) {
+  if (requisitionIds.length > 0 && markRequisitionsReconciled) {
     const idPlaceholders = requisitionIds.map((_, i) => `@r${i}`).join(',');
     const updateRequest = pool.request();
     requisitionIds.forEach((rid, i) => updateRequest.input(`r${i}`, sql.Int, rid));

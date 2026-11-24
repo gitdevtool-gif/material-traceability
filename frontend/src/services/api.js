@@ -30,6 +30,15 @@ api.interceptors.request.use((config) => {
     err.response = { status: 403, data: { error: 'Read-only access — System Viewer accounts cannot make changes' } };
     return Promise.reject(err);
   }
+  // GRN Reviewer (2026-11-23): read-only like a Viewer, except the reasons on GRN checks
+  const path = (config.url || '').split('?')[0];
+  if (method !== 'get' && method !== 'head' && currentRole() === 'GrnReviewer'
+      && !(method === 'post' && (VIEWER_ALLOWED_POSTS.includes(path) || /^\/grn-approvals\/\d+\/reasons$/.test(path)))) {
+    const err = new Error('Read-only access');
+    err.config = config;
+    err.response = { status: 403, data: { error: 'Read-only access — a GRN Reviewer can only give reasons on GRN checks' } };
+    return Promise.reject(err);
+  }
   return config;
 });
 

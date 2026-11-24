@@ -27,6 +27,13 @@ const opsManagerRoutes = require('./routes/opsmanager.routes');
 const busyReceivingRoutes = require('./routes/busy-receiving.routes');
 const stockRoutes = require('./routes/stock.routes');
 const traceRoutes = require('./routes/trace.routes');
+// Receive a delivery as a Busy GRN from here + the GRN printout (2026-10-21).
+const busyGrnRoutes = require('./routes/busy-grn.routes');
+// System Settings page — Admin-editable settings (2026-10-27).
+const settingsRoutes = require('./routes/settings.routes');
+// GRN Director approval before payment + Accounts view (2026-11-11).
+const grnApprovalRoutes = require('./routes/grn-approval.routes');
+const { startGrnApprovalJob, stopGrnApprovalJob } = require('./services/grn-approval.service');
 
 // Procurement module
 const procItemCategoryRoutes   = require('./routes/procurement/item-category-map.routes');
@@ -37,6 +44,7 @@ const procEvaluationRoutes     = require('./routes/procurement/evaluation.routes
 const procReconciliationRoutes = require('./routes/procurement/reconciliation.routes');
 // "LPO raised in Busy" marking + listing (2026-10-15) — read-only on Busy.
 const procBusyLpoRoutes        = require('./routes/procurement/busy-lpo.routes');
+const procDirectSupplyRoutes   = require('./routes/procurement/direct-supply.routes');
 const procReorderRoutes        = require('./routes/Reorder.routes');
 const procFGReorderRoutes      = require('./routes/procurement/fg-reorder.routes');
 const rfqPublicRoutes          = require('./routes/rfq-public.routes');
@@ -152,8 +160,11 @@ app.use('/api/reports', reportsRoutes);
 app.use('/api/erp', erpRoutes);
 app.use('/api/ops-approval', opsManagerRoutes);
 app.use('/api/busy-receiving', busyReceivingRoutes);
+app.use('/api/busy-grn', busyGrnRoutes);
 app.use('/api/stock', stockRoutes);
 app.use('/api/trace', traceRoutes);
+app.use('/api/settings', settingsRoutes);
+app.use('/api/grn-approvals', grnApprovalRoutes);
 
 // ── Procurement API routes ──
 app.use('/api/procurement/item-categories',  procItemCategoryRoutes);
@@ -163,6 +174,8 @@ app.use('/api/procurement/quotations',       procQuotationsRoutes);
 app.use('/api/procurement/evaluation',       procEvaluationRoutes);
 app.use('/api/procurement/reconciliation',   procReconciliationRoutes);
 app.use('/api/procurement/busy-lpo',         procBusyLpoRoutes);
+// Direct-supply orders (sawdust) + production's delivery plan (2026-11-24)
+app.use('/api/procurement/direct-supply',    procDirectSupplyRoutes);
 app.use('/api/procurement/reorder',          procReorderRoutes);
 app.use('/api/procurement/fg-reorder',       procFGReorderRoutes);
 // Requisition Ops-Approval — gates Busy-synced requisitions before
@@ -219,11 +232,18 @@ app.use(errorHandler);
 const PORT = config.port;
 const server = app.listen(PORT, () => {
   logger.info(`Material Traceability API running on port ${PORT}`);
+  // A local/dev copy pointed at the production DB must not run the syncs or
+  // send the GRN digest emails a second time (2026-11-24).
+  if (process.env.DISABLE_BACKGROUND_JOBS === 'true') {
+    logger.warn('DISABLE_BACKGROUND_JOBS=true — sync jobs and digests are NOT started');
+    return;
+  }
   // Start procurement sync polling after server is up
   startSyncJob();
   startReorderSyncJob();
   startFGReorderSyncJob();
   startAgingSyncJob();
+  startGrnApprovalJob();
 });
 server.timeout = 30000;
 server.keepAliveTimeout = 65000;
@@ -236,6 +256,7 @@ process.on('SIGTERM', async () => {
   stopReorderSyncJob();
   stopFGReorderSyncJob();
   stopAgingSyncJob();
+  stopGrnApprovalJob();
   server.close();
   await closePool();
   await closeErpPool();
@@ -246,6 +267,7 @@ process.on('SIGINT', async () => {
   stopReorderSyncJob();
   stopFGReorderSyncJob();
   stopAgingSyncJob();
+  stopGrnApprovalJob();
   server.close();
   await closePool();
   await closeErpPool();

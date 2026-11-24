@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import StockPicture from '../components/StockPicture';
+import { PreferredSupplierCell, PreferredBadge } from '../components/PreferredSupplier';
 import { useAuth } from '../context/AuthContext';
 
 const STATUS_COLOR = {
@@ -68,7 +69,11 @@ export default function RequisitionDetailPage() {
         ]);
         setReq(reqRes.data);
         setSuppliers(suppRes.data);
-        setSelectedItemIds((reqRes.data.items || []).filter((it) => !it.RFQId).map((it) => it.RequisitionItemId));
+        // The supplier the requester asked for starts ticked for the RFQ.
+        const preferred = suppRes.data.filter((s) => s.IsPreferred && s.IsActive).map((s) => s.SupplierId);
+        setSelected(preferred);
+        setChannels(Object.fromEntries(preferred.map((sid) => [sid, 'email'])));
+        setSelectedItemIds((reqRes.data.items || []).filter((it) => !it.RFQId && !it.IsDirectSupply).map((it) => it.RequisitionItemId));
         await loadRfqBatches(reqRes.data.items);
       } catch (e) {
         setError(e.response?.data?.error || 'Failed to load');
@@ -169,7 +174,7 @@ export default function RequisitionDetailPage() {
       });
       const reqRes = await api.get(`/procurement/requisitions/${id}`);
       setReq(reqRes.data);
-      setSelectedItemIds((reqRes.data.items || []).filter((it) => !it.RFQId).map((it) => it.RequisitionItemId));
+      setSelectedItemIds((reqRes.data.items || []).filter((it) => !it.RFQId && !it.IsDirectSupply).map((it) => it.RequisitionItemId));
       await loadRfqBatches(reqRes.data.items);
       setRfqOpen(false);
       setSelected([]);
@@ -324,7 +329,8 @@ export default function RequisitionDetailPage() {
   if (loading) return <div className="page-container" style={{ padding: 40, textAlign: 'center', color: '#6b7280' }}>Loading…</div>;
   if (!req) return <div className="page-container" style={{ padding: 40 }}>Requisition not found</div>;
 
-  const availableItems = (req.items || []).filter((it) => !it.RFQId);
+  // Direct-supply lines (sawdust/offcuts) are raised with "Raise direct POs", never an RFQ (2026-11-24).
+  const availableItems = (req.items || []).filter((it) => !it.RFQId && !it.IsDirectSupply);
   const hasAvailableItems = availableItems.length > 0;
   const canEditPending = isProcurement && hasAvailableItems
     && !['Cancelled', 'Reconciled'].includes(req.Status);
@@ -396,6 +402,7 @@ export default function RequisitionDetailPage() {
               <th>Item Name</th>
               <th>Qty</th>
               <th>Category</th>
+              <th title="The supplier the person who raised the order asked for">Preferred Supplier</th>
               <th>Preferred Brand / Quality</th>
               <th>Indicative Price</th>
               <th>Indicative Amt</th>
@@ -406,7 +413,7 @@ export default function RequisitionDetailPage() {
           </thead>
           <tbody>
             {(req.items || []).map((item) => {
-              const isLinked = !!item.RFQId;
+              const isLinked = !!item.RFQId || !!item.IsDirectSupply;
               const isEditing = !isLinked && editingQtyItemId === item.RequisitionItemId;
               return (
                 <tr key={item.RequisitionItemId} style={isLinked && rfqOpen ? { opacity: 0.5 } : undefined}>
@@ -416,7 +423,7 @@ export default function RequisitionDetailPage() {
                         checked={selectedItemIds.includes(item.RequisitionItemId)}
                         disabled={isLinked}
                         onChange={() => toggleItemSelected(item.RequisitionItemId)}
-                        title={isLinked ? `Already in ${item.RFQNumber}` : 'Include in this RFQ'} />
+                        title={item.IsDirectSupply ? 'Direct-supply item — raised with Raise direct POs on Requisitions, no RFQ' : isLinked ? `Already in ${item.RFQNumber}` : 'Include in this RFQ'} />
                     </td>
                   )}
                   <td>
@@ -445,6 +452,9 @@ export default function RequisitionDetailPage() {
                       ? <span className="badge badge-blue" style={{ fontSize: 11 }}>{item.Category}</span>
                       : <span style={{ color: '#f59e0b', fontSize: 12 }}>⚠ No category mapped</span>
                     }
+                  </td>
+                  <td style={{ fontSize: 12.5 }}>
+                    <PreferredSupplierCell item={item} />
                   </td>
                   <td style={{ fontSize: 12.5 }}>
                     {[item.PreferredBrand, item.PreferredQuality].filter(Boolean).join(' · ') || <span style={{ color: '#9ca3af' }}>—</span>}
@@ -564,14 +574,20 @@ export default function RequisitionDetailPage() {
                 <div key={s.SupplierId}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 12,
-                    padding: '8px 12px', border: '1px solid #e5e7eb',
+                    padding: '8px 12px', border: `1px solid ${s.IsPreferred ? '#f59e0b' : '#e5e7eb'}`,
                     borderRadius: 6, marginBottom: 6,
                     background: selectedSuppliers.includes(s.SupplierId) ? '#e8f0fe' : '#fff',
                   }}>
                   <input type="checkbox" checked={selectedSuppliers.includes(s.SupplierId)}
+                    disabled={!s.IsActive}
+                    title={s.IsActive ? undefined : 'Inactive in the supplier list — reactivate it under Suppliers first'}
                     onChange={() => toggleSupplier(s.SupplierId)} />
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 600, fontSize: 13 }}>{s.SupplierName}</div>
+                    <div style={{ fontWeight: 600, fontSize: 13 }}>
+                      {s.SupplierName}
+                      {s.IsPreferred && <PreferredBadge items={s.PreferredForItems} />}
+                      {!s.IsActive && <span className="badge badge-gray" style={{ fontSize: 10, marginLeft: 6 }}>inactive</span>}
+                    </div>
                     <div style={{ fontSize: 11, color: '#6b7280' }}>
                       {s.SupplierCategories} &nbsp;·&nbsp; {s.Email || 'No email'} &nbsp;·&nbsp; {s.Phone || s.WhatsApp || ''}
                     </div>
@@ -632,6 +648,7 @@ export default function RequisitionDetailPage() {
                 <tr>
                   <th>Item</th>
                   <th>Qty Requested</th>
+                  <th>Preferred Supplier</th>
                   <th>Preferred Brand / Quality</th>
                   {isProcurement && <th></th>}
                 </tr>
@@ -659,6 +676,9 @@ export default function RequisitionDetailPage() {
                       ) : (
                         `${Number(item.Qty).toLocaleString()}${item.Unit ? ` ${item.Unit}` : ''}`
                       )}
+                    </td>
+                    <td style={{ fontSize: 12.5 }}>
+                      <PreferredSupplierCell item={item} />
                     </td>
                     <td style={{ fontSize: 12.5 }}>
                       {[item.PreferredBrand, item.PreferredQuality].filter(Boolean).join(' · ') || <span style={{ color: '#9ca3af' }}>—</span>}
@@ -771,8 +791,8 @@ export default function RequisitionDetailPage() {
                           <option value="">
                             {addableSuppliers.length === 0 ? 'No more matching suppliers' : 'Select a supplier…'}
                           </option>
-                          {addableSuppliers.map((s) => (
-                            <option key={s.SupplierId} value={s.SupplierId}>{s.SupplierName}</option>
+                          {addableSuppliers.filter((s) => s.IsActive).map((s) => (
+                            <option key={s.SupplierId} value={s.SupplierId}>{s.IsPreferred ? '★ ' : ''}{s.SupplierName}{s.IsPreferred ? ' (requested)' : ''}</option>
                           ))}
                         </select>
                       </div>

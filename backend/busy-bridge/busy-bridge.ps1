@@ -17,7 +17,7 @@
     %WINDIR%\SysWOW64\WindowsPowerShell\v1.0\powershell.exe
 
   Request:
-    { "action": "ping" | "addVch" | "getVchXml" | "deleteVch" | "checkUser",
+    { "action": "ping" | "addVch" | "modifyVch" | "getVchXml" | "deleteVch" | "checkUser",
       "busyUser", "busyPassword",                                   # checkUser
       "conn": { "busyPath", "server", "user", "password", "compCode", "fy" },
       "vchType": 13, "xml": "<PurchaseOrder>...</PurchaseOrder>",   # addVch
@@ -68,6 +68,19 @@ try {
       } else {
         $vchNo = [string]$fi.GetVchNoFromVchCode([int]$vchCode)
         Out-Json @{ ok = $true; vchCode = [int]$vchCode; vchNo = $vchNo.Trim(); warning = [string]$err }
+      }
+    }
+    'modifyVch' {
+      # Amend a voucher in place (same VchCode / number) — 2026-10-22.
+      # Signature from Busy's type library:
+      #   ModifyVchFromXMLByCode(p_VchType, p_Vchcode, p_XMLStr, ref p_ErrStr, ref p_CreateIfNotExist?, ref p_Source?)
+      $err = ''
+      $ok = $fi.ModifyVchFromXMLByCode([int16]$req.vchType, [int]$req.vchCode, [string]$req.xml, [ref]$err)
+      if (-not $ok) {
+        if (-not $err) { $err = 'Busy did not save the change and returned no reason.' }
+        Out-Json @{ ok = $false; error = [string]$err }
+      } else {
+        Out-Json @{ ok = $true; vchCode = [int]$req.vchCode; vchNo = ([string]$fi.GetVchNoFromVchCode([int]$req.vchCode)).Trim(); warning = [string]$err }
       }
     }
     'getVchXml' {

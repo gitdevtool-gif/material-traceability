@@ -58,6 +58,8 @@ function callBusy(request) {
 module.exports = {
   ping: () => callBusy({ action: 'ping' }),
   addVoucher: (vchType, xml) => callBusy({ action: 'addVch', vchType, xml }),
+  // Amend a saved voucher in place — same VchCode and number (2026-10-22).
+  modifyVoucher: (vchType, vchCode, xml) => callBusy({ action: 'modifyVch', vchType, vchCode, xml }),
   getVoucherXml: (vchCode) => callBusy({ action: 'getVchXml', vchCode }),
   deleteVoucher: (vchCode) => callBusy({ action: 'deleteVch', vchCode }),
   // { exists, valid } for a Busy login — the password goes to Busy only, never stored or logged.

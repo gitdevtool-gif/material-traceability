@@ -4,6 +4,7 @@ const { getPool, sql } = require('../db');
 const { authenticate, authorize } = require('../middleware/auth');
 const { writeAuditLog, writeStatusHistory } = require('../services/audit.service');
 const { sendOpsApprovalEmail } = require('../services/email.service');
+const { writeQaDecisionLog } = require('../services/qa-log.service');
 const config = require('../config');
 const logger = require('../logger');
 
@@ -20,8 +21,28 @@ function extractFactoryFromEmail(email) {
 
 // ──── Helper: check if user can see all factories ────
 function canSeeAllFactories(role) {
-  return ['Admin', 'Supervisor', 'QAManager', 'Viewer'].includes(role);
+  return ['Admin', 'Supervisor', 'QAManager', 'Viewer', 'GrnReviewer'].includes(role);
 }
+
+/**
+ * The factory a factory-bound user works in: from the f<N>production@ email,
+ * or (2026-10-22, e.g. Factory QA users) from their assigned mat centre —
+ * F2P / F1w → F2 / F1, as on the Receiving page. null = not factory-bound.
+ */
+async function ownFactoryOf(pool, user) {
+  const fromEmail = extractFactoryFromEmail(user.email);
+  if (fromEmail) return fromEmail;
+  const me = (await pool.request().input('id', sql.Int, user.userId)
+    .query('SELECT AssignedMatCenter FROM dbo.Users WHERE UserId = @id')).recordset[0];
+  const m = String(me?.AssignedMatCenter || '').trim().match(/^F(\d+)/i);
+  return m ? `F${m[1]}` : null;
+}
+// The factory itself or its sub-locations (F7-STORE) — F1 must not also match F10.
+const inFactory = (locationName, factoryId) => {
+  const n = String(locationName || '').toUpperCase();
+  const f = String(factoryId || '').toUpperCase();
+  return n === f || n.startsWith(`${f}-`);
+};
 
 // ──── Helper: generate next QA Inspection No ────
 async function generateInspectionNo(transaction) {
@@ -62,9 +83,9 @@ router.post('/', authenticate, authorize('QAInspector', 'QAManager', 'FactoryQA'
 
     // Factory access check
     if (!canSeeAllFactories(req.user.role)) {
-      const factoryId = extractFactoryFromEmail(req.user.email);
-      if (factoryId && entry.LocationName && !entry.LocationName.toUpperCase().includes(factoryId.toUpperCase())) {
-        return res.status(403).json({ error: 'You can only inspect entries for your factory' });
+      const factoryId = await ownFactoryOf(pool, req.user);
+      if (factoryId && entry.LocationName && !inFactory(entry.LocationName, factoryId)) {
+        return res.status(403).json({ error: `You can only inspect entries for your factory (${factoryId})` });
       }
     }
 
@@ -220,7 +241,7 @@ router.post('/:inspectionNo/tests', authenticate, authorize('QAInspector', 'QAMa
 // ──── PATCH /api/qa/:inspectionNo/decision — Accept / Reject / Quarantine ────
 router.patch('/:inspectionNo/decision', authenticate, authorize('QAManager', 'FactoryQA', 'Supervisor', 'Admin'), async (req, res, next) => {
   try {
-    const { decision, acceptedQty, rejectedQty, remarks } = req.body;
+    const { decision, acceptedQty, rejectedQty, remarks, rejectionReason, rejectionNotes } = req.body;
     if (!decision || !['Accepted', 'Rejected', 'Quarantine', 'Conditional'].includes(decision)) {
       return res.status(400).json({ error: 'decision must be Accepted, Rejected, Quarantine or Conditional' });
     }
@@ -241,7 +262,7 @@ router.patch('/:inspectionNo/decision', authenticate, authorize('QAManager', 'Fa
     try {
       // Update inspection
       const updReq = new sql.Request(transaction);
-      await updReq
+      const upd = await updReq
         .input('inspId', sql.Int, inspection.InspectionId)
         .input('decision', sql.VarChar(20), decision)
         .input('acceptedQty', sql.Decimal(12, 2), acceptedQty || null)
@@ -254,6 +275,10 @@ router.patch('/:inspectionNo/decision', authenticate, authorize('QAManager', 'Fa
                     OverallRemarks = COALESCE(@remarks, OverallRemarks), ApprovedBy = @approvedBy, ApprovedAt = GETUTCDATE(),
                     VersionNo = VersionNo + 1, UpdatedAt = GETUTCDATE()
                 WHERE InspectionId = @inspId AND VersionNo = @versionNo`);
+      if (upd.rowsAffected[0] === 0) {
+        await transaction.rollback();
+        return res.status(409).json({ error: 'This inspection was changed by someone else — reload it and submit again.' });
+      }
 
       // Map QA decision to entry status
       const statusMap = {
@@ -271,11 +296,21 @@ router.patch('/:inspectionNo/decision', authenticate, authorize('QAManager', 'Fa
         .query(`UPDATE dbo.DeliveryEntries SET Status = @status, VersionNo = VersionNo + 1, UpdatedAt = GETUTCDATE()
                 WHERE EntryId = @entryId`);
 
+      // The inspector's copy of what they submitted (2026-11-11) — saved with the decision.
+      const logId = await writeQaDecisionLog(() => new sql.Request(transaction), {
+        inspectionId: inspection.InspectionId, submittedBy: req.user.userId,
+        extra: {
+          decisionRemarks: remarks || null,
+          rejectionReason: decision === 'Rejected' ? String(rejectionReason || '').trim() || null : null,
+          rejectionNotes: decision === 'Rejected' ? String(rejectionNotes || '').trim() || null : null,
+        },
+      });
+
       await transaction.commit();
 
       writeAuditLog({
         entityType: 'QAInspection', entityId: inspection.InspectionId, action: 'StatusChange',
-        userId: req.user.userId, oldValues: { status: inspection.OverallStatus }, newValues: { status: decision },
+        userId: req.user.userId, oldValues: { status: inspection.OverallStatus }, newValues: { status: decision, acceptedQty, rejectedQty, qaLogId: logId },
         ipAddress: req.ip, userAgent: req.get('User-Agent'),
       });
       writeStatusHistory({
@@ -284,7 +319,7 @@ router.patch('/:inspectionNo/decision', authenticate, authorize('QAManager', 'Fa
         remarks: `QA decision: ${decision}. ${remarks || ''}`,
       });
 
-      res.json({ inspectionNo: req.params.inspectionNo, decision, entryStatus: newEntryStatus });
+      res.json({ inspectionNo: req.params.inspectionNo, decision, entryStatus: newEntryStatus, logId });
 
       // Auto-send Ops Manager approval email when QA accepts (fire-and-forget)
       if (['Accepted', 'Conditional'].includes(decision)) {
@@ -473,10 +508,11 @@ router.get('/pending', authenticate, async (req, res, next) => {
 
     let factoryFilter = '';
     if (!canSeeAllFactories(req.user.role)) {
-      const factoryId = extractFactoryFromEmail(req.user.email);
+      const factoryId = await ownFactoryOf(pool, req.user);
       if (factoryId) {
-        factoryFilter = ' AND sl.LocationName LIKE @factoryPattern';
-        request.input('factoryPattern', sql.NVarChar(100), `%${factoryId}%`);
+        // F1 must not also match F10: the factory itself or its sub-locations (F7-STORE).
+        factoryFilter = " AND (sl.LocationName = @factoryId OR sl.LocationName LIKE @factoryId + '-%')";
+        request.input('factoryId', sql.NVarChar(100), factoryId);
       } else if (factory) {
         // No auto-detected factory restriction for this user (their email
         // doesn't match the f<N>production@ pattern) — honor their manual
@@ -525,6 +561,74 @@ router.get('/pending', authenticate, async (req, res, next) => {
   } catch (err) {
     next(err);
   }
+});
+
+// ──── QA decision log — the inspector's copies (2026-11-11) ────
+// GET /api/qa/my-log?search=&dateFrom=&dateTo=&decision=&scope=all&page=
+//   Decisions the user submitted or inspected. scope=all (managers only) = everyone's.
+router.get('/my-log', authenticate, async (req, res, next) => {
+  try {
+    const { search, dateFrom, dateTo, decision } = req.query;
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 25));
+    const all = req.query.scope === 'all' && canSeeAllFactories(req.user.role);
+    const pool = await getPool();
+    const request = pool.request().input('me', sql.Int, req.user.userId);
+    let where = all ? '1=1' : '(l.SubmittedBy = @me OR l.InspectorId = @me)';
+    if (dateFrom) { where += ' AND l.SubmittedAt >= @dateFrom'; request.input('dateFrom', sql.Date, dateFrom); }
+    if (dateTo) { where += ' AND l.SubmittedAt < DATEADD(day, 1, @dateTo)'; request.input('dateTo', sql.Date, dateTo); }
+    if (decision) { where += ' AND l.Decision = @decision'; request.input('decision', sql.VarChar(20), decision); }
+    if (search) {
+      where += ` AND (l.EntryNo LIKE @search OR l.InspectionNo LIKE @search
+                 OR JSON_VALUE(l.Snapshot, '$.entry.supplierName') LIKE @search OR JSON_VALUE(l.Snapshot, '$.entry.vehicleRegNo') LIKE @search)`;
+      request.input('search', sql.NVarChar(100), `%${String(search).trim()}%`);
+    }
+    request.input('offset', sql.Int, (page - 1) * limit).input('limit', sql.Int, limit);
+    const result = await request.query(`
+      SELECT l.LogId, l.InspectionNo, l.EntryNo, l.Decision, l.AcceptedQty, l.RejectedQty, l.SubmittedAt, l.Source,
+             us.FullName AS SubmittedByName,
+             JSON_VALUE(l.Snapshot, '$.entry.supplierName') AS SupplierName,
+             JSON_VALUE(l.Snapshot, '$.entry.factory') AS Factory,
+             JSON_VALUE(l.Snapshot, '$.entry.vehicleRegNo') AS VehicleRegNo,
+             JSON_VALUE(l.Snapshot, '$.entry.netWeight') AS NetWeight,
+             (SELECT STRING_AGG(JSON_VALUE(i.value, '$.name'), ', ') FROM OPENJSON(l.Snapshot, '$.entry.items') i) AS Materials,
+             (SELECT COUNT(*) FROM OPENJSON(l.Snapshot, '$.tests')) AS TestCount,
+             (SELECT COUNT(*) FROM OPENJSON(l.Snapshot, '$.tests') t WHERE JSON_VALUE(t.value, '$.result') = 'Fail') AS FailCount,
+             de.Status AS EntryStatusNow,
+             COUNT(*) OVER () AS Total
+      FROM dbo.QADecisionLog l
+      LEFT JOIN dbo.Users us ON us.UserId = l.SubmittedBy
+      LEFT JOIN dbo.DeliveryEntries de ON de.EntryId = l.EntryId
+      WHERE ${where}
+      ORDER BY l.SubmittedAt DESC, l.LogId DESC
+      OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY`);
+    const rows = result.recordset;
+    res.json({ data: rows.map(({ Total, ...r }) => r), total: rows[0]?.Total || 0, page, limit, scope: all ? 'all' : 'mine' });
+  } catch (err) { next(err); }
+});
+
+// GET /api/qa/my-log/:logId — the copy as submitted, plus where the delivery is now.
+router.get('/my-log/:logId', authenticate, async (req, res, next) => {
+  try {
+    const logId = parseInt(req.params.logId, 10);
+    if (!Number.isInteger(logId)) return res.status(400).json({ error: 'Invalid record' });
+    const pool = await getPool();
+    const row = (await pool.request().input('id', sql.Int, logId).query(`
+      SELECT l.*, us.FullName AS SubmittedByName, de.Status AS EntryStatusNow,
+             CASE WHEN EXISTS (SELECT 1 FROM dbo.QAInspections qi WHERE qi.InspectionId = l.InspectionId) THEN 0 ELSE 1 END AS InspectionDeleted,
+             (SELECT STRING_AGG(gr.RejectionNo, ', ') FROM dbo.GoodsRejectionNotes gr WHERE gr.InspectionId = l.InspectionId) AS RejectionNos,
+             (SELECT TOP 1 n.LogId FROM dbo.QADecisionLog n WHERE n.InspectionId = l.InspectionId AND n.LogId > l.LogId ORDER BY n.LogId DESC) AS LaterLogId
+      FROM dbo.QADecisionLog l
+      LEFT JOIN dbo.Users us ON us.UserId = l.SubmittedBy
+      LEFT JOIN dbo.DeliveryEntries de ON de.EntryId = l.EntryId
+      WHERE l.LogId = @id`)).recordset[0];
+    if (!row) return res.status(404).json({ error: 'Record not found' });
+    if (row.SubmittedBy !== req.user.userId && row.InspectorId !== req.user.userId && !canSeeAllFactories(req.user.role)) {
+      return res.status(403).json({ error: 'You can only open QA decisions you submitted or inspected' });
+    }
+    const { Snapshot, ...meta } = row;
+    res.json({ ...meta, InspectionDeleted: !!row.InspectionDeleted, snapshot: JSON.parse(Snapshot) });
+  } catch (err) { next(err); }
 });
 
 // ──── GET /api/qa — List inspections ────

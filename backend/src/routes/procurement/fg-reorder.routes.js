@@ -19,7 +19,7 @@ const { syncFGReorderStatus } = require('../../services/fg-reorder-sync.service'
 const stockService = require('../../services/stock.service');
 
 const router = express.Router();
-const FG_REORDER_ROLES = ['Admin', 'Procurement', 'Director', 'ProductionManager', 'OpsManager'];
+const FG_REORDER_ROLES = ['Admin', 'Procurement', 'Director', 'ProductionManager', 'HeadOfProductionPlanning', 'OpsManager'];
 
 // ── GET /api/procurement/fg-reorder ────────────────────────────────────────────
 router.get('/', authenticate, authorize(...FG_REORDER_ROLES), async (req, res, next) => {
@@ -69,11 +69,15 @@ router.get('/', authenticate, authorize(...FG_REORDER_ROLES), async (req, res, n
   } catch (err) { next(err); }
 });
 
-// ── GET /api/procurement/fg-reorder/summary ────────────────────────────────────
+// ── GET /api/procurement/fg-reorder/summary?factory= ───────────────────────────
+// factory (= Busy Mat Centre) narrows the cards to that store.
 router.get('/summary', authenticate, authorize(...FG_REORDER_ROLES), async (req, res, next) => {
   try {
     const pool = await getPool();
-    const result = await pool.request().query(`
+    const request = pool.request();
+    let where = '';
+    if (req.query.factory) { where = 'WHERE Factory = @factory'; request.input('factory', sql.NVarChar(80), req.query.factory); }
+    const result = await request.query(`
       SELECT
         COUNT(*) AS TotalItems,
         SUM(CASE WHEN StockStatus = 'CRITICAL' THEN 1 ELSE 0 END) AS CriticalCount,
@@ -81,14 +85,27 @@ router.get('/summary', authenticate, authorize(...FG_REORDER_ROLES), async (req,
         SUM(CASE WHEN Overstocked > 0 THEN 1 ELSE 0 END) AS OverstockedCount,
         SUM(CASE WHEN StockStatus IN ('CRITICAL','REORDER') AND AcknowledgedAt IS NULL THEN 1 ELSE 0 END) AS UnacknowledgedCount,
         MAX(SyncedAt) AS LastSyncedAt
-      FROM dbo.FGReorderStatus
+      FROM dbo.FGReorderStatus ${where}
     `);
     res.json(result.recordset[0]);
   } catch (err) { next(err); }
 });
 
+// ── GET /api/procurement/fg-reorder/stores ─────────────────────────────────────
+// Every Mat Centre with finished-goods rows (the page's filter), with counts.
+router.get('/stores', authenticate, authorize(...FG_REORDER_ROLES), async (req, res, next) => {
+  try {
+    const result = await (await getPool()).request().query(`
+      SELECT Factory AS name, COUNT(*) AS items,
+             SUM(CASE WHEN StockStatus IN ('CRITICAL','REORDER') THEN 1 ELSE 0 END) AS needsAction
+      FROM dbo.FGReorderStatus WHERE Factory IS NOT NULL
+      GROUP BY Factory`);
+    res.json(result.recordset);
+  } catch (err) { next(err); }
+});
+
 // ── POST /api/procurement/fg-reorder/sync ──────────────────────────────────────
-router.post('/sync', authenticate, authorize('Admin', 'Procurement'), async (req, res, next) => {
+router.post('/sync', authenticate, authorize('Admin', 'Procurement', 'HeadOfProductionPlanning'), async (req, res, next) => {
   try {
     const result = await syncFGReorderStatus();
     res.json(result);

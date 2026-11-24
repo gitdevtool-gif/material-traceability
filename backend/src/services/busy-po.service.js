@@ -16,12 +16,15 @@
  *   tax type  one of the purchase types buyers already use on POs (MasterType 14)
  * Prices and quantities always come from the stored award, never the browser.
  */
+const os = require('os');
 const { sql } = require('../db');
 const { sql: erpSql } = require('../erpDb');
 const config = require('../config');
 const { FUEL_ITEMS, FUEL_TAX_TYPE, FUEL_VAT_RATE, fuelItemName } = require('./fuel-order.service');
 
 const PO_VCHTYPE = 13;
+// Tran1.Source Busy gives a voucher saved through its COM API (see makeEditableInBusy)
+const API_SOURCE = 11;
 
 // Purchase types used on Busy POs (Aug–Oct 2026: TaxIncl 562, Vat16% 478,
 // Exempt 372, VAT/16% 77, VAT/14% 2). Defaults are picked from the quote's
@@ -431,6 +434,247 @@ async function buildFuelPurchaseOrder(pool, erpPool, { requisitionId, supplierId
 }
 
 /**
+ * Busy PO for one supplier's share of a direct-supply requisition
+ * (2026-11-24, sawdust for F8 — see direct-supply.service.js). No RFQ: the
+ * price and tax type are the supplier's standing ones from its last Busy PO
+ * for the item, worked out by the caller (the route) and passed in, so
+ * this only resolves the names against Busy and builds the XML — the same
+ * shape and tax handling as buildPurchaseOrder. One line per item this
+ * supplier is given (sawdust and/or offcuts — Busy users combine them on
+ * one PO too, e.g. Mijengo Pur-1303), all to the requisition's store (F8),
+ * qty in the item's Busy unit. One tax type for the whole PO.
+ *   lines: [{ itemName, qty, price }]
+ */
+async function buildDirectPurchaseOrder(pool, erpPool, {
+  requisitionNo, lines: wanted, store: storeName, supplierId, taxType, seriesName, date = new Date(),
+}) {
+  const problems = [];
+  let supplierName = null;
+  let party = null;
+  const s = (await pool.request().input('sid', sql.Int, supplierId)
+    .query('SELECT SupplierName, SupplierCode FROM dbo.Suppliers WHERE SupplierId = @sid')).recordset[0];
+  if (!s) problems.push('Supplier not found.');
+  else {
+    supplierName = s.SupplierName;
+    const partyCode = parseInt(String(s.SupplierCode || '').trim(), 10);
+    if (!Number.isFinite(partyCode) || partyCode <= 0) {
+      problems.push(`Supplier "${supplierName}" has no Busy party code — set its Supplier Code to the Busy account code first.`);
+    } else {
+      const p = await erpPool.request().input('code', erpSql.Int, partyCode)
+        .query('SELECT Code, LTRIM(RTRIM(Name)) AS Name FROM dbo.Master1 WHERE Code = @code AND MasterType = 2');
+      party = p.recordset[0] || null;
+      if (!party) problems.push(`Busy has no party with code ${partyCode} (supplier "${supplierName}").`);
+    }
+  }
+
+  const want = Array.isArray(wanted) ? wanted : [];
+  if (want.length === 0) problems.push(`Nothing to order from ${supplierName || 'this supplier'}.`);
+  const [items, stores, taxTypes] = await Promise.all([
+    resolveMastersByName(erpPool, 6, want.map((l) => l.itemName), ', LTRIM(RTRIM(u.Name)) AS UnitName'),
+    resolveMastersByName(erpPool, 11, [storeName]),
+    resolveMastersByName(erpPool, 14, taxType ? [taxType] : []),
+  ]);
+  const store = stores.get(nameKey(storeName));
+  if (!store) problems.push(`Store "${storeName || '(none)'}" does not exist in Busy.`);
+  const taxInfo = TAX_RATES[taxType];
+  if (!taxType) problems.push(`Choose the tax type for ${supplierName || 'this supplier'}.`);
+  else if (!taxInfo || !taxTypes.has(nameKey(taxType))) problems.push(`Tax type "${taxType}" can't be used from here — raise this one in Busy.`);
+  const taxRate = taxInfo?.rate || 0;
+  const taxInclusive = !!taxInfo?.inclusive;
+
+  const lines = want.map((l, i) => {
+    const item = items.get(nameKey(l.itemName));
+    if (!item) problems.push(`Item "${l.itemName}" does not exist in Busy.`);
+    const q = round2(Number(l.qty) || 0);
+    const pr = Number(l.price) || 0;
+    if (!(q > 0)) problems.push(`Enter the quantity of ${l.itemName} for ${supplierName || 'this supplier'}.`);
+    if (!(pr > 0)) problems.push(`${supplierName || 'This supplier'} has no price for ${l.itemName}.`);
+    const amount = round2(q * pr);
+    const netAmount = taxInclusive ? round2(amount / (1 + taxRate / 100)) : amount;
+    return {
+      srNo: i + 1, itemName: item?.Name || l.itemName, unitName: item?.UnitName || null, store: store?.Name || storeName,
+      qty: q, price: pr, amount, netAmount, taxAmount: taxInclusive ? round2(amount - netAmount) : 0,
+    };
+  });
+  const subtotal = round2(lines.reduce((s2, l) => s2 + l.amount, 0));
+  const vat = taxInclusive ? round2(lines.reduce((s2, l) => s2 + l.taxAmount, 0)) : round2(subtotal * taxRate / 100);
+  const grossTotal = taxInclusive ? subtotal : round2(subtotal + vat);
+  const total = Math.round(grossTotal);
+  const roundOff = round2(total - grossTotal);
+  const what = lines.map((l) => `${String(l.itemName).replace(/\s+IN\s+TONNES$/i, '')} ${l.qty}${l.unitName ? ` ${l.unitName}` : ''}`).join(' + ');
+  const narration = `${narrationTag(requisitionNo)} ${what} direct supply`
+    .replace(/\s+/g, ' ').trim().slice(0, NARRATION_MAX);
+
+  const po = {
+    requisitionNo, supplierId, supplierName, party, taxType, taxRate, taxInclusive,
+    date: busyDate(date), narration, lines, subtotal, vat, roundOff, total,
+    problems: [...new Set(problems)],
+  };
+  if (po.problems.length === 0) {
+    const sundries = [];
+    if (!taxInclusive && taxRate > 0) {
+      sundries.push(`<BSName>VAT</BSName><PercentVal>${taxRate}</PercentVal><PercentOperatedOn>${subtotal}</PercentOperatedOn><Amt>${vat}</Amt>`);
+    }
+    if (roundOff !== 0) sundries.push(`<BSName>Rounded Off (${roundOff > 0 ? '+' : '-'})</BSName><Amt>${Math.abs(roundOff)}</Amt>`);
+    po.xml = '<PurchaseOrder>'
+      + `<VchSeriesName>${xmlEscape(seriesName)}</VchSeriesName>`
+      + `<Date>${po.date}</Date><VchType>${PO_VCHTYPE}</VchType>`
+      + `<STPTName>${xmlEscape(taxType)}</STPTName>`
+      + `<MasterName1>${xmlEscape(party.Name)}</MasterName1>`
+      + `<VchOtherInfoDetails><Narration1>${xmlEscape(narration)}</Narration1></VchOtherInfoDetails>`
+      + '<ItemEntries>'
+      + lines.map((l) => '<ItemDetail>'
+        + `<SrNo>${l.srNo}</SrNo><ItemName>${xmlEscape(l.itemName)}</ItemName>`
+        + (l.unitName ? `<UnitName>${xmlEscape(l.unitName)}</UnitName>` : '')
+        + `<Qty>${l.qty}</Qty><Price>${l.price}</Price><Amt>${l.amount}</Amt>`
+        + `<NettAmount>${l.netAmount}</NettAmount>`
+        + (taxInclusive
+          ? `<STAmount>${l.taxAmount}</STAmount><STPercent>${taxRate}</STPercent><TaxBeforeSurcharge>${l.taxAmount}</TaxBeforeSurcharge>`
+          : '')
+        + `<MC>${xmlEscape(l.store)}</MC>`
+        + '</ItemDetail>').join('')
+      + '</ItemEntries>'
+      + (sundries.length ? `<BillSundries>${sundries.map((x, i) => `<BSDetail><SrNo>${i + 1}</SrNo>${x}</BSDetail>`).join('')}</BillSundries>` : '')
+      + '</PurchaseOrder>';
+  }
+  return po;
+}
+
+/**
+ * Amend a PO this system pushed to Busy (2026-10-22) — the SAME voucher is
+ * changed in place (ModifyVchFromXMLByCode), keeping its Pur- number, date,
+ * series and "[MTS …]" narration. Lines are read from Busy, edited by the
+ * user ({ itemName, qty, price, store }), re-checked against Busy and turned
+ * back into the push XML with the tax treatment of the original push.
+ * Blocked when the PO was entered in Busy by hand (no "[MTS " tag) or when
+ * goods have already been received against it — those must be changed in
+ * Busy itself.
+ *   lines omitted → the PO as it stands in Busy (for the edit form)
+ */
+const MTS_TAG = '[MTS ';
+
+async function loadBusyPoForAmend(erpPool, vchCode) {
+  const head = (await erpPool.request().input('v', erpSql.Int, vchCode).input('t', erpSql.Int, PO_VCHTYPE).query(`
+    SELECT t1.VchCode, LTRIM(RTRIM(t1.VchNo)) AS VchNo, t1.AutoVchNo, t1.[Date], t1.ApprovalStatus,
+           LTRIM(RTRIM(ser.Name)) AS SeriesName, LTRIM(RTRIM(p.Name)) AS PartyName, t1.MasterCode1 AS PartyCode,
+           LTRIM(RTRIM(st.Name)) AS TaxType, LTRIM(RTRIM(oi.Narration1)) AS Narration, t1.VchAmtBaseCur AS GrandTotal
+    FROM dbo.Tran1 t1
+    LEFT JOIN dbo.Master1 ser ON ser.Code = t1.VchSeriesCode
+    LEFT JOIN dbo.Master1 p   ON p.Code = t1.MasterCode1
+    LEFT JOIN dbo.Master1 st  ON st.Code = t1.CM1
+    LEFT JOIN dbo.VchOtherInfo oi ON oi.VchCode = t1.VchCode
+    WHERE t1.VchCode = @v AND t1.VchType = @t`)).recordset[0];
+  if (!head) return null;
+  const lines = (await erpPool.request().input('v', erpSql.Int, vchCode).query(`
+    SELECT t2.SrNo, LTRIM(RTRIM(it.Name)) AS itemName, LTRIM(RTRIM(u.Name)) AS unitName,
+           ABS(t2.D1) AS qty, t2.D2 AS price, LTRIM(RTRIM(mc.Name)) AS store
+    FROM dbo.Tran2 t2
+    LEFT JOIN dbo.Master1 it ON it.Code = t2.MasterCode1
+    LEFT JOIN dbo.Master1 u  ON u.Code = it.CM1
+    LEFT JOIN dbo.Master1 mc ON mc.Code = t2.MasterCode2
+    WHERE t2.VchCode = @v AND t2.RecType IN (4, 15)
+    ORDER BY t2.SrNo`)).recordset;
+  const received = (await erpPool.request().input('v', erpSql.Int, vchCode).query(`
+    SELECT COUNT(*) AS n FROM dbo.Tran3 x
+    WHERE x.RecType = 4 AND x.Method = 2
+      AND x.RefCode IN (SELECT RefCode FROM dbo.Tran3 WHERE VchCode = @v AND RecType = 4 AND Method = 1)`)).recordset[0].n;
+  return { ...head, lines: lines.map((l) => ({ ...l, qty: Number(l.qty) || 0, price: Number(l.price) || 0 })), received };
+}
+
+async function buildAmendedPurchaseOrder(erpPool, { vchCode, lines: edited, taxType: wantedTax }) {
+  const po = await loadBusyPoForAmend(erpPool, vchCode);
+  if (!po) return { problems: ['That PO was not found in Busy.'] };
+  const problems = [];
+  if (!String(po.Narration || '').startsWith(MTS_TAG)) {
+    problems.push(`${po.VchNo} was entered in Busy by hand — change it in Busy itself.`);
+  }
+  if (po.received > 0) {
+    problems.push(`Goods have already been received (GRN) against ${po.VchNo} — it can no longer be amended from here. Change it in Busy or raise a new PO for the difference.`);
+  }
+
+  const src = Array.isArray(edited) ? edited : po.lines;
+  const rows = src
+    .map((l) => ({ itemName: String(l.itemName || '').trim(), qty: Number(l.qty), price: Number(l.price), store: String(l.store || '').trim() }))
+    .filter((l) => l.itemName);
+  if (rows.length === 0) problems.push('A PO needs at least one line.');
+
+  const isFuel = rows.length > 0 && rows.every((l) => fuelItemName(l.itemName));
+  const taxType = isFuel ? FUEL_TAX_TYPE : (wantedTax || po.TaxType);
+  const [items, stores, taxTypes] = await Promise.all([
+    resolveMastersByName(erpPool, 6, rows.map((l) => l.itemName), ', LTRIM(RTRIM(u.Name)) AS UnitName'),
+    resolveMastersByName(erpPool, 11, rows.map((l) => l.store)),
+    resolveMastersByName(erpPool, 14, [taxType]),
+  ]);
+  const taxInfo = isFuel ? { rate: FUEL_VAT_RATE, inclusive: true } : TAX_RATES[taxType];
+  if (!taxInfo || !taxTypes.has(nameKey(taxType))) problems.push(`Tax type "${taxType}" can't be used here — amend this one in Busy.`);
+  const taxRate = taxInfo?.rate || 0;
+  const taxInclusive = !!taxInfo?.inclusive;
+
+  const lines = rows.map((l, i) => {
+    const item = items.get(nameKey(l.itemName));
+    const store = stores.get(nameKey(l.store));
+    if (!item) problems.push(`Item "${l.itemName}" does not exist in Busy.`);
+    if (!store) problems.push(`Store "${l.store || '(none)'}" for "${l.itemName}" does not exist in Busy.`);
+    if (!(l.qty > 0)) problems.push(`Enter a quantity above 0 for "${l.itemName}".`);
+    if (!(l.price > 0)) problems.push(`Enter a price above 0 for "${l.itemName}".`);
+    const amount = round2((l.qty || 0) * (l.price || 0));
+    const netAmount = taxInclusive ? round2(amount / (1 + taxRate / 100)) : amount;
+    return {
+      srNo: i + 1, itemName: item?.Name || l.itemName, unitName: item?.UnitName || null, store: store?.Name || l.store,
+      qty: l.qty, price: l.price, amount, netAmount, taxAmount: taxInclusive ? round2(amount - netAmount) : 0,
+    };
+  });
+
+  const subtotal = round2(lines.reduce((s, l) => s + l.amount, 0));
+  const vat = taxInclusive ? round2(lines.reduce((s, l) => s + l.taxAmount, 0)) : round2(subtotal * taxRate / 100);
+  const grossTotal = taxInclusive ? subtotal : round2(subtotal + vat);
+  const total = Math.round(grossTotal);
+  const roundOff = round2(total - grossTotal);
+  const out = {
+    vchCode: po.VchCode, ordno: po.VchNo, date: busyDate(new Date(po.Date)), party: { Code: po.PartyCode, Name: po.PartyName },
+    approvalStatus: po.ApprovalStatus, received: po.received, narration: po.Narration, isFuel,
+    taxType, taxRate, taxInclusive, taxTypes: isFuel ? [FUEL_TAX_TYPE] : TAX_TYPES,
+    currentLines: po.lines, currentTotal: Number(po.GrandTotal) || 0,
+    lines, subtotal, vat, roundOff, total, problems: [...new Set(problems)],
+  };
+
+  if (out.problems.length === 0) {
+    const sundries = [];
+    if (!taxInclusive && taxRate > 0) {
+      sundries.push(`<BSName>VAT</BSName><PercentVal>${taxRate}</PercentVal><PercentOperatedOn>${subtotal}</PercentOperatedOn><Amt>${vat}</Amt>`);
+    }
+    if (roundOff !== 0) sundries.push(`<BSName>Rounded Off (${roundOff > 0 ? '+' : '-'})</BSName><Amt>${Math.abs(roundOff)}</Amt>`);
+    // Busy stores a series master under the voucher type + its name ("13NCF")
+    // but the XML takes the name alone ("NCF") — the stored one is "Invalid
+    // voucher series" (2026-10-28).
+    const typePrefix = String(PO_VCHTYPE);
+    const seriesName = String(po.SeriesName || '').startsWith(typePrefix) ? po.SeriesName.slice(typePrefix.length) : po.SeriesName;
+    out.xml = '<PurchaseOrder>'
+      + `<VchSeriesName>${xmlEscape(seriesName)}</VchSeriesName>`
+      + `<Date>${out.date}</Date><VchType>${PO_VCHTYPE}</VchType>`
+      + `<VchNo>${xmlEscape(po.VchNo)}</VchNo>${po.AutoVchNo ? `<AutoVchNo>${po.AutoVchNo}</AutoVchNo>` : ''}`
+      + `<STPTName>${xmlEscape(taxType)}</STPTName>`
+      + `<MasterName1>${xmlEscape(po.PartyName)}</MasterName1>`
+      + `<VchOtherInfoDetails><Narration1>${xmlEscape(String(po.Narration || '').slice(0, NARRATION_MAX))}</Narration1></VchOtherInfoDetails>`
+      + '<ItemEntries>'
+      + lines.map((l) => '<ItemDetail>'
+        + `<SrNo>${l.srNo}</SrNo><ItemName>${xmlEscape(l.itemName)}</ItemName>`
+        + (l.unitName ? `<UnitName>${xmlEscape(l.unitName)}</UnitName>` : '')
+        + `<Qty>${l.qty}</Qty><Price>${l.price}</Price><Amt>${l.amount}</Amt>`
+        + `<NettAmount>${l.netAmount}</NettAmount>`
+        + (taxInclusive
+          ? `<STAmount>${l.taxAmount}</STAmount><STPercent>${taxRate}</STPercent><TaxBeforeSurcharge>${l.taxAmount}</TaxBeforeSurcharge>`
+          : '')
+        + `<MC>${xmlEscape(l.store)}</MC>`
+        + '</ItemDetail>').join('')
+      + '</ItemEntries>'
+      + (sundries.length ? `<BillSundries>${sundries.map((s, i) => `<BSDetail><SrNo>${i + 1}</SrNo>${s}</BSDetail>`).join('')}</BillSundries>` : '')
+      + '</PurchaseOrder>';
+  }
+  return out;
+}
+
+/**
  * Our suppliers that Busy users have raised fuel POs to (last 12 months),
  * most used first — offered first when Procurement picks the fuel supplier.
  */
@@ -467,14 +711,16 @@ async function findExistingPushedPo(erpPool, { rfqNumber, partyCode }) {
     .input('party', erpSql.Int, partyCode)
     .input('tag', erpSql.NVarChar(100), narrationTag(rfqNumber))
     .query(`
-      SELECT TOP 1 LTRIM(RTRIM(t1.VchNo)) AS VchNo
+      SELECT TOP 1 LTRIM(RTRIM(t1.VchNo)) AS VchNo, t1.VchCode, t1.Source
       FROM dbo.Tran1 t1
       JOIN dbo.VchOtherInfo oi ON oi.VchCode = t1.VchCode
       -- prefix compare, not LIKE: "[" is a LIKE wildcard
       WHERE t1.VchType = @vchType AND t1.MasterCode1 = @party AND LEFT(oi.Narration1, LEN(@tag)) = @tag
       ORDER BY t1.VchCode DESC
     `);
-  return result.recordset[0]?.VchNo || null;
+  const row = result.recordset[0];
+  // Source 11 = still exactly as the API saved it: our after-save fixes never ran
+  return row ? { vchNo: row.VchNo, vchCode: row.VchCode, untouched: row.Source === API_SOURCE } : null;
 }
 
 /**
@@ -509,6 +755,38 @@ async function markPendingApproval(erpPool, vchCode) {
 }
 
 /**
+ * Makes a PO saved through Busy's COM API look like one saved on Busy's own
+ * screen (2026-10-28), so Busy users can open, change and save it. Compared
+ * against Busy-entered POs:
+ *   Tran1.Source 11 -> 0       11 marks a voucher made by another program;
+ *                              Busy locks Save on those in its PO screen
+ *   Tran1.InputType 0 -> 1     every Busy-entered PO has 1
+ *   Tran3 pending order -> minus  Busy books the order quantity as minus and a
+ *                              receipt as plus so they cancel; the API books
+ *                              it plus, so a receipt in Busy would double the
+ *                              pending quantity instead of clearing it
+ * Call straight after every AddVchFromXML / ModifyVchFromXMLByCode of a PO.
+ */
+async function makeEditableInBusy(erpPool, vchCode) {
+  const tx = new erpSql.Transaction(erpPool);
+  await tx.begin();
+  try {
+    const t1 = await tx.request()
+      .input('vch', erpSql.Int, vchCode)
+      .input('vchType', erpSql.Int, PO_VCHTYPE)
+      .query('UPDATE dbo.Tran1 SET Source = 0, InputType = 1 WHERE VchCode = @vch AND VchType = @vchType');
+    if (t1.rowsAffected[0] !== 1) throw new Error(`PO VchCode ${vchCode} not found`);
+    await tx.request().input('vch', erpSql.Int, vchCode).query(`
+      UPDATE dbo.Tran3 SET Value1 = -ABS(Value1), Value2 = -ABS(Value2), NewRefAmount = -ABS(NewRefAmount)
+      WHERE VchCode = @vch AND RecType = 4 AND Method = 1`);
+    await tx.commit();
+  } catch (err) {
+    await tx.rollback().catch(() => {});
+    throw err;
+  }
+}
+
+/**
  * Busy's COM session always logs in as Supervisor, so Busy's "Added by"
  * (BusyUserLog, written when the voucher is saved) names Supervisor. Re-point
  * those entries at the Busy login of the person who raised the PO here.
@@ -535,6 +813,10 @@ async function resolveBusyUser(erpPool, name) {
   return result.recordset[0]?.Name || null;
 }
 
+// Busy writes the machine the COM session ran on into CheckList.ComputerName;
+// the bridge runs on the API's machine, so only rows from here are ours.
+const BRIDGE_COMPUTER = os.hostname().toUpperCase();
+
 async function attributeToBusyUser(erpPool, { vchCode, vchNo, busyUserName }) {
   await erpPool.request()
     .input('vch', erpSql.Int, vchCode)
@@ -542,9 +824,74 @@ async function attributeToBusyUser(erpPool, { vchCode, vchNo, busyUserName }) {
     .input('user', erpSql.NVarChar(50), busyUserName)
     .query(`UPDATE [${busyCompanyDb()}].dbo.BusyUserLog SET UserName = @user
             WHERE WorkedOn = 2 AND L1 = @vch AND LTRIM(RTRIM(S2)) = @vchNo AND UserName = 'Supervisor'`);
+  // Busy's voucher screens show "Added by" / "Modified by" from CheckList
+  // (year database; Type 2 = voucher, Action 1 = added, 2 = modified), not
+  // from BusyUserLog (2026-10-29).
+  await erpPool.request()
+    .input('vch', erpSql.Int, vchCode)
+    .input('user', erpSql.NVarChar(50), busyUserName)
+    .input('pc', erpSql.NVarChar(50), BRIDGE_COMPUTER)
+    .query(`UPDATE dbo.CheckList SET UserName = @user
+            WHERE Type = 2 AND Code = @vch AND Action IN (1, 2) AND UserName = 'Supervisor' AND ComputerName = @pc`);
+  // The COM session (Supervisor, a super user) also logs an approval
+  // (Action 3) the moment it saves. Once markPendingApproval has put the
+  // voucher back to "to be approved" that row is false — a PO a normal user
+  // saves has no Action 3 until someone approves it — so drop it (2026-10-30).
+  await erpPool.request()
+    .input('vch', erpSql.Int, vchCode)
+    .input('pc', erpSql.NVarChar(50), BRIDGE_COMPUTER)
+    .query(`DELETE FROM dbo.CheckList
+            WHERE Type = 2 AND Code = @vch AND Action = 3 AND UserName = 'Supervisor' AND ComputerName = @pc
+              AND EXISTS (SELECT 1 FROM dbo.Tran1 WHERE VchCode = @vch AND ApprovalStatus = 2)`);
+}
+
+/**
+ * Busy logs the approval of a PO this system pushed as "Supervisor" in
+ * CheckList (what the voucher screen shows) even when a normal user
+ * approved it — e.g. Pur-2990 approved by Prity on IT-DEPT (2026-10-30).
+ * Busy's own BusyUserLog (LogFor 12 = approved) has the real approver;
+ * when it has no entry, the approver is the one user who was approving on
+ * that same computer within 5 minutes either side (Supervisor approvals
+ * sit in the middle of those runs). Only rows from other computers than
+ * the bridge are touched. Runs with the procurement sync; returns the
+ * rows fixed as [{ vchCode, vchNo, user, source }].
+ */
+async function fixApprovalAttribution(erpPool, { days = 60, bridgeComputer = BRIDGE_COMPUTER } = {}) {
+  const rows = (await erpPool.request()
+    .input('pc', erpSql.NVarChar(50), bridgeComputer)
+    .input('days', erpSql.Int, days)
+    .query(`
+      SELECT c.Code, LTRIM(RTRIM(t.VchNo)) AS VchNo, c.ActionTime, c.ComputerName,
+        (SELECT TOP 1 LTRIM(RTRIM(l.UserName)) FROM [${busyCompanyDb()}].dbo.BusyUserLog l
+          WHERE l.WorkedOn = 2 AND l.L1 = c.Code AND l.LogFor = 12 AND l.UserName <> 'Supervisor'
+            AND ABS(DATEDIFF(second, l.[Date], c.ActionTime)) <= 5
+          ORDER BY ABS(DATEDIFF(second, l.[Date], c.ActionTime))) AS LogUser,
+        (SELECT CASE WHEN COUNT(DISTINCT n.UserName) = 1 THEN MIN(n.UserName) END FROM dbo.CheckList n
+          WHERE n.Type = 2 AND n.ComputerName = c.ComputerName AND n.UserName <> 'Supervisor'
+            AND n.ActionTime BETWEEN DATEADD(minute, -5, c.ActionTime) AND DATEADD(minute, 5, c.ActionTime)) AS PcUser
+      FROM dbo.CheckList c JOIN dbo.Tran1 t ON t.VchCode = c.Code AND t.VchType = ${PO_VCHTYPE}
+      WHERE c.Type = 2 AND c.Action = 3 AND c.UserName = 'Supervisor' AND c.ComputerName <> @pc
+        AND ISNULL(c.ComputerName, '') <> '' AND c.ActionTime >= DATEADD(day, -@days, GETDATE())
+        -- not a super user's own save (approval logged in the same second as its add/modify)
+        AND NOT EXISTS (SELECT 1 FROM dbo.CheckList s WHERE s.Type = 2 AND s.Code = c.Code AND s.Action IN (1, 2)
+                        AND s.ComputerName = c.ComputerName AND s.ActionTime = c.ActionTime)
+        -- only POs this system pushed (raised through the bridge)
+        AND EXISTS (SELECT 1 FROM dbo.CheckList a WHERE a.Type = 2 AND a.Code = c.Code AND a.Action = 1 AND a.ComputerName = @pc)`)).recordset;
+  const fixed = [];
+  for (const r of rows) {
+    const user = r.LogUser || r.PcUser;
+    if (!user) continue;
+    await erpPool.request()
+      .input('vch', erpSql.Int, r.Code).input('at', erpSql.DateTime, r.ActionTime)
+      .input('pcName', erpSql.NVarChar(50), r.ComputerName).input('user', erpSql.NVarChar(50), user)
+      .query(`UPDATE dbo.CheckList SET UserName = @user
+              WHERE Type = 2 AND Code = @vch AND Action = 3 AND UserName = 'Supervisor' AND ActionTime = @at AND ComputerName = @pcName`);
+    fixed.push({ vchCode: r.Code, vchNo: r.VchNo, user, source: r.LogUser ? 'BusyUserLog' : 'same computer' });
+  }
+  return fixed;
 }
 
 module.exports = {
-  PO_VCHTYPE, TAX_TYPES, buildPurchaseOrder, buildFuelPurchaseOrder, listFuelSuppliers, findExistingPushedPo, listBusyStores,
-  markPendingApproval, listBusyUsers, resolveBusyUser, attributeToBusyUser,
+  PO_VCHTYPE, TAX_TYPES, buildPurchaseOrder, buildFuelPurchaseOrder, buildDirectPurchaseOrder, buildAmendedPurchaseOrder, listFuelSuppliers, findExistingPushedPo, listBusyStores,
+  markPendingApproval, makeEditableInBusy, listBusyUsers, resolveBusyUser, attributeToBusyUser, fixApprovalAttribution,
 };

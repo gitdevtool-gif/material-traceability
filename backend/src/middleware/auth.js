@@ -24,6 +24,20 @@ const READ_ONLY_POSTS = new Set([
   '/api/procurement/production-planning/plan',
 ]);
 
+/**
+ * GRN Reviewer (2026-11-23): sees every page like a System Viewer (read-only),
+ * and may also write one thing — the reasons on flagged GRN checks before the
+ * Director approves (routes/grn-approval.routes.js).
+ */
+const GRN_REVIEWER_ROLE = 'GrnReviewer';
+const READ_ALL_ROLES = new Set([VIEWER_ROLE, GRN_REVIEWER_ROLE]);
+const GRN_REVIEWER_WRITES = [/^\/api\/grn-approvals\/\d+\/reasons$/];
+
+function isReviewerWrite(req) {
+  const path = (req.originalUrl || '').split('?')[0].replace(/\/+$/, '');
+  return req.method === 'POST' && GRN_REVIEWER_WRITES.some((re) => re.test(path));
+}
+
 function isReadRequest(req) {
   if (READ_METHODS.has(req.method)) return true;
   if (req.method === 'POST') {
@@ -51,6 +65,9 @@ function authenticate(req, res, next) {
   if (req.user.role === VIEWER_ROLE && !isReadRequest(req)) {
     return res.status(403).json({ error: 'Read-only access — System Viewer accounts cannot make changes' });
   }
+  if (req.user.role === GRN_REVIEWER_ROLE && !isReadRequest(req) && !isReviewerWrite(req)) {
+    return res.status(403).json({ error: 'Read-only access — a GRN Reviewer can only give reasons on GRN checks' });
+  }
   next();
 }
 
@@ -63,7 +80,7 @@ function authorize(...allowedRoles) {
     if (!req.user) {
       return res.status(401).json({ error: 'Authentication required' });
     }
-    if (req.user.role === VIEWER_ROLE && isReadRequest(req)) {
+    if (READ_ALL_ROLES.has(req.user.role) && isReadRequest(req)) {
       return next();
     }
     if (!allowedRoles.includes(req.user.role)) {

@@ -8,10 +8,10 @@
 const express = require('express');
 const { getPool, sql } = require('../db');
 const { authenticate, authorize } = require('../middleware/auth');
-const { syncAgingStock } = require('../services/aging-sync.service');
+const { syncAgingStock, AGING_STORES } = require('../services/aging-sync.service');
 
 const router = express.Router();
-const AGING_ROLES = ['Admin', 'Procurement', 'Director', 'ProductionClerk', 'ProductionManager', 'OpsManager'];
+const AGING_ROLES = ['Admin', 'Procurement', 'Director', 'ProductionClerk', 'ProductionManager', 'HeadOfProductionPlanning', 'OpsManager'];
 
 // Bucket boundaries (days). Adjust here only — every endpoint uses this SQL fragment.
 // BatchDate is nullable (see migration) — without the explicit NULL branch,
@@ -45,8 +45,11 @@ function clampInt(value, { min, max, fallback }) {
 // Applies the shared WHERE filters to a given request object and returns the
 // WHERE clause string. Used by both the count query and the data query so
 // they can never drift apart from each other.
+// Only the aging stores (see aging-sync.service.js) — the sync already keeps
+// out everything else; this also hides rows left from a sync before the list.
 function applyFilters(request, { factory, category, itemName, bucket, minAge }) {
-  let where = '1=1';
+  AGING_STORES.forEach((s, i) => request.input(`store${i}`, sql.NVarChar(80), s));
+  let where = `Factory IN (${AGING_STORES.map((_, i) => `@store${i}`).join(', ')})`;
   if (factory)  { where += ' AND Factory = @factory'; request.input('factory', sql.NVarChar(80), factory); }
   if (category) { where += ' AND Category = @category'; request.input('category', sql.NVarChar(80), category); }
   if (itemName) { where += ' AND ItemName LIKE @itemName'; request.input('itemName', sql.NVarChar(200), `%${itemName}%`); }
@@ -104,6 +107,41 @@ router.get('/', authenticate, authorize(...AGING_ROLES), async (req, res, next) 
       limit,
       total,
       totalPages: Math.max(1, Math.ceil(total / limit)),
+    });
+  } catch (err) { next(err); }
+});
+
+// ── GET /api/production/aging/export ──────────────────────────────────────
+// Every row matching the active filters (2026-11-24) — the table's filters
+// and sort, without paging — for the page's Excel export (e.g. Central
+// Stores 180+ days, to work on dead stock). Same applyFilters as GET /, so
+// the export can never disagree with what the page shows.
+const EXPORT_MAX_ROWS = 60000; // the whole table is ~33k batches
+router.get('/export', authenticate, authorize(...AGING_ROLES), async (req, res, next) => {
+  try {
+    const { factory, category, itemName, bucket, minAge, sortBy = 'AgeDays', sortDir = 'DESC' } = req.query;
+    const pool = await getPool();
+    const sortCol = ALLOWED_SORT[sortBy] || 'AgeDays';
+    const dir = sortDir === 'ASC' ? 'ASC' : 'DESC';
+    const request = pool.request();
+    const where = applyFilters(request, { factory, category, itemName, bucket, minAge });
+    const result = await request.query(`
+      SELECT TOP (${EXPORT_MAX_ROWS + 1})
+        ItemName, Category, Factory, BatchNo, BatchDate, DueDate, Qty, Amount,
+        DATEDIFF(day, BatchDate, GETDATE()) AS AgeDays,
+        ${BUCKET_CASE} AS AgeBucket
+      FROM dbo.AgingStock
+      WHERE ${where}
+      ORDER BY ${sortCol} ${dir}, AgingStockId ASC
+    `);
+    const rows = result.recordset;
+    const truncated = rows.length > EXPORT_MAX_ROWS;
+    const lastSync = await pool.request().query('SELECT MAX(SyncedAt) AS LastSyncedAt FROM dbo.AgingStock');
+    res.json({
+      data: truncated ? rows.slice(0, EXPORT_MAX_ROWS) : rows,
+      truncated,
+      maxRows: EXPORT_MAX_ROWS,
+      lastSyncedAt: lastSync.recordset[0].LastSyncedAt,
     });
   } catch (err) { next(err); }
 });
@@ -174,12 +212,13 @@ router.get('/summary', authenticate, authorize(...AGING_ROLES), async (req, res,
       totals: totals.recordset[0],
       topAging: topAging.recordset,       // the actual "act on this" list
       lastSyncedAt: lastSync.recordset[0].LastSyncedAt,
+      stores: AGING_STORES,               // the factory filter's options
     });
   } catch (err) { next(err); }
 });
 
 // ── POST /api/production/aging/sync ───────────────────────────────────────
-router.post('/sync', authenticate, authorize('Admin', 'Procurement'), async (_req, res) => {
+router.post('/sync', authenticate, authorize('Admin', 'Procurement', 'HeadOfProductionPlanning'), async (_req, res) => {
   try {
     const result = await syncAgingStock();
     res.json(result);

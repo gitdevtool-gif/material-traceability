@@ -1,7 +1,7 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import Layout from './components/Layout';
+import Layout, { AUDIT_ROLES } from './components/Layout';
 import LoginPage from './pages/LoginPage';
 import './index.css';
 
@@ -10,7 +10,11 @@ const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const GateEntryPage = lazy(() => import('./pages/GateEntryPage'));
 const GateEntryListPage = lazy(() => import('./pages/GateEntryListPage'));
 const WeighbridgePage = lazy(() => import('./pages/WeighbridgePage'));
+const GrnPrintPage = lazy(() => import('./pages/GrnPrintPage'));
 const QAInspectionPage = lazy(() => import('./pages/QAInspectionPage'));
+const QADecisionCopyPage = lazy(() => import('./pages/QADecisionCopyPage'));
+const GrnApprovalsPage = lazy(() => import('./pages/GrnApprovalsPage'));
+const AccountsPaymentsPage = lazy(() => import('./pages/AccountsPaymentsPage'));
 const ReceivingPage = lazy(() => import('./pages/ReceivingPage'));
 const GRNListPage = lazy(() => import('./pages/GRNListPage'));
 const GoodsRejectionPage = lazy(() => import('./pages/GoodsRejectionPage'));
@@ -18,6 +22,7 @@ const TraceabilityPage = lazy(() => import('./pages/TraceabilityPage'));
 const ERPLookupPage = lazy(() => import('./pages/ERPLookupPage'));
 const UserManagementPage = lazy(() => import('./pages/UserManagementPage'));
 const OpsManagerApprovalPage  = lazy(() => import('./pages/OpsManagerApprovalPage'));
+const WorkshopApprovalPage    = lazy(() => import('./pages/WorkshopApprovalPage'));
 const RequisitionApprovalStatusPage = lazy(() => import('./pages/RequisitionApprovalStatusPage'));
 const CreateRequisitionPage   = lazy(() => import('./pages/CreateRequisitionPage'));
 const CentralStoresApprovalPage = lazy(() => import('./pages/CentralStoresApprovalPage'));
@@ -35,14 +40,17 @@ const LPOReconciliationPage   = lazy(() => import('./pages/LPOReconciliationPage
 const BusyLPOsRaisedPage      = lazy(() => import('./pages/BusyLPOsRaisedPage'));
 const BusyReceivingPage       = lazy(() => import('./pages/BusyReceivingPage'));
 const OrderTracePage          = lazy(() => import('./pages/OrderTracePage'));
+const RequisitionAuditPage    = lazy(() => import('./pages/RequisitionAuditPage'));
 const ItemCategoryMapPage     = lazy(() => import('./pages/ItemCategoryMapPage'));
 const ItemCodeLookupPage      = lazy(() => import('./pages/ItemCodeLookupPage'));
 const SuppliersPage           = lazy(() => import('./pages/SuppliersPage'));
+const SystemSettingsPage      = lazy(() => import('./pages/SystemSettingsPage'));
 const ReorderLevelPage        = lazy(() => import('./pages/ReorderLevelPage'));
 const FGReorderLevelPage      = lazy(() => import('./pages/FGReorderLevelPage'));
 // Production module
 const ProductionPlanningPage  = lazy(() => import('./pages/ProductionPlanning'));
 const AgingAnalysisPage       = lazy(() => import('./pages/AgingAnalysis'));
+const DirectSupplyPage        = lazy(() => import('./pages/DirectSupplyPage'));
 // Public — no auth
 const SupplierQuotePage       = lazy(() => import('./pages/SupplierQuotePage'));
 
@@ -73,7 +81,9 @@ function ProtectedRoute({ children, roles, noViewer }) {
   const { user, loading } = useAuth();
   if (loading) return <div className="text-center mt-4">Loading…</div>;
   if (!user) return <Navigate to="/login" replace />;
-  if (user.role === 'Viewer') {
+  // GRN Reviewer (2026-11-23) also sees every page read-only, like a Viewer,
+  // and has its own access where a route lists it (GRN Approval).
+  if (user.role === 'Viewer' || (user.role === 'GrnReviewer' && !(roles && roles.includes(user.role)))) {
     if (noViewer) return <Navigate to="/" replace />;
     return children;
   }
@@ -89,6 +99,14 @@ function AppRoutes() {
       <Route path="/supplier-quote/:token" element={<Suspense fallback={<PageLoader />}><SupplierQuotePage /></Suspense>} />
 
       <Route path="/login" element={user ? <Navigate to="/" replace /> : <LoginPage />} />
+      {/* Printable GRN — outside the app layout so it prints as a clean A4 page */}
+      <Route path="/grn-print/:entryId" element={
+        <ProtectedRoute><Suspense fallback={<PageLoader />}><GrnPrintPage /></Suspense></ProtectedRoute>
+      } />
+      {/* The inspector's printable copy of a QA decision (access checked server-side) */}
+      <Route path="/qa-copy/:logId" element={
+        <ProtectedRoute><Suspense fallback={<PageLoader />}><QADecisionCopyPage /></Suspense></ProtectedRoute>
+      } />
       <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
         <Route index element={<Suspense fallback={<PageLoader />}><DashboardPage /></Suspense>} />
         <Route path="entries" element={<Suspense fallback={<PageLoader />}><GateEntryListPage /></Suspense>} />
@@ -117,8 +135,24 @@ function AppRoutes() {
             <Suspense fallback={<PageLoader />}><OpsManagerApprovalPage /></Suspense>
           </ProtectedRoute>
         } />
+        <Route path="workshop-approval" element={
+          <ProtectedRoute roles={['WorkshopHOD', 'Director', 'Admin']}>
+            <Suspense fallback={<PageLoader />}><WorkshopApprovalPage /></Suspense>
+          </ProtectedRoute>
+        } />
+        {/* GRN Director approval before payment + Accounts view (2026-11-11) */}
+        <Route path="grn-approvals" element={
+          <ProtectedRoute roles={['Director', 'Admin', 'GrnReviewer', 'StoreReceiving', 'FactoryReceiving', 'FactoryQA', 'Supervisor', 'Accounts', 'Procurement', 'OpsManager', 'Auditor']}>
+            <Suspense fallback={<PageLoader />}><GrnApprovalsPage /></Suspense>
+          </ProtectedRoute>
+        } />
+        <Route path="accounts/payments" element={
+          <ProtectedRoute roles={['Accounts', 'Director', 'Admin', 'Auditor']}>
+            <Suspense fallback={<PageLoader />}><AccountsPaymentsPage /></Suspense>
+          </ProtectedRoute>
+        } />
         <Route path="requisition-approval-status" element={
-          <ProtectedRoute roles={['FactoryReceiving', 'StoreReceiving', 'OpsManager', 'Director', 'Admin']}>
+          <ProtectedRoute roles={['FactoryReceiving', 'FactoryQA', 'StoreReceiving', 'OpsManager', 'WorkshopHOD', 'Director', 'Admin']}>
             <Suspense fallback={<PageLoader />}><RequisitionApprovalStatusPage /></Suspense>
           </ProtectedRoute>
         } />
@@ -155,7 +189,7 @@ function AppRoutes() {
         {/* Registered BEFORE /procurement/requisitions/:id, same reasoning as
             /bundle below — "raise" would otherwise be swallowed as an :id. */}
         <Route path="procurement/requisitions/raise" element={
-          <ProtectedRoute roles={['FactoryReceiving', 'StoreReceiving', 'Admin']} noViewer>
+          <ProtectedRoute roles={['FactoryReceiving', 'FactoryQA', 'StoreReceiving', 'Admin']} noViewer>
             <Suspense fallback={<PageLoader />}><CreateRequisitionPage /></Suspense>
           </ProtectedRoute>
         } />
@@ -203,6 +237,11 @@ function AppRoutes() {
             <Suspense fallback={<PageLoader />}><BusyLPOsRaisedPage /></Suspense>
           </ProtectedRoute>
         } />
+        <Route path="reports/requisition-audit" element={
+          <ProtectedRoute roles={AUDIT_ROLES}>
+            <Suspense fallback={<PageLoader />}><RequisitionAuditPage /></Suspense>
+          </ProtectedRoute>
+        } />
         <Route path="procurement/trace" element={<Suspense fallback={<PageLoader />}><OrderTracePage /></Suspense>} />
         <Route path="procurement/trace/:id" element={<Suspense fallback={<PageLoader />}><OrderTracePage /></Suspense>} />
         <Route path="receiving/busy" element={
@@ -211,24 +250,32 @@ function AppRoutes() {
           </ProtectedRoute>
         } />
         <Route path="procurement/reorder" element={
-          <ProtectedRoute roles={['Procurement', 'Admin', 'Director', 'ProductionManager', 'OpsManager']}>
+          <ProtectedRoute roles={['Procurement', 'Admin', 'Director', 'ProductionManager', 'HeadOfProductionPlanning', 'OpsManager']}>
             <Suspense fallback={<PageLoader />}><ReorderLevelPage /></Suspense>
           </ProtectedRoute>
         } />
         <Route path="procurement/fg-reorder" element={
-          <ProtectedRoute roles={['Procurement', 'Admin', 'Director', 'ProductionManager', 'OpsManager']}>
+          <ProtectedRoute roles={['Procurement', 'Admin', 'Director', 'ProductionManager', 'HeadOfProductionPlanning', 'OpsManager']}>
             <Suspense fallback={<PageLoader />}><FGReorderLevelPage /></Suspense>
           </ProtectedRoute>
         } />
 
         {/* Production module */}
         <Route path="production/planning" element={
-          <ProtectedRoute roles={['Procurement', 'Admin', 'Director', 'ProductionClerk', 'ProductionManager', 'OpsManager']}>
+          <ProtectedRoute roles={['Procurement', 'Admin', 'Director', 'ProductionClerk', 'ProductionManager', 'HeadOfProductionPlanning', 'OpsManager']}>
             <Suspense fallback={<PageLoader />}><ProductionPlanningPage /></Suspense>
           </ProtectedRoute>
         } />
+        {/* Direct supply (sawdust/offcuts, 2026-11-24) — keep roles in sync with
+            VIEW_ROLES in routes/procurement/direct-supply.routes.js */}
+        <Route path="procurement/direct-supply" element={
+          <ProtectedRoute roles={['Admin', 'Procurement', 'Director', 'ProductionManager', 'HeadOfProductionPlanning', 'OpsManager',
+            'Weighbridge', 'GateSecurity', 'StoreReceiving', 'FactoryReceiving', 'FactoryQA', 'Supervisor', 'ProductionClerk']}>
+            <Suspense fallback={<PageLoader />}><DirectSupplyPage /></Suspense>
+          </ProtectedRoute>
+        } />
         <Route path="production/aging-analysis" element={
-          <ProtectedRoute roles={['Procurement', 'Admin', 'Director', 'ProductionClerk', 'ProductionManager', 'OpsManager']}>
+          <ProtectedRoute roles={['Procurement', 'Admin', 'Director', 'ProductionClerk', 'ProductionManager', 'HeadOfProductionPlanning', 'OpsManager']}>
             <Suspense fallback={<PageLoader />}><AgingAnalysisPage /></Suspense>
           </ProtectedRoute>
         } />
@@ -251,6 +298,11 @@ function AppRoutes() {
         <Route path="admin/suppliers" element={
           <ProtectedRoute roles={['Admin', 'Procurement']}>
             <Suspense fallback={<PageLoader />}><SuppliersPage /></Suspense>
+          </ProtectedRoute>
+        } />
+        <Route path="admin/settings" element={
+          <ProtectedRoute roles={['Admin']} noViewer>
+            <Suspense fallback={<PageLoader />}><SystemSettingsPage /></Suspense>
           </ProtectedRoute>
         } />
       </Route>

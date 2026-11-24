@@ -9,7 +9,7 @@ const logger = require('../logger');
 const ALLOWED_ACTIONS = new Set(['Create', 'Update', 'Delete', 'Reverse', 'Lock', 'StatusChange', 'Login', 'Logout']);
 const ACTION_MAP = {
   MarkRaisedInBusy: 'Create', RaisedInBusy: 'Create', LinkPushedToBusy: 'Create',
-  LinkBusyGRN: 'StatusChange', Cancel: 'StatusChange',
+  LinkBusyGRN: 'StatusChange', Cancel: 'StatusChange', ReceivedInBusy: 'Create', LinkPushedGRN: 'Create',
   MergeIntoBusySupplier: 'Update',
 };
 

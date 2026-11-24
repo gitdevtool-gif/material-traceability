@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../services/api';
 import StockPicture from '../components/StockPicture';
+import { PreferredSupplierCell, PreferredBadge } from '../components/PreferredSupplier';
 
 /**
  * Combined-RFQ dispatch page.
@@ -113,6 +114,10 @@ export default function CreateBundledRFQPage() {
         ]);
         setRequisitions(reqResults.map((r) => r.data));
         setSuppliers(suppRes.data);
+        // Suppliers the requesters asked for start ticked.
+        const preferred = suppRes.data.filter((s) => s.IsPreferred && s.IsActive).map((s) => s.SupplierId);
+        setSelected(preferred);
+        setChannels(Object.fromEntries(preferred.map((sid) => [sid, 'email'])));
       } catch (e) {
         setLoadError(e.response?.data?.error || 'Failed to load selected requisitions');
       } finally {
@@ -144,7 +149,8 @@ export default function CreateBundledRFQPage() {
   // per-item RFQ linkage (2026-08-25) lets a requisition split across
   // several RFQs, so anything already sent stays off this bundle.
   const allItemsRaw = requisitions.flatMap((r) => (r.items || []).map((i) => ({ ...i, BusyOrdNo: r.BusyOrdNo })));
-  const allItems = allItemsRaw.filter((i) => !i.RFQId);
+  // Direct-supply lines (sawdust/offcuts) never go on an RFQ (2026-11-24).
+  const allItems = allItemsRaw.filter((i) => !i.RFQId && !i.IsDirectSupply);
   const alreadySentCount = allItemsRaw.length - allItems.length;
   const allItemIds = allItems.map((i) => i.RequisitionItemId);
   const anyMissingCategory = allItems.some((i) => !i.Category);
@@ -263,8 +269,8 @@ export default function CreateBundledRFQPage() {
                 <td>{r.Warehouse || '—'}</td>
                 <td>{r.MatCenter || '—'}</td>
                 <td style={{ textAlign: 'center' }}>
-                  {(r.items || []).filter((i) => !i.RFQId).length}
-                  {(r.items || []).some((i) => i.RFQId) && (
+                  {(r.items || []).filter((i) => !i.RFQId && !i.IsDirectSupply).length}
+                  {(r.items || []).some((i) => i.RFQId || i.IsDirectSupply) && (
                     <span style={{ color: '#9ca3af', fontSize: 11 }}> / {(r.items || []).length} total</span>
                   )}
                 </td>
@@ -296,6 +302,7 @@ export default function CreateBundledRFQPage() {
               <th>Item Name</th>
               <th>Qty</th>
               <th>Category</th>
+              <th title="The supplier the person who raised the order asked for">Preferred Supplier</th>
               <th>Reference Photo</th>
             </tr>
           </thead>
@@ -311,6 +318,7 @@ export default function CreateBundledRFQPage() {
                     : <span style={{ color: '#f59e0b', fontSize: 12 }}>⚠ No category mapped</span>
                   }
                 </td>
+                <td style={{ fontSize: 12.5 }}><PreferredSupplierCell item={item} /></td>
                 <td>
                   <ItemPhotoCell
                     photoUrl={item.ReferencePhotoUrl}
@@ -371,14 +379,20 @@ export default function CreateBundledRFQPage() {
             return (
               <div key={s.SupplierId}
                 style={{
-                  border: '1px solid #e5e7eb', borderRadius: 6, marginBottom: 6,
+                  border: `1px solid ${s.IsPreferred ? '#f59e0b' : '#e5e7eb'}`, borderRadius: 6, marginBottom: 6,
                   background: isSelected ? '#e8f0fe' : '#fff', overflow: 'hidden',
                 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 12px' }}>
                   <input type="checkbox" checked={isSelected}
+                    disabled={!s.IsActive}
+                    title={s.IsActive ? undefined : 'Inactive in the supplier list — reactivate it under Suppliers first'}
                     onChange={() => toggleSupplier(s.SupplierId)} />
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 600, fontSize: 13 }}>{s.SupplierName}</div>
+                    <div style={{ fontWeight: 600, fontSize: 13 }}>
+                      {s.SupplierName}
+                      {s.IsPreferred && <PreferredBadge items={s.PreferredForItems} />}
+                      {!s.IsActive && <span className="badge badge-gray" style={{ fontSize: 10, marginLeft: 6 }}>inactive</span>}
+                    </div>
                     <div style={{ fontSize: 11, color: '#6b7280' }}>
                       {s.SupplierCategories} &nbsp;·&nbsp; {s.Email || 'No email'} &nbsp;·&nbsp; {s.Phone || s.WhatsApp || ''}
                     </div>

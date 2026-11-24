@@ -104,6 +104,7 @@ export default function TraceabilityPage() {
             <div className="card">
               <h3>Weighbridge</h3>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginTop: 8, fontSize: 14 }}>
+                <div><strong>Ticket No:</strong> {[...new Set((data.weighings || [data.weighbridge]).map((w) => w.TicketNo).filter(Boolean))].join(', ') || '—'}</div>
                 <div><strong>1st Weight:</strong> {data.weighbridge.FirstWeight} kg</div>
                 <div><strong>2nd Weight:</strong> {data.weighbridge.SecondWeight} kg</div>
                 <div><strong>Net Weight:</strong> {data.weighbridge.NetWeight} kg</div>
@@ -112,6 +113,20 @@ export default function TraceabilityPage() {
                 <div><strong>Weighed:</strong> {new Date(data.weighbridge.WeighmentDate).toLocaleString()}</div>
               </div>
               {data.weighbridge.Remarks && <div className="mt-2 text-muted">Remarks: {data.weighbridge.Remarks}</div>}
+              {(data.weighings || []).length > 1 && (
+                <table className="data-table" style={{ marginTop: 10, fontSize: 13 }}>
+                  <thead><tr><th>Material</th><th>Ticket</th><th>1st (kg)</th><th>2nd (kg)</th><th>Net (kg)</th><th>Final net (kg)</th></tr></thead>
+                  <tbody>
+                    {data.weighings.map((w) => (
+                      <tr key={w.WeighbridgeId}>
+                        <td>{w.MaterialName || 'All items (weighed together)'}</td>
+                        <td>{w.TicketNo || '—'}</td>
+                        <td>{w.FirstWeight}</td><td>{w.SecondWeight}</td><td>{w.NetWeight}</td><td>{w.FinalNetWeight ?? w.NetWeight}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           )}
 

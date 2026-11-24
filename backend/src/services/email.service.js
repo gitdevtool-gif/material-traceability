@@ -196,7 +196,9 @@ async function sendRequisitionApprovalEmail({ to, busyOrdNo, warehouse, matCente
         <tr>
           <td style="padding:24px 32px;">
             <p style="margin:0 0 16px;font-size:15px;color:#333;">
-              A factory-floor requisition has synced from Busy and needs your review before Procurement can act on it.
+              ${String(matCenter || '').trim().toLowerCase() === 'workshop'
+                ? 'A Workshop requisition has been reviewed by Central Stores and needs your approval (Workshop HOD) before Procurement can act on it.'
+                : 'A factory-floor requisition needs your review before Procurement can act on it.'}
             </p>
             <table width="100%" cellpadding="8" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:6px;font-size:14px;color:#333;margin-bottom:16px;">
               <tr style="background:#f9fafb;">
@@ -281,4 +283,18 @@ async function sendRequisitionApprovalEmail({ to, busyOrdNo, warehouse, matCente
   }
 }
 
-module.exports = { sendOpsApprovalEmail, sendRequisitionApprovalEmail };
+/** A plain notification email (GRN approval queries / Director digest, 2026-11-11). */
+async function sendSimpleEmail({ to, subject, html }) {
+  const list = (Array.isArray(to) ? to : [to]).filter((t) => t && /@/.test(t));
+  if (!list.length) return false;
+  try {
+    const info = await getTransporter().sendMail({ from: `"Njoro Canning Factory" <${config.email.from}>`, to: list.join(', '), subject, html });
+    logger.info(`Email "${subject}" sent to ${list.join(', ')}`, { messageId: info.messageId });
+    return true;
+  } catch (err) {
+    logger.error(`Failed to send email "${subject}"`, { error: err.message });
+    return false;
+  }
+}
+
+module.exports = { sendOpsApprovalEmail, sendRequisitionApprovalEmail, sendSimpleEmail };

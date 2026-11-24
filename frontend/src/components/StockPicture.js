@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import api from '../services/api';
+import PriceHistory, { PriceSummaryCell } from './PriceHistory';
 
 /**
  * The "whole picture" for the items on a requisition / RFQ / award
@@ -53,7 +54,7 @@ function Bars({ months }) {
   );
 }
 
-function Detail({ p }) {
+function Detail({ p, prices }) {
   const [batches, setBatches] = useState(null);
   const [loading, setLoading] = useState(false);
   const loadBatches = () => {
@@ -107,6 +108,9 @@ function Detail({ p }) {
           </>
         )}
       </div>
+      <div style={{ flexBasis: '100%', borderTop: '1px solid #e5e7eb', paddingTop: 8 }}>
+        <PriceHistory itemName={p.itemName} data={prices} />
+      </div>
     </div>
   );
 }
@@ -117,14 +121,20 @@ export default function StockPicture({ items, title = 'Stock picture (live from 
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
   const [open, setOpen] = useState(null);
+  const [prices, setPrices] = useState({}); // itemCode -> 3-month purchase history
 
   useEffect(() => {
     if (!names.length) { setData({ items: [], notFound: [] }); return; }
     setData(null);
     setError('');
+    setPrices({});
     api.post('/stock/picture', { itemNames: names })
       .then((r) => setData(r.data))
       .catch((e) => setError(e.response?.data?.error || 'Could not read stock from Busy'));
+    // Prices load alongside; the table shows without them if Busy is slow.
+    api.post('/stock/purchase-history', { itemNames: names, months: 3 })
+      .then((r) => setPrices(Object.fromEntries(r.data.items.filter(Boolean).map((h) => [h.itemCode, h]))))
+      .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
@@ -153,6 +163,7 @@ export default function StockPicture({ items, title = 'Stock picture (live from 
                 <th style={{ textAlign: 'right' }}>Cover</th><th style={{ textAlign: 'right' }}>Lead</th>
                 <th style={{ textAlign: 'right' }}>Reorder level</th><th>Status</th>
                 <th style={{ textAlign: 'right' }}>Suggested order</th><th>Last bought</th>
+                <th style={{ textAlign: 'right' }} title="Average price paid per unit over the last 3 months (lowest – highest), with the trend — click the item for every purchase">Avg price (3 mo)</th>
               </tr>
             </thead>
             <tbody>
@@ -182,8 +193,11 @@ export default function StockPicture({ items, title = 'Stock picture (live from 
                       <td style={{ whiteSpace: 'nowrap' }}>
                         {p.lastPurchase ? <>{num(p.lastPurchase.price)} · {date(p.lastPurchase.date)}<div style={{ fontSize: 11, color: '#6b7280' }}>{p.lastPurchase.supplier}</div></> : '—'}
                       </td>
+                      <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                        {prices[p.itemCode] ? <PriceSummaryCell h={prices[p.itemCode]} /> : <span style={{ color: '#9ca3af' }}>…</span>}
+                      </td>
                     </tr>
-                    {open === p.itemCode && <tr><td colSpan={12} style={{ background: '#f9fafb' }}><Detail p={p} /></td></tr>}
+                    {open === p.itemCode && <tr><td colSpan={13} style={{ background: '#f9fafb' }}><Detail p={p} prices={prices[p.itemCode]} /></td></tr>}
                   </React.Fragment>
                 );
               })}
@@ -195,7 +209,7 @@ export default function StockPicture({ items, title = 'Stock picture (live from 
             </div>
           )}
           <div style={{ fontSize: 11, color: '#6b7280', marginTop: 4 }}>
-            Click an item for stock by store, monthly consumption, open POs and batches. Use / month = average of the last 3 full months.
+            Click an item for stock by store, monthly consumption, open POs, batches and every purchase price. Use / month = average of the last 3 full months.
           </div>
         </div>
       )}

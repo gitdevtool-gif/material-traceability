@@ -45,6 +45,7 @@ const express = require('express');
 const { getPool, sql } = require('../../db');
 const { authenticate, authorize } = require('../../middleware/auth');
 const { sendRFQEmail, tokenExpiryDate } = require('../../services/rfq.service');
+const { directItemFor, rfqEligibleLineSql } = require('../../services/direct-supply.service');
 const config = require('../../config');
 
 const router = express.Router();
@@ -192,6 +193,17 @@ router.post('/', authenticate, authorize('Admin', 'Procurement'), async (req, re
           error: `Cannot create RFQ — requisition(s) cancelled: ${[...new Set(cancelled.map((it) => it.BusyOrdNo))].join(', ')}`,
         });
       }
+      // Direct-supply items (sawdust/offcuts, 2026-11-24) are ordered from
+      // their standing suppliers, never through an RFQ.
+      const direct = [];
+      for (const it of itemCheck.recordset) {
+        if (it.DirectOrderedAt || await directItemFor(it.ItemCode || it.ItemName)) direct.push(it);
+      }
+      if (direct.length > 0) {
+        return res.status(400).json({
+          error: `${[...new Set(direct.map((it) => it.ItemName))].join(', ')} ${direct.length === 1 ? 'is a' : 'are'} direct-supply item${direct.length === 1 ? '' : 's'} — raise ${direct.length === 1 ? 'it' : 'them'} from Requisitions with "Raise direct POs", no RFQ.`,
+        });
+      }
       items = itemCheck.recordset;
       parentRequisitionIds = [...new Set(items.map((it) => it.RequisitionId))];
     } else {
@@ -227,18 +239,21 @@ router.post('/', authenticate, authorize('Admin', 'Procurement'), async (req, re
       // just picks up whatever's left.
       const itemsRequest = pool.request();
       ids.forEach((rid, i) => itemsRequest.input(`r${i}`, sql.Int, rid));
+      // Direct-supply lines (sawdust/offcuts) are skipped — no RFQ for them (2026-11-24).
+      const rfqEligible = await rfqEligibleLineSql(itemsRequest, 'ri');
       const itemsResult = await itemsRequest.query(`
         SELECT ri.*
         FROM dbo.RequisitionItems ri
         LEFT JOIN dbo.RequisitionItemApprovals ia ON ia.RequisitionItemId = ri.RequisitionItemId
         WHERE ri.RequisitionId IN (${idPlaceholders})
           AND ri.RFQId IS NULL
+          AND ${rfqEligible}
           AND ISNULL(ia.Decision, 'Approved') = 'Approved'
         ORDER BY ri.RequisitionItemId
       `);
       items = itemsResult.recordset;
       if (items.length === 0) {
-        return res.status(400).json({ error: 'Every item on the selected requisition(s) is already part of an RFQ' });
+        return res.status(400).json({ error: 'Every item on the selected requisition(s) is already part of an RFQ, or is a direct-supply item (raise those with "Raise direct POs")' });
       }
       parentRequisitionIds = ids;
     }

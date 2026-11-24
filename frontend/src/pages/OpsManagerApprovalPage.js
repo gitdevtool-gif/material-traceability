@@ -1,7 +1,35 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import api from '../services/api';
 import StockPicture from '../components/StockPicture';
+import { PreferredSupplierNote } from '../components/PreferredSupplier';
+import { planStock } from '../services/stockPlanning';
 import { useAuth } from '../context/AuthContext';
+
+const fmtShortDate = (d) => d.toLocaleDateString('en-KE', { day: 'numeric', month: 'short', year: 'numeric' });
+const fmtSpan = (days) => (days >= 60 ? `${(days / 30).toFixed(1)} months` : `${Math.round(days)} days`);
+
+/**
+ * Look ahead for one requisition item: if `qty` is bought now, how long the
+ * stock lasts at average use (arrives after the lead time) and when it runs
+ * out — same projection as the Reorder Levels page's "Plan".
+ */
+function LookAhead({ item, qty }) {
+  if (item.LiveStock == null) return <span className="text-muted">no stock data</span>;
+  const p = planStock(item, qty);
+  if (!p.hasUsage) return <span className="text-muted" title="No use in the last 3 months to project from">no recent use</span>;
+  if (!qty) {
+    return <span>Stock lasts {fmtSpan(p.daysCover)}<div className="text-muted">runs out {fmtShortDate(p.runOutDate)}</div></span>;
+  }
+  const short = p.coverAfterDays < 30;
+  return (
+    <span title={`Arrives ${fmtShortDate(p.arrivalDate)} (lead time ${Math.round(p.leadDays)} days) with ${Math.round(p.stockAtArrival)} left; next order due ${fmtShortDate(p.nextOrderDate)}`}>
+      <strong style={{ color: p.overMaxQty > 0 ? '#d97706' : short ? '#b91c1c' : undefined }}>Lasts {fmtSpan(p.coverAfterDays)}</strong>
+      <div className="text-muted">until {fmtShortDate(p.newRunOutDate)}</div>
+      {p.overMaxQty > 0 && <div style={{ color: '#d97706' }}>{Math.round(p.overMaxQty).toLocaleString()} above max level</div>}
+      {p.gapDays > 0 && <div style={{ color: '#b91c1c' }}>{Math.round(p.gapDays)} days without stock before it arrives</div>}
+    </span>
+  );
+}
 
 const fmtDT = (v) => {
   if (!v) return '—';
@@ -84,6 +112,13 @@ function GoodsReceivingTab() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  // Search by supplier (also entry no, vehicle, consignment) — every word must match.
+  const [search, setSearch] = useState('');
+  const searchWords = search.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const shownEntries = searchWords.length === 0 ? entries : entries.filter((e) => {
+    const hay = [e.EntryNo, e.SupplierName, e.SupplierCode, e.VehicleRegNo, e.ConsignmentNo, e.InspectorName].join(' ').toLowerCase();
+    return searchWords.every((w) => hay.includes(w));
+  });
 
   const load = () => {
     setLoading(true);
@@ -166,7 +201,15 @@ function GoodsReceivingTab() {
       {error && !selected && <div className="card" style={{ color: 'var(--danger)' }}>{error}</div>}
 
       <div className="card">
-        <h3 style={{ marginBottom: 12 }}>Entries Awaiting Ops Manager Approval ({entries.length})</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
+          <h3 style={{ margin: 0 }}>
+            Entries Awaiting Ops Manager Approval ({searchWords.length ? `${shownEntries.length} of ${entries.length}` : entries.length})
+          </h3>
+          <input type="search" value={search} onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter' && shownEntries.length === 1) handleSelect(shownEntries[0]); if (e.key === 'Escape') setSearch(''); }}
+            placeholder="Search supplier, entry no, vehicle…"
+            style={{ minWidth: 260, padding: '6px 10px', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius)' }} />
+        </div>
         {loading ? <div>Loading…</div> : (
           <div className="opsApproval-table-wrap">
           <table className="data-table">
@@ -186,7 +229,7 @@ function GoodsReceivingTab() {
               </tr>
             </thead>
             <tbody>
-              {entries.map(e => (
+              {shownEntries.map(e => (
                 <tr key={e.EntryId}>
                   <td><strong>{e.EntryNo}</strong></td>
                   <td>{e.SupplierName}</td>
@@ -209,8 +252,10 @@ function GoodsReceivingTab() {
                   </td>
                 </tr>
               ))}
-              {entries.length === 0 && (
-                <tr><td colSpan="11" className="text-center text-muted">No entries pending Ops Manager approval</td></tr>
+              {shownEntries.length === 0 && (
+                <tr><td colSpan="11" className="text-center text-muted">
+                  {entries.length ? 'No entry matches the search' : 'No entries pending Ops Manager approval'}
+                </td></tr>
               )}
             </tbody>
           </table>
@@ -390,17 +435,24 @@ function GoodsReceivingTab() {
 // requested qty so the Ops Manager can judge if it's genuinely still
 // needed, then Approves (-> Procurement's existing list) or Rejects.
 // ════════════════════════════════════════════════════════════════════════
-function RequisitionApprovalTab({ user }) {
-  const canDecide = ['OpsManager', 'Director', 'Admin'].includes(user?.role);
+// gate: 'ops' (factory floors) or 'workshop' — which queue this tab shows.
+export function RequisitionApprovalTab({ user, approverLabel = 'Ops Manager', gate = 'ops' }) {
+  const canDecide = ['OpsManager', 'WorkshopHOD', 'Director', 'Admin'].includes(user?.role);
 
   const [rows, setRows] = useState([]);
+  const [reqSearch, setReqSearch] = useState('');
+  const reqWords = reqSearch.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const shownRows = reqWords.length === 0 ? rows : rows.filter((r) => {
+    const hay = [r.BusyOrdNo, r.MatCenter, r.Warehouse, r.Vehicle].join(' ').toLowerCase();
+    return reqWords.every((w) => hay.includes(w));
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
   const load = () => {
     setLoading(true);
-    api.get('/procurement/requisition-approval/pending')
+    api.get('/procurement/requisition-approval/pending', { params: { gate } })
       .then(r => setRows(r.data))
       .catch(() => setError('Failed to load pending requisitions'))
       .finally(() => setLoading(false));
@@ -547,7 +599,7 @@ function RequisitionApprovalTab({ user }) {
 
       <div className="card">
         <h3 style={{ marginBottom: 4 }}>
-          Requisitions Awaiting Ops Manager Approval ({rows.length})
+          Requisitions Awaiting {approverLabel} Approval ({rows.length})
           {rows.some((r) => r.Status === 'OnHold') && (
             <span style={{ fontSize: 12, fontWeight: 400, color: '#92400e', marginLeft: 10 }}>
               {rows.filter((r) => r.Status === 'OnHold').length} on hold
@@ -558,6 +610,9 @@ function RequisitionApprovalTab({ user }) {
           A notification email goes out automatically as soon as a requisition lands here, with
           one-click "Approve All" and "Hold for Review" links — no need to log in just to approve.
         </p>
+        <input type="search" value={reqSearch} onChange={(e) => setReqSearch(e.target.value)}
+          placeholder="Search requisition no, mat centre…"
+          style={{ minWidth: 260, padding: '6px 10px', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius)', marginBottom: 10 }} />
         <div className="opsApproval-table-wrap">
         <table className="data-table">
           <thead>
@@ -566,9 +621,9 @@ function RequisitionApprovalTab({ user }) {
           <tbody>
             {loading ? (
               <tr><td colSpan="7" className="text-center text-muted">Loading…</td></tr>
-            ) : rows.length === 0 ? (
-              <tr><td colSpan="7" className="text-center text-muted">No requisitions pending approval</td></tr>
-            ) : rows.map(r => (
+            ) : shownRows.length === 0 ? (
+              <tr><td colSpan="7" className="text-center text-muted">{rows.length ? 'No requisition matches the search' : 'No requisitions pending approval'}</td></tr>
+            ) : shownRows.map(r => (
               <tr key={r.RequisitionId} style={r.Status === 'OnHold' ? { background: '#fffbeb' } : undefined}>
                 <td><strong>{r.BusyOrdNo}</strong></td>
                 <td style={{ fontSize: 12, color: 'var(--gray-600)' }}>{fmtDate(r.BusyDate)}</td>
@@ -671,6 +726,7 @@ function RequisitionApprovalTab({ user }) {
                     <thead>
                       <tr>
                         <th>Item</th><th>Requested Qty</th><th>Live Stock</th><th>Reorder Level</th><th>Needs Reorder?</th>
+                        <th title="Looking ahead at average use: how long stock lasts if this quantity is bought">If bought</th>
                         {canDecide && <><th>Decision</th><th>Approved Qty / Rejection Reason</th></>}
                       </tr>
                     </thead>
@@ -680,7 +736,7 @@ function RequisitionApprovalTab({ user }) {
                         const isRejected = d.decision === 'Rejected';
                         return (
                           <tr key={i.RequisitionItemId} style={isRejected ? { background: '#fef2f2' } : undefined}>
-                            <td>{i.ItemName}</td>
+                            <td>{i.ItemName}<PreferredSupplierNote item={i} /></td>
                             <td>{i.Qty}</td>
                             <td>{i.LiveStock != null ? i.LiveStock : <span className="text-muted">no stock data</span>}</td>
                             <td>{i.ReorderLevel != null ? i.ReorderLevel : '—'}</td>
@@ -690,6 +746,9 @@ function RequisitionApprovalTab({ user }) {
                                   {i.NeedsReorder ? 'Yes' : 'No — sufficient stock'}
                                 </span>
                               )}
+                            </td>
+                            <td style={{ fontSize: 12, minWidth: 150 }}>
+                              <LookAhead item={i} qty={isRejected ? 0 : Math.abs(Number(d.approvedQty) || 0)} />
                             </td>
                             {canDecide && (
                               <>

@@ -239,7 +239,7 @@ async function traceRequisition(pool, erpPool, requisitionId, { resolveItems }) 
     });
     // Trucks at the gate for this PO that aren't received in Busy yet.
     const atGate = po ? gate.filter((e) => !e.BusyGRNVchCode && String(e.PoVchCodes || '').split(',').includes(String(po.vchCode)))
-      .map((e) => ({ entryNo: e.EntryNo, status: e.Status, date: e.DeliveryDate, qa: e.QAStatus })) : [];
+      .map((e) => ({ entryNo: e.EntryNo, status: e.Status, date: e.DeliveryDate, qa: e.QAStatus, ticketNo: e.TicketNo })) : [];
 
     // Award vs PO compared on VALUE ex VAT: Procurement often raises the PO
     // in Busy's unit (600 L @ 209.05) for an award quoted per pack (30
@@ -270,7 +270,7 @@ async function traceRequisition(pool, erpPool, requisitionId, { resolveItems }) 
         po ? { at: po.date, by: lpo.LinkedBy, info: `${po.poNo}${po.approved ? '' : ' · awaiting approval in Busy'}${poLine ? ` · ${poLine.ordered} @ ${poLine.price}` : ''}` } : {}),
       stage('gate', 'At the gate / QA',
         receipts.some((r) => r.gateEntries.length) || atGate.length ? 'done' : receipts.length ? 'skipped' : po ? 'pending' : 'na',
-        { info: [...receipts.flatMap((r) => r.gateEntries.map((e) => `${e.entryNo}${e.qa ? ` QA ${e.qa}` : ''}`)), ...atGate.map((e) => `${e.entryNo} (${e.status})`)].join(', ')
+        { info: [...receipts.flatMap((r) => r.gateEntries.map((e) => `${e.entryNo}${e.ticketNo ? ` ticket ${e.ticketNo}` : ''}${e.qa ? ` QA ${e.qa}` : ''}`)), ...atGate.map((e) => `${e.entryNo}${e.ticketNo ? ` ticket ${e.ticketNo}` : ''} (${e.status})`)].join(', ')
             || (receipts.length ? 'received in Busy with no gate entry here' : undefined) }),
       stage('grn', 'Received (Busy GRN)', poLine ? (poLine.pending <= 0.0001 ? 'done' : poLine.received > 0 ? 'partial' : 'pending') : 'na',
         poLine ? { info: `${poLine.received} of ${poLine.ordered} received${receipts.length ? ` · ${receipts.map((r) => r.voucher).filter(Boolean).join(', ')}` : ''}` } : {}),
@@ -326,4 +326,4 @@ async function traceRequisition(pool, erpPool, requisitionId, { resolveItems }) 
   };
 }
 
-module.exports = { traceRequisition };
+module.exports = { traceRequisition, loadBusyPos };

@@ -35,7 +35,7 @@ const VIEW_ROLES     = ['Admin', 'Supervisor', 'StoreReceiving', 'FactoryReceivi
 const GATE_ROLES     = ['GateSecurity', 'Weighbridge', 'Admin', 'Supervisor', 'StoreReceiving', 'FactoryReceiving', 'Procurement'];
 const LINK_ROLES     = ['Admin', 'Supervisor', 'StoreReceiving'];
 const MERGE_ROLES    = ['Admin', 'Procurement'];
-const ACCOUNTS_ROLES = ['Admin', 'Director', 'Procurement'];
+const ACCOUNTS_ROLES = ['Admin', 'Director', 'Procurement', 'Accounts'];
 
 const daysAgo = (n) => new Date(Date.now() - n * 864e5);
 const parseDate = (v, fallback) => {
@@ -237,8 +237,10 @@ router.get('/supplier-cleanup', authenticate, authorize(...MERGE_ROLES), async (
   } catch (err) { next(err); }
 });
 
-// Tables whose SupplierId follows a merge. SupplierCategories / SupplierEmails
-// stay on the retired record (the Busy supplier keeps its own).
+// Tables whose SupplierId follows a merge. Contact details, categories and
+// additional emails are COPIED onto the Busy supplier where it lacks them
+// (2026-11-17: HYRAX's only email stayed on the retired record, so its RFQs
+// went out to nobody).
 const SUPPLIER_REFS = [
   ['DeliveryEntries', 'SupplierId'],
   ['RFQDispatches', 'SupplierId'],
@@ -271,8 +273,32 @@ router.post('/supplier-cleanup/merge', authenticate, authorize(...MERGE_ROLES), 
           .query(`UPDATE dbo.${table} SET ${col} = @to WHERE ${col} = @from`);
         if (r.rowsAffected[0]) moved[table] = r.rowsAffected[0];
       }
-      await new sql.Request(tx).input('from', sql.Int, fromId).input('to', sql.Int, toId)
-        .query('UPDATE dbo.Suppliers SET IsActive = 0, MergedIntoSupplierId = @to WHERE SupplierId = @from');
+      await new sql.Request(tx).input('from', sql.Int, fromId).input('to', sql.Int, toId).query(`
+        UPDATE t SET
+          t.Email         = COALESCE(NULLIF(LTRIM(RTRIM(t.Email)), ''), NULLIF(LTRIM(RTRIM(f.Email)), '')),
+          t.ContactPerson = COALESCE(NULLIF(LTRIM(RTRIM(t.ContactPerson)), ''), NULLIF(LTRIM(RTRIM(f.ContactPerson)), '')),
+          t.Phone         = COALESCE(NULLIF(LTRIM(RTRIM(t.Phone)), ''), NULLIF(LTRIM(RTRIM(f.Phone)), '')),
+          t.WhatsApp      = COALESCE(NULLIF(LTRIM(RTRIM(t.WhatsApp)), ''), NULLIF(LTRIM(RTRIM(f.WhatsApp)), '')),
+          t.Address       = COALESCE(NULLIF(LTRIM(RTRIM(t.Address)), ''), NULLIF(LTRIM(RTRIM(f.Address)), '')),
+          t.UpdatedAt     = GETUTCDATE()
+        FROM dbo.Suppliers t JOIN dbo.Suppliers f ON f.SupplierId = @from
+        WHERE t.SupplierId = @to;
+        -- the retired record's main email, if the Busy one already had a different one
+        INSERT INTO dbo.SupplierEmails (SupplierId, Email, Label)
+        SELECT @to, LOWER(LTRIM(RTRIM(f.Email))), 'Merged'
+        FROM dbo.Suppliers f JOIN dbo.Suppliers t ON t.SupplierId = @to
+        WHERE f.SupplierId = @from AND NULLIF(LTRIM(RTRIM(f.Email)), '') IS NOT NULL
+          AND CHARINDEX(LOWER(LTRIM(RTRIM(f.Email))), LOWER(ISNULL(t.Email, ''))) = 0
+          AND NOT EXISTS (SELECT 1 FROM dbo.SupplierEmails e WHERE e.SupplierId = @to AND LOWER(e.Email) = LOWER(LTRIM(RTRIM(f.Email))));
+        INSERT INTO dbo.SupplierEmails (SupplierId, Email, Label)
+        SELECT @to, e.Email, e.Label FROM dbo.SupplierEmails e
+        WHERE e.SupplierId = @from
+          AND NOT EXISTS (SELECT 1 FROM dbo.SupplierEmails x WHERE x.SupplierId = @to AND LOWER(x.Email) = LOWER(e.Email));
+        INSERT INTO dbo.SupplierCategories (SupplierId, Category)
+        SELECT @to, c.Category FROM dbo.SupplierCategories c
+        WHERE c.SupplierId = @from
+          AND NOT EXISTS (SELECT 1 FROM dbo.SupplierCategories x WHERE x.SupplierId = @to AND x.Category = c.Category);
+        UPDATE dbo.Suppliers SET IsActive = 0, MergedIntoSupplierId = @to WHERE SupplierId = @from;`);
       await tx.commit();
     } catch (err) {
       await tx.rollback().catch(() => {});

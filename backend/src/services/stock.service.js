@@ -59,6 +59,25 @@ const FG_GROUPS = new Set([
 
 // Services bought/sold through items (e.g. "Transport charges", -23,005
 // "units") — no stock, so no reorder levels.
+/**
+ * Items filed under a finished-goods group in Busy that are really bought
+ * inputs: received from suppliers (Purchase 2 / GRN 4), used in production
+ * (VchType 6 out) and never produced, this financial year. e.g. Glacial
+ * Acetic Acid (ING-10947) sits in "CENTRAL STORES FINISHED GOODS" — skipped
+ * as FG here and not sold, so the FG page never listed it either (2026-10-30).
+ */
+async function getBoughtInputs(erpPool, itemCodes) {
+  const req = erpPool.request();
+  const r = await req.query(`
+    SELECT MasterCode1 AS Code FROM dbo.Tran2 t
+    WHERE t.RecType = 2 ${itemFilter(req, 't.MasterCode1', itemCodes)}
+    GROUP BY MasterCode1
+    HAVING SUM(CASE WHEN VchType IN (2, 4) AND Value1 > 0 THEN 1 ELSE 0 END) > 0
+       AND SUM(CASE WHEN VchType = 6 AND Value1 < 0 THEN 1 ELSE 0 END) > 0
+       AND SUM(CASE WHEN VchType = 6 AND Value1 > 0 THEN 1 ELSE 0 END) = 0`);
+  return new Set(r.recordset.map((x) => x.Code));
+}
+
 const NON_STOCK_GROUPS = new Set(String(process.env.BUSY_NON_STOCK_GROUPS || 'SERVICE ITEMS,SERVICE SALES')
   .split(',').map((g) => g.trim().toUpperCase()).filter(Boolean));
 const isNonStock = (group) => NON_STOCK_GROUPS.has(String(group || '').toUpperCase());
@@ -242,6 +261,125 @@ async function getConsumption(erpPool, itemCodes, { months = 6, nameByCode } = {
   return out;
 }
 
+// ── One Mat Centre (store view on the Reorder Levels page) ──────────────────
+
+/** Busy Mat Centres that hold or move stock, for the Reorder Levels filter. */
+async function listStockStores(erpPool) {
+  const r = await erpPool.request().query(`
+    SELECT mc.Code, LTRIM(RTRIM(mc.Name)) AS Name FROM dbo.Master1 mc
+    WHERE mc.MasterType = 11 AND mc.Code NOT IN (${excludedList()})
+      AND (EXISTS (SELECT 1 FROM dbo.Tran2 t WHERE t.RecType = 2 AND t.MasterCode2 = mc.Code AND t.[Date] >= DATEADD(month, -7, GETDATE()))
+        OR EXISTS (SELECT 1 FROM dbo.Tran4 t WHERE t.MasterCode2 = mc.Code AND t.D1 <> 0))
+    ORDER BY mc.Name`);
+  return r.recordset.map((s) => ({ code: s.Code, name: s.Name }));
+}
+
+/**
+ * Stock and monthly use of every item in ONE Mat Centre — the store-level
+ * version of getStockByStore + getConsumption, shaped like getConsumption's
+ * output so computeLevels / buildReorderRow work unchanged.
+ *
+ * Use of a store = everything that leaves it: used in production (VchType
+ * 6), issued to a party (11, except purchase returns) and transferred out
+ * (5) — for Central Stores that is what it sends to the factories; for a
+ * factory store, what the floor draws and moves on. Transfers IN are
+ * replenishment, not negative use. Months before this financial year come
+ * from the previous year's database by item and store name.
+ */
+async function getStoreStockAndUse(erpPool, storeName, { months = 6 } = {}) {
+  const st = (await erpPool.request().input('n', erpSql.NVarChar(80), String(storeName).trim()).query(
+    `SELECT TOP 1 Code, LTRIM(RTRIM(Name)) AS Name FROM dbo.Master1 WHERE MasterType = 11 AND UPPER(LTRIM(RTRIM(Name))) = UPPER(@n)`)).recordset[0];
+  if (!st) return null;
+
+  const stockRows = (await erpPool.request().input('s', erpSql.Int, st.Code).query(`
+    SELECT ItemCode, SUM(Qty) AS Qty FROM (
+      SELECT t.MasterCode1 AS ItemCode, SUM(t.D1) AS Qty FROM dbo.Tran4 t
+      JOIN dbo.Master1 i ON i.Code = t.MasterCode1 AND i.MasterType = 6
+      WHERE t.MasterCode2 = @s GROUP BY t.MasterCode1
+      UNION ALL
+      SELECT t.MasterCode1, SUM(t.Value1) FROM dbo.Tran2 t WHERE t.RecType = 2 AND t.MasterCode2 = @s GROUP BY t.MasterCode1
+    ) x GROUP BY ItemCode HAVING ABS(SUM(Qty)) > 0.0001`)).recordset;
+  const stockByItem = new Map(stockRows.map((r) => [r.ItemCode, r3(r.Qty)]));
+
+  const now = new Date();
+  const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const from = new Date(thisMonth.getFullYear(), thisMonth.getMonth() - months, 1);
+  const monthList = [];
+  for (let k = months; k >= 1; k--) monthList.push(monthKey(new Date(thisMonth.getFullYear(), thisMonth.getMonth() - k, 1)));
+
+  const useSql = (p, itemSel, storeWhere) => `
+    SELECT ${itemSel} AS ItemKey, DATEFROMPARTS(YEAR(t.[Date]), MONTH(t.[Date]), 1) AS Mth,
+           SUM(CASE WHEN t.VchType IN (5, 6) AND t.Value1 < 0 THEN -t.Value1
+                    WHEN t.VchType = 11 AND t.Value1 < 0 AND pr.Code IS NULL THEN -t.Value1 ELSE 0 END) AS Qty
+    FROM ${p}dbo.Tran2 t
+    LEFT JOIN (SELECT Code FROM ${p}dbo.Master1 WHERE MasterType = 21 AND LTRIM(RTRIM(Name)) = '11Pur-return') pr ON pr.Code = t.VchSeriesCode
+    ${p ? `JOIN ${p}dbo.Master1 i ON i.Code = t.MasterCode1 JOIN ${p}dbo.Master1 mc ON mc.Code = t.MasterCode2` : ''}
+    WHERE t.RecType = 2 AND t.VchType IN (5, 6, 11) AND t.Value1 < 0 AND t.[Date] >= @from ${storeWhere}
+    GROUP BY ${itemSel}, DATEFROMPARTS(YEAR(t.[Date]), MONTH(t.[Date]), 1)`;
+
+  const raw = [];
+  const cur = await erpPool.request().input('from', erpSql.DateTime, from).input('s', erpSql.Int, st.Code)
+    .query(useSql('', 't.MasterCode1', ' AND t.MasterCode2 = @s'));
+  raw.push(...cur.recordset.map((r) => ({ code: r.ItemKey, mth: r.Mth, qty: Number(r.Qty) || 0 })));
+  const prevNames = []; // previous-year rows keyed by item name, mapped to codes by the caller's item list
+  try {
+    const prev = await erpPool.request().input('from', erpSql.DateTime, from).input('n', erpSql.NVarChar(80), st.Name)
+      .query(useSql(`[${PREV_FY_DB}].`, 'UPPER(LTRIM(RTRIM(i.Name)))', ' AND UPPER(LTRIM(RTRIM(mc.Name))) = UPPER(@n)'));
+    prevNames.push(...prev.recordset.map((r) => ({ name: r.ItemKey, mth: r.Mth, qty: Number(r.Qty) || 0 })));
+  } catch { /* previous year's database not reachable — this year only */ }
+
+  // Previous-year item names → this year's codes.
+  const names = [...new Set(prevNames.map((r) => r.name))];
+  const codeByName = new Map();
+  for (let k = 0; k < names.length; k += 900) {
+    const req = erpPool.request();
+    const chunk = names.slice(k, k + 900);
+    chunk.forEach((n, j) => req.input(`n${j}`, erpSql.NVarChar(60), n));
+    (await req.query(`SELECT Code, UPPER(LTRIM(RTRIM(Name))) AS Name FROM dbo.Master1 WHERE MasterType = 6 AND UPPER(LTRIM(RTRIM(Name))) IN (${chunk.map((_, j) => `@n${j}`).join(',')})`))
+      .recordset.forEach((x) => codeByName.set(x.Name, x.Code));
+  }
+  raw.push(...prevNames.map((r) => ({ code: codeByName.get(r.name), mth: r.mth, qty: r.qty })).filter((r) => r.code));
+
+  const byItem = new Map();
+  for (const r of raw) {
+    let it = byItem.get(r.code);
+    if (!it) byItem.set(r.code, (it = {}));
+    const k = monthKey(new Date(r.mth));
+    it[k] = (it[k] || 0) + r.qty;
+  }
+  const mtdKey = monthKey(thisMonth);
+  const use = new Map();
+  for (const [code, m] of byItem) {
+    const series = monthList.map((k) => ({ month: k, qty: r3(Math.max(0, m[k] || 0)) }));
+    const last3 = series.slice(-3).map((s) => s.qty);
+    const nonZero = series.map((s) => s.qty).filter((q) => q > 0);
+    use.set(code, {
+      months: series, mtd: r3(Math.max(0, m[mtdKey] || 0)),
+      avg3: r3(last3.reduce((a, b) => a + b, 0) / 3),
+      max6: r3(Math.max(0, ...series.map((s) => s.qty))),
+      min6: r3(nonZero.length ? Math.min(...nonZero) : 0),
+    });
+  }
+  return { storeCode: st.Code, storeName: st.Name, stock: stockByItem, use };
+}
+
+// ── Inventory stores (Reorder Levels basis, 2026-11-11) ─────────────────────
+//
+// What the business stocks and reorders is held in the inventory stores —
+// Central Stores and F7. Goods issued from them to a department or factory
+// (Workshop, Admin, F6, F2W, vehicles…) are consumed from the stores' point of
+// view, even when the department never books its own use in Busy: company-wide
+// stock counted 2,644 of 5,007 reorder items as "available" while it sat in a
+// department. So Reorder Levels works on each inventory store separately
+// (they hold different items — F7 the spices — and are not combined):
+//   live stock = that store's own stock
+//   use        = what leaves it (getStoreStockAndUse) — for Central Stores
+//                that includes what it sends to F7
+//   held in departments = the item's stock outside every inventory store
+//                (shown for information, not counted as available).
+const INVENTORY_STORE_NAMES = String(process.env.BUSY_INVENTORY_STORES || 'CENTRAL STORES,F7')
+  .split(',').map((s) => s.trim().toUpperCase()).filter(Boolean);
+
 // ── Purchasing context ───────────────────────────────────────────────────────
 
 /** EOQ = average PO line quantity this financial year. */
@@ -271,6 +409,111 @@ async function getLastPurchase(erpPool, itemCodes) {
   return new Map(result.recordset.map((r) => [r.ItemCode, {
     date: r.Date, supplier: r.Party, qty: r3(r.Qty), price: r2(r.Price), voucher: r.VchNo,
   }]));
+}
+
+/**
+ * Purchase price history (2026-10-23) — Busy's "Purchase Analysis" per item:
+ * every purchase in the last `months` months with supplier, quantity and
+ * price per unit, plus average / lowest / highest / latest price and a
+ * per-supplier breakdown.
+ *
+ * A purchase is a GRN (VchType 4, series "04GRN") or a purchase bill that
+ * itself brings stock in (VchType 2, stock row) — fuel and direct buys. A
+ * bill made against a GRN usually moves no stock; the few that do repeat
+ * the GRN (same supplier, item and quantity within 60 days) and are dropped
+ * so nothing is counted twice. Stock transfers (Ibt) and customer returns
+ * ("04Ncf return") are not purchases. Price = line amount ÷ quantity in the
+ * item's own unit, as entered on the Busy voucher. Months before this
+ * financial year come from the previous year's database (matched by name).
+ */
+const GRN_SERIES_CODE = Number(process.env.BUSY_GRN_SERIES_CODE) || 12076;
+
+const PURCHASE_SQL = (p, itemSel, itemWhere) => `
+  SELECT ${itemSel} AS ItemKey, t.[Date], t.VchType, t.VchCode, t.SrNo, LTRIM(RTRIM(t1.VchNo)) AS VchNo,
+         t1.MasterCode1 AS PartyCode, LTRIM(RTRIM(pt.Name)) AS Party, LTRIM(RTRIM(mc.Name)) AS Store,
+         t.Value1 AS Qty, t.D5 AS Amount, t.D2 AS Rate
+  FROM ${p}dbo.Tran2 t
+  JOIN ${p}dbo.Tran1 t1 ON t1.VchCode = t.VchCode
+  ${p ? `JOIN ${p}dbo.Master1 i ON i.Code = t.MasterCode1` : ''}
+  LEFT JOIN ${p}dbo.Master1 pt ON pt.Code = t1.MasterCode1
+  LEFT JOIN ${p}dbo.Master1 mc ON mc.Code = t.MasterCode2
+  WHERE t.RecType = 2 AND t.Value1 > 0 AND t.[Date] >= @from
+    AND ((t.VchType = 4 AND t1.VchSeriesCode = ${GRN_SERIES_CODE}) OR t.VchType = 2) ${itemWhere}`;
+
+async function getPurchaseHistory(erpPool, items, { months = 3 } = {}) {
+  const out = new Map();
+  if (!items.length) return out;
+  const now = new Date();
+  const from = new Date(now.getFullYear(), now.getMonth() - months, now.getDate());
+  const rows = [];
+  const push = (code, r, fy) => rows.push({ ...r, code, fy });
+
+  const cur = erpPool.request().input('from', erpSql.DateTime, from);
+  for (const r of (await cur.query(PURCHASE_SQL('', 't.MasterCode1', itemFilter(cur, 't.MasterCode1', items.map((i) => i.itemCode))))).recordset) {
+    push(r.ItemKey, r, 'current');
+  }
+  // Window reaches back before this financial year → previous year's database, by item name.
+  const firstThisYear = (await erpPool.request().query('SELECT MIN([Date]) AS d FROM dbo.Tran1')).recordset[0].d;
+  if (firstThisYear && from < new Date(firstThisYear)) {
+    try {
+      const prev = erpPool.request().input('from', erpSql.DateTime, from);
+      const codeByName = new Map(items.map((i) => [String(i.itemName).toUpperCase(), i.itemCode]));
+      const names = [...codeByName.keys()].slice(0, 500);
+      names.forEach((n, k) => prev.input(`pn${k}`, erpSql.NVarChar(60), n));
+      const where = ` AND UPPER(LTRIM(RTRIM(i.Name))) IN (${names.map((_, k) => `@pn${k}`).join(',')})`;
+      for (const r of (await prev.query(PURCHASE_SQL(`[${PREV_FY_DB}].`, 'UPPER(LTRIM(RTRIM(i.Name)))', where))).recordset) {
+        const code = codeByName.get(r.ItemKey);
+        if (code) push(code, r, 'previous');
+      }
+    } catch { /* previous year's database not reachable — this year only */ }
+  }
+
+  // Drop bill lines that repeat a GRN (same year, supplier, item, quantity, GRN up to 60 days before).
+  const grns = rows.filter((r) => r.VchType === 4);
+  const kept = rows.filter((r) => r.VchType !== 2 || !grns.some((g) => g.fy === r.fy && g.code === r.code && g.PartyCode === r.PartyCode
+    && Math.abs(g.Qty - r.Qty) < 0.01 && g.Date <= r.Date && (r.Date - g.Date) <= 60 * 864e5));
+
+  for (const it of items) {
+    const lines = kept.filter((r) => r.code === it.itemCode)
+      .map((r) => {
+        const qty = Number(r.Qty) || 0;
+        const amount = Number(r.Amount) || 0;
+        const rate = qty > 0 && amount > 0 ? amount / qty : Number(r.Rate) || 0;
+        return { date: r.Date, voucher: r.VchNo, kind: r.VchType === 4 ? 'GRN' : 'Purchase', supplier: r.Party, store: r.Store, qty: r3(qty), rate: r2(rate), amount: r2(amount || rate * qty) };
+      })
+      .sort((a, b) => b.date - a.date);
+    const priced = lines.filter((l) => l.rate > 0);
+    const totQty = priced.reduce((s, l) => s + l.qty, 0);
+    const totAmt = priced.reduce((s, l) => s + l.amount, 0);
+    const latest = priced[0] || null;
+    const oldest = priced[priced.length - 1] || null;
+    const bySupplier = new Map();
+    for (const l of priced) {
+      let s = bySupplier.get(l.supplier);
+      if (!s) bySupplier.set(l.supplier, (s = { supplier: l.supplier, purchases: 0, qty: 0, amount: 0, lastRate: l.rate, lastDate: l.date, minRate: l.rate, maxRate: l.rate }));
+      s.purchases += 1; s.qty += l.qty; s.amount += l.amount;
+      s.minRate = Math.min(s.minRate, l.rate); s.maxRate = Math.max(s.maxRate, l.rate);
+    }
+    out.set(it.itemCode, {
+      itemCode: it.itemCode, itemName: it.itemName, unitName: it.unitName, months, from,
+      summary: priced.length ? {
+        purchases: priced.length, qty: r3(totQty), amount: r2(totAmt),
+        avgRate: totQty > 0 ? r2(totAmt / totQty) : null,
+        minRate: r2(Math.min(...priced.map((l) => l.rate))), maxRate: r2(Math.max(...priced.map((l) => l.rate))),
+        lastRate: latest.rate, lastDate: latest.date, lastSupplier: latest.supplier,
+        // Price movement over the window: latest vs the oldest purchase in it.
+        changePct: priced.length > 1 && oldest.rate > 0 ? r2(((latest.rate - oldest.rate) / oldest.rate) * 100) : null,
+        suppliers: bySupplier.size,
+        // Bought in different units on different vouchers (fuel: "1 unit" = the whole fill vs per litre) —
+        // averages and trends would mislead.
+        mixedUnits: Math.min(...priced.map((l) => l.rate)) > 0 && Math.max(...priced.map((l) => l.rate)) / Math.min(...priced.map((l) => l.rate)) > 5,
+      } : null,
+      bySupplier: [...bySupplier.values()].map((s) => ({ ...s, qty: r3(s.qty), amount: r2(s.amount), avgRate: s.qty > 0 ? r2(s.amount / s.qty) : null }))
+        .sort((a, b) => b.lastDate - a.lastDate),
+      lines: lines.slice(0, 60),
+    });
+  }
+  return out;
 }
 
 /** Average inward price over the last 12 months, for stock value. */
@@ -364,6 +607,210 @@ async function getAllBatchBalances(erpPool) {
   }));
 }
 
+// ── FIFO aging (2026-10-21) ──────────────────────────────────────────────────
+
+/**
+ * Stock aging the way Busy's stock-ageing report does it — First In, First
+ * Out — instead of by batch. Per item × store:
+ *   1. closing stock = Tran4 opening + Tran2 stock rows (the engine above,
+ *      verified against Busy's own closing balances);
+ *   2. FIFO means whatever was issued went out oldest-first, so the stock
+ *      still on hand is the most RECENT inward quantities into that store
+ *      (GRNs, purchases, transfers in, production output, adjustments).
+ *      Walk the inward rows newest first until the closing stock is covered;
+ *      each slice keeps the date and cost (Tran2.Value3, excl. VAT) of the
+ *      inward it came from.
+ *   3. Stock older than this financial year (opening stock) is dated from
+ *      the previous years' Busy databases the same way, matched by item and
+ *      store name (codes can change between years). Whatever is still left
+ *      is older than the oldest database and is dated at its start.
+ * Returns rows shaped like getAllBatchBalances(): one per FIFO layer, with
+ * batchNo = the inward voucher number.
+ */
+const FY_START_MONTH = 4; // May (0-based) — Busy's financial year starts 1 May
+// Bookkeeping items that sit in a store but aren't goods — "Adj-opening" in
+// Central Stores holds 157,659,600 "pcs" at KES 1 from an April 2024
+// opening adjustment and would alone add KES 158M of "180+ days" stock.
+// "ELECTRICITY COST-F3 METER" etc. are utility costs booked through items
+// (KES 10.25M in F1/F3/F4 on 2026-10-21) — not stock. A trailing * matches
+// every item whose name starts with the text.
+const AGING_EXCLUDED_ITEMS = String(process.env.AGING_EXCLUDED_ITEMS || 'Adj-opening,ELECTRICITY COST*')
+  .split(',').map((s) => s.trim().toUpperCase()).filter(Boolean);
+const isAgingExcludedItem = (name) => {
+  const n = String(name || '').trim().toUpperCase();
+  return AGING_EXCLUDED_ITEMS.some((p) => (p.endsWith('*') ? n.startsWith(p.slice(0, -1)) : n === p));
+};
+const priorYearCache = new Map(); // db name -> rows (previous years never change)
+
+function fyDbList(currentDb, currentFy) {
+  const m = String(currentDb).match(/^(.*?)(1)(\d{4})$/);
+  if (!m) return [];
+  const out = [];
+  for (let y = currentFy - 1; y >= currentFy - 3; y--) out.push({ db: `${m[1]}1${y}`, fy: y });
+  return out;
+}
+
+async function getFifoLayers(erpPool, { storeNames, currentDb, currentFy }) {
+  const names = storeNames.map((s) => String(s).trim());
+  const req = erpPool.request();
+  names.forEach((n, k) => req.input(`s${k}`, erpSql.NVarChar(80), n));
+  const storeIn = `(${names.map((_, k) => `@s${k}`).join(',')})`;
+  const fyStart = new Date(Date.UTC(currentFy, FY_START_MONTH, 1));
+
+  // 1. Closing stock per item × store (aging stores only).
+  const stock = (await req.query(`
+    WITH st AS (SELECT Code, LTRIM(RTRIM(Name)) AS Name FROM dbo.Master1 WHERE MasterType = 11 AND LTRIM(RTRIM(Name)) IN ${storeIn}),
+    s AS (
+      SELECT t.MasterCode1 AS ItemCode, t.MasterCode2 AS StoreCode, SUM(t.D1) AS Qty
+      FROM dbo.Tran4 t JOIN dbo.Master1 i ON i.Code = t.MasterCode1 AND i.MasterType = 6
+      WHERE t.MasterCode2 IN (SELECT Code FROM st) GROUP BY t.MasterCode1, t.MasterCode2
+      UNION ALL
+      SELECT t.MasterCode1, t.MasterCode2, SUM(t.Value1) FROM dbo.Tran2 t
+      WHERE t.RecType = 2 AND t.MasterCode2 IN (SELECT Code FROM st) GROUP BY t.MasterCode1, t.MasterCode2
+    )
+    SELECT s.ItemCode, LTRIM(RTRIM(i.Name)) AS ItemName, LTRIM(RTRIM(g.Name)) AS GroupName,
+           s.StoreCode, st.Name AS Store, SUM(s.Qty) AS Qty,
+           -- Busy's own value of the opening stock (Tran4.D3; D1 = qty, D2 repeats the qty)
+           (SELECT SUM(o.D3) / NULLIF(SUM(o.D1), 0) FROM dbo.Tran4 o WHERE o.MasterCode1 = s.ItemCode AND o.MasterCode2 = s.StoreCode) AS OpeningRate,
+           (SELECT SUM(o.D1) FROM dbo.Tran4 o WHERE o.MasterCode1 = s.ItemCode AND o.MasterCode2 = s.StoreCode) AS OpeningQty,
+           (SELECT SUM(o.D3) FROM dbo.Tran4 o WHERE o.MasterCode1 = s.ItemCode AND o.MasterCode2 = s.StoreCode) AS OpeningValue
+    FROM s JOIN st ON st.Code = s.StoreCode
+    JOIN dbo.Master1 i ON i.Code = s.ItemCode AND i.MasterType = 6
+    LEFT JOIN dbo.Master1 g ON g.Code = i.ParentGrp
+    GROUP BY s.ItemCode, i.Name, g.Name, s.StoreCode, st.Name
+    -- negative balances too: Busy's stock status subtracts them
+    HAVING ABS(SUM(s.Qty)) > 0.0001`)).recordset;
+
+  // 2. This year's inward rows into those stores, newest first.
+  const req2 = erpPool.request();
+  names.forEach((n, k) => req2.input(`s${k}`, erpSql.NVarChar(80), n));
+  const inward = (await req2.query(`
+    SELECT t.MasterCode1 AS ItemCode, t.MasterCode2 AS StoreCode, t.[Date], t.VchCode, t.Value1 AS Qty, t.Value3 AS Amt,
+           LTRIM(RTRIM(t1.VchNo)) AS VchNo
+    FROM dbo.Tran2 t LEFT JOIN dbo.Tran1 t1 ON t1.VchCode = t.VchCode
+    WHERE t.RecType = 2 AND t.Value1 > 0
+      AND t.MasterCode2 IN (SELECT Code FROM dbo.Master1 WHERE MasterType = 11 AND LTRIM(RTRIM(Name)) IN ${storeIn})
+    ORDER BY t.[Date] DESC, t.VchCode DESC, t.SrNo DESC`)).recordset;
+  const byKey = new Map();
+  for (const r of inward) {
+    const k = `${r.ItemCode}|${r.StoreCode}`;
+    (byKey.get(k) || byKey.set(k, []).get(k)).push(r);
+  }
+
+  // 3. Previous years, loaded only if some stock reaches back past this year.
+  const priorDbs = fyDbList(currentDb, currentFy);
+  const loadPrior = async ({ db, fy }) => {
+    if (priorYearCache.has(db)) return priorYearCache.get(db);
+    let rows = [];
+    try {
+      if (!/^[A-Za-z0-9_]+$/.test(db)) throw new Error('bad db name');
+      const pr = erpPool.request();
+      names.forEach((n, k) => pr.input(`s${k}`, erpSql.NVarChar(80), n));
+      rows = (await pr.query(`
+        SELECT UPPER(LTRIM(RTRIM(i.Name))) AS ItemName, UPPER(LTRIM(RTRIM(mc.Name))) AS Store, t.[Date], t.Value1 AS Qty, t.Value3 AS Amt,
+               LTRIM(RTRIM(t1.VchNo)) AS VchNo
+        FROM [${db}].dbo.Tran2 t
+        JOIN [${db}].dbo.Master1 i ON i.Code = t.MasterCode1 AND i.MasterType = 6
+        JOIN [${db}].dbo.Master1 mc ON mc.Code = t.MasterCode2 AND mc.MasterType = 11
+        LEFT JOIN [${db}].dbo.Tran1 t1 ON t1.VchCode = t.VchCode
+        WHERE t.RecType = 2 AND t.Value1 > 0 AND LTRIM(RTRIM(mc.Name)) IN ${storeIn}
+        ORDER BY t.[Date] DESC, t.VchCode DESC, t.SrNo DESC`)).recordset;
+    } catch (e) {
+      rows = null; // database missing / unreadable — stop dating further back
+    }
+    const map = new Map();
+    for (const r of rows || []) {
+      const k = `${r.ItemName}|${r.Store}`;
+      (map.get(k) || map.set(k, []).get(k)).push(r);
+    }
+    const entry = { fy, ok: rows !== null, map };
+    priorYearCache.set(db, entry);
+    return entry;
+  };
+
+  const fyLabel = (fy) => `${fy}-${String((fy + 1) % 100).padStart(2, '0')}`;
+  const validDate = (d, fallback) => (d && new Date(d).getUTCFullYear() > 1901 ? d : fallback);
+  const layers = [];
+
+  for (const s of stock) {
+    if (isAgingExcludedItem(s.ItemName)) continue;
+    // Services bought through items are not stock (Busy's stock status leaves them out).
+    if (isNonStock(s.GroupName)) continue;
+    let remaining = Number(s.Qty);
+    const base = { itemCode: s.ItemCode, itemName: s.ItemName, group: s.GroupName, storeCode: s.StoreCode, store: s.Store, dueDate: null };
+    if (remaining < 0) {
+      // Issued before the receipt was entered. Busy's stock status nets it off
+      // the total, so it is kept as a negative line with no date (the page's
+      // "unknown date" figure), at the item's average cost in this store.
+      const ins = byKey.get(`${s.ItemCode}|${s.StoreCode}`) || [];
+      const q = (Number(s.OpeningQty) || 0) + ins.reduce((a, r) => a + Number(r.Qty), 0);
+      const v = (Number(s.OpeningValue) || 0) + ins.reduce((a, r) => a + (Number(r.Amt) || 0), 0);
+      const rate = q > 0 && v > 0 ? v / q : 0;
+      layers.push({ ...base, batchNo: 'Negative stock (issued before received)', qty: r3(remaining), unitPrice: r2(rate), amount: r2(remaining * rate), batchDate: null });
+      continue;
+    }
+    // Stock carried into this year is valued the way Busy holds it — at the
+    // opening value of this item in this store — while its age still comes
+    // from the receipt it was traced back to.
+    const openingRate = Number(s.OpeningRate) > 0 ? Number(s.OpeningRate) : null;
+    const take = (rows, fallbackDate, suffix, isOpening) => {
+      for (const r of rows) {
+        if (remaining <= 0.0001) break;
+        const q = Math.min(remaining, Number(r.Qty));
+        if (!(q > 0)) continue;
+        const own = Number(r.Qty) > 0 ? (Number(r.Amt) || 0) / Number(r.Qty) : 0;
+        const rate = isOpening && openingRate ? openingRate : own;
+        layers.push({
+          ...base, batchNo: `${r.VchNo || 'Opening'}${suffix}`.slice(0, 50), qty: r3(q),
+          unitPrice: r2(rate), amount: r2(q * rate), batchDate: validDate(r.Date, fallbackDate),
+        });
+        remaining -= q;
+      }
+    };
+
+    take(byKey.get(`${s.ItemCode}|${s.StoreCode}`) || [], fyStart, '');
+    let oldestStart = fyStart;
+    for (const p of priorDbs) {
+      if (remaining <= 0.0001) break;
+      const prior = await loadPrior(p);
+      if (!prior.ok) break;
+      oldestStart = new Date(Date.UTC(p.fy, FY_START_MONTH, 1));
+      take(prior.map.get(`${String(s.ItemName).toUpperCase()}|${String(s.Store).toUpperCase()}`) || [], oldestStart, ` (${fyLabel(p.fy)})`, true);
+    }
+    if (remaining > 0.0001) {
+      // Older than every database we can read — dated at the oldest year's start.
+      const rate = openingRate || 0;
+      layers.push({ ...base, batchNo: `Opening before ${oldestStart.toISOString().slice(0, 7)}`, qty: r3(remaining), unitPrice: r2(rate), amount: r2(remaining * rate), batchDate: oldestStart });
+    }
+  }
+
+  // Layers with no cost of their own (stock older than the databases, or an
+  // inward recorded at zero cost): the item's most recent known cost from any
+  // store and any year. Anything still unpriced is left to aging-sync's
+  // purchase-price fallback.
+  const latestRate = new Map(); // item name (upper) -> { rate, date } of its newest priced inward
+  const noteRate = (name, qty, amt, date) => {
+    if (!(Number(qty) > 0 && Number(amt) > 0)) return;
+    const k = String(name).toUpperCase();
+    const t = new Date(date).getTime() || 0;
+    const prev = latestRate.get(k);
+    if (!prev || t > prev.t) latestRate.set(k, { rate: Number(amt) / Number(qty), t });
+  };
+  const nameByCode = new Map(stock.map((s) => [s.ItemCode, s.ItemName]));
+  for (const r of inward) if (nameByCode.has(r.ItemCode)) noteRate(nameByCode.get(r.ItemCode), r.Qty, r.Amt, r.Date);
+  for (const p of priorDbs) {
+    const prior = priorYearCache.get(p.db);
+    if (!prior?.ok) continue;
+    for (const [k, rows] of prior.map) for (const r of rows) noteRate(k.split('|')[0], r.Qty, r.Amt, r.Date);
+  }
+  for (const l of layers) {
+    if (l.unitPrice) continue;
+    const found = latestRate.get(String(l.itemName).toUpperCase());
+    if (found) { l.unitPrice = r2(found.rate); l.amount = r2(l.qty * found.rate); }
+  }
+  return layers;
+}
+
 // ── The whole picture ────────────────────────────────────────────────────────
 
 function computeLevels({ live, cons, leadWeeks, eoq }) {
@@ -433,15 +880,21 @@ module.exports = {
   DEFAULT_LEAD_WEEKS,
   EXCLUDED_STORES,
   FG_GROUPS,
+  getBoughtInputs,
   isNonStock,
   resolveItems,
   getStockByStore,
   getConsumption,
+  listStockStores,
+  getStoreStockAndUse,
+  INVENTORY_STORE_NAMES,
   getEoq,
   getAvgInwardPrice,
   getLastPurchase,
+  getPurchaseHistory,
   getBatchBalances,
   getAllBatchBalances,
+  getFifoLayers,
   computeLevels,
   getStockPicture,
 };

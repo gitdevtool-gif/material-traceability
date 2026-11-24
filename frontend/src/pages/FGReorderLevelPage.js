@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 
 export default function FGReorderLevelPage() {
   const { user } = useAuth();
-  const canSync = ['Admin', 'Procurement'].includes(user?.role);
+  const canSync = ['Admin', 'Procurement', 'HeadOfProductionPlanning'].includes(user?.role);
 
   const [items, setItems]           = useState([]);
   const [loading, setLoading]       = useState(true);
@@ -44,14 +44,15 @@ export default function FGReorderLevelPage() {
   const [batchLoading, setBatchLoading]              = useState(false);
   const [batchError, setBatchError]                  = useState('');
 
+  // Cards follow the Mat Centre filter.
   const loadSummary = useCallback(async () => {
     try {
-      const res = await api.get('/procurement/fg-reorder/summary');
+      const res = await api.get('/procurement/fg-reorder/summary', { params: factory ? { factory } : {} });
       setSummary(res.data);
     } catch {
       setSummary(null);
     }
-  }, []);
+  }, [factory]);
 
   const loadItems = useCallback(async () => {
     setLoading(true);
@@ -78,18 +79,22 @@ export default function FGReorderLevelPage() {
   useEffect(() => { loadSummary(); }, [loadSummary]);
   useEffect(() => { loadItems(); }, [loadItems]);
 
-  // One-time pull of a larger page to derive distinct filter dropdown values.
+  // Filter dropdowns. Mat Centres come from the server (every one, with counts) —
+  // the old "first 1,000 rows" pull missed F6, F7, F8 and three others.
   useEffect(() => {
-    api.get('/procurement/fg-reorder', { params: { limit: 1000, page: 1 } })
+    api.get('/procurement/fg-reorder/stores')
+      .then(res => {
+        const rank = (n) => (/^CENTRAL STORES$/i.test(n) ? 0 : /^F\d/i.test(n) ? 1 : 2);
+        setFactoryOptions((res.data || [])
+          .sort((a, b) => rank(a.name) - rank(b.name) || a.name.localeCompare(b.name, undefined, { numeric: true })));
+      })
+      .catch(() => setFactoryOptions([]));
+    api.get('/procurement/fg-reorder', { params: { limit: 5000, page: 1 } })
       .then(res => {
         const rows = Array.isArray(res.data?.data) ? res.data.data : [];
-        setFactoryOptions([...new Set(rows.map(r => r.Factory).filter(Boolean))].sort());
         setItemgrpOptions([...new Set(rows.map(r => r.ItemGroup).filter(Boolean))].sort());
       })
-      .catch(() => {
-        setFactoryOptions([]);
-        setItemgrpOptions([]);
-      });
+      .catch(() => setItemgrpOptions([]));
   }, []);
 
   // Reset to page 1 whenever a filter changes
@@ -192,6 +197,7 @@ export default function FGReorderLevelPage() {
       case 'NEEDS GROUP ASSIGNMENT':     return 'Needs Group';
       case 'NEEDS LEAD TIME ASSIGNMENT': return 'Needs Lead Time';
       case 'NEEDS STOCK MASTER REVIEW':  return 'Needs Stock Match';
+      case 'NO SALES LAST 6 MONTHS':     return 'No sales (6 mo)';
       default: return status;
     }
   };
@@ -201,7 +207,11 @@ export default function FGReorderLevelPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Finished Goods Reorder Levels</h1>
-          <p className="page-subtitle">Sales-driven stock status for finished goods — avoid stock-outs and overstocking</p>
+          <p className="page-subtitle">
+            Sales-driven stock status for finished goods — from the last 6 complete months of sales:
+            reorder = highest month × lead time, minimum = (highest − 3-month average) × lead time,
+            maximum = reorder + average production run − lowest month × lead time
+          </p>
         </div>
         {canSync && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
@@ -237,9 +247,13 @@ export default function FGReorderLevelPage() {
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
-          <select className="form-control" style={{ maxWidth: 180 }} value={factory} onChange={e => setFactory(e.target.value)}>
-            <option value="">All Factories</option>
-            {factoryOptions.map(f => <option key={f} value={f}>{f}</option>)}
+          <select className="form-control" style={{ maxWidth: 240, fontWeight: factory ? 600 : 400 }} value={factory}
+            onChange={e => setFactory(e.target.value)}
+            title="Busy Material Centre: that store's own stock against levels from its own sales">
+            <option value="">All Mat Centres</option>
+            {factoryOptions.map(f => (
+              <option key={f.name} value={f.name}>{f.name} — {f.items} item{f.items === 1 ? '' : 's'}{f.needsAction ? `, ${f.needsAction} need action` : ''}</option>
+            ))}
           </select>
           <select className="form-control" style={{ maxWidth: 200 }} value={itemgrp} onChange={e => setItemgrp(e.target.value)}>
             <option value="">All Item Groups</option>
@@ -250,6 +264,7 @@ export default function FGReorderLevelPage() {
             <option value="CRITICAL">Critical</option>
             <option value="REORDER">Needs Reorder</option>
             <option value="OK">OK</option>
+            <option value="NO SALES LAST 6 MONTHS">No sales in last 6 months</option>
           </select>
           <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, color: '#374151', cursor: 'pointer' }}>
             <input type="checkbox" checked={unackOnly} onChange={e => setUnackOnly(e.target.checked)} />
@@ -272,12 +287,14 @@ export default function FGReorderLevelPage() {
             <thead>
               <tr>
                 <th>Item</th>
-                <th>Factory</th>
+                <th>Mat Centre</th>
                 <th>Item Group</th>
+                <th>UOM</th>
                 <th>Live Stock</th>
                 <th>Min Level</th>
                 <th>Reorder Level</th>
                 <th>Max Level</th>
+                <th title="Critical levels set on the item in Busy (Item master → Critical Levels): minimum / reorder / maximum">Busy Levels (Min / Reorder / Max)</th>
                 <th>Overstocked</th>
                 <th>Lead Time (mo)</th>
                 <th>Status</th>
@@ -306,10 +323,21 @@ export default function FGReorderLevelPage() {
                   </td>
                   <td>{r.Factory}</td>
                   <td style={{ fontSize: 13 }}>{r.ItemGroup || <span style={{ color: '#9ca3af' }}>—</span>}</td>
+                  <td style={{ fontSize: 13 }}>{r.UOM || <span style={{ color: '#9ca3af' }}>—</span>}</td>
                   <td style={{ fontFamily: 'monospace', fontSize: 13 }}>{fmtNum(r.LiveStock)}</td>
                   <td style={{ fontFamily: 'monospace', fontSize: 13 }}>{fmtNum(r.MinimumStockLevel)}</td>
                   <td style={{ fontFamily: 'monospace', fontSize: 13 }}>{fmtNum(r.ReorderLevel)}</td>
                   <td style={{ fontFamily: 'monospace', fontSize: 13 }}>{fmtNum(r.MaximumStockLevel)}</td>
+                  <td style={{ fontFamily: 'monospace', fontSize: 12, whiteSpace: 'nowrap' }}>
+                    {r.BusyMinLevel != null || r.BusyReorderLevel != null || r.BusyMaxLevel != null
+                      ? <>
+                          {fmtNum(r.BusyMinLevel)} / <strong>{fmtNum(r.BusyReorderLevel)}</strong> / {fmtNum(r.BusyMaxLevel)}
+                          {r.BusyReorderLevel > 0 && Number(r.LiveStock) <= Number(r.BusyReorderLevel) && (
+                            <div style={{ color: '#b91c1c', fontFamily: 'inherit' }}>below Busy reorder</div>
+                          )}
+                        </>
+                      : <span style={{ color: '#9ca3af' }} title="No critical levels set on this item in Busy">not set</span>}
+                  </td>
                   <td style={{ fontFamily: 'monospace', fontSize: 13, color: r.Overstocked > 0 ? '#2563eb' : undefined }}>
                     {r.Overstocked > 0 ? fmtNum(r.Overstocked) : '—'}
                   </td>

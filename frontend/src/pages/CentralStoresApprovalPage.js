@@ -135,7 +135,7 @@ export default function CentralStoresApprovalPage() {
       setSuccess(
         res.data.status === 'RejectedByCentralStores'
           ? `${selectedReq.BusyOrdNo}: every item rejected — sent back to ${selectedReq.CreatedByName || 'the requester'}`
-          : `${selectedReq.BusyOrdNo}: ${res.data.approvedCount} item(s) approved${res.data.rejectedCount ? `, ${res.data.rejectedCount} rejected` : ''} — forwarded to ${res.data.status === 'PendingOpsApproval' ? 'the Ops Manager' : 'Procurement'}`
+          : `${selectedReq.BusyOrdNo}: ${res.data.approvedCount} item(s) approved${res.data.rejectedCount ? `, ${res.data.rejectedCount} rejected` : ''} — forwarded to ${res.data.status === 'PendingOpsApproval' ? `the ${res.data.approver || 'Ops Manager'}` : 'Procurement'}`
       );
       closeModal();
       load();
@@ -169,8 +169,8 @@ export default function CentralStoresApprovalPage() {
         <h3 style={{ marginBottom: 4 }}>Requisitions Awaiting Central Stores Review ({rows.length})</h3>
         <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 12px' }}>
           Check against physical stock — approve at a reduced quantity if you already hold some, or
-          reject an item outright with a reason. Factory Mat Centres still go to the Ops Manager
-          afterward; everything else goes straight to Procurement.
+          reject an item outright with a reason. Factory Mat Centres then go to the Ops Manager and
+          Workshop to the Workshop HOD; everything else goes straight to Procurement.
         </p>
         <div className="csApproval-table-wrap">
         <table className="data-table">

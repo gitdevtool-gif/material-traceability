@@ -25,11 +25,12 @@ const { sendRequisitionApprovalEmail } = require('../../services/email.service')
 const { resolveCategoryForItemNames } = require('../../services/requisition-item-catalog.service');
 const config = require('../../config');
 const logger = require('../../logger');
+const { GATE_DECIDER_ROLES, isWorkshopMatCenter, canDecideFor, gateScopeSql } = require('../../services/requisition-gate');
 
 const router = express.Router();
 
-const VIEW_ROLES = ['OpsManager', 'Admin', 'Director'];
-const DECIDE_ROLES = ['OpsManager', 'Director', 'Admin'];
+const VIEW_ROLES = ['OpsManager', 'WorkshopHOD', 'Admin', 'Director'];
+const DECIDE_ROLES = GATE_DECIDER_ROLES;
 // FactoryReceiving clerks raise the Busy Purchase Indent that becomes a
 // Requisition here — they can't decide anything, but need to check
 // whether the Ops Manager has approved/rejected/held theirs, hence a
@@ -39,7 +40,7 @@ const DECIDE_ROLES = ['OpsManager', 'Director', 'Admin'];
 // StoreReceiving added 2026-09-21 — Central Stores can now raise their own
 // requisitions too (requisition-create.routes.js) and need the same
 // read-only follow-up view a FactoryReceiving clerk already gets.
-const STATUS_VIEW_ROLES = [...VIEW_ROLES, 'FactoryReceiving', 'StoreReceiving'];
+const STATUS_VIEW_ROLES = [...VIEW_ROLES, 'FactoryReceiving', 'FactoryQA', 'StoreReceiving'];
 
 // ── Approve-all-items-at-full-qty, shared by the authenticated per-item
 // decision endpoint's "everything approved" case and the email token
@@ -140,7 +141,9 @@ async function sendApprovalEmailForRequisition(requisitionId) {
     }
 
     const sent = await sendRequisitionApprovalEmail({
-      to: config.email.requisitionOpsManagerEmail,
+      to: isWorkshopMatCenter(header.MatCenter)
+        ? config.email.requisitionWorkshopHodEmail
+        : config.email.requisitionOpsManagerEmail,
       busyOrdNo: header.BusyOrdNo,
       warehouse: header.Warehouse,
       matCenter: header.MatCenter,
@@ -255,16 +258,21 @@ router.get('/token/:token', async (req, res) => {
 // the Ops Manager previously put 'OnHold' — held ones stay visible here
 // (badged via Status) so they don't get lost, but never reach Procurement
 // until actively approved/rejected.
+// ?gate=workshop | ops narrows the queue to one gate for roles that see both
+// (Director, Admin): the Workshop Approval page sends gate=workshop, the Ops
+// Manager page gate=ops. The role's own scope always applies on top.
 router.get('/pending', authenticate, authorize(...VIEW_ROLES), async (req, res, next) => {
   try {
     const pool = await getPool();
+    const gate = String(req.query.gate || '').toLowerCase();
+    const gateSql = gate === 'workshop' ? gateScopeSql('WorkshopHOD') : gate === 'ops' ? gateScopeSql('OpsManager') : '';
     const result = await pool.request().query(`
       SELECT
         r.RequisitionId, r.BusyOrdNo, r.BusyDate, r.Warehouse, r.MatCenter,
         r.Status, r.SyncedAt, r.CreatedAt, r.HoldReason, r.HoldAt,
         (SELECT COUNT(*) FROM dbo.RequisitionItems ri WHERE ri.RequisitionId = r.RequisitionId) AS ItemCount
       FROM dbo.Requisitions r
-      WHERE r.Status IN ('PendingOpsApproval', 'OnHold')
+      WHERE r.Status IN ('PendingOpsApproval', 'OnHold')${gateScopeSql(req.user.role)}${gateSql}
       ORDER BY CASE r.Status WHEN 'PendingOpsApproval' THEN 0 ELSE 1 END, r.BusyDate ASC, r.BusyOrdNo ASC
     `);
     res.json(result.recordset);
@@ -289,6 +297,8 @@ router.get('/status', authenticate, authorize(...STATUS_VIEW_ROLES), async (req,
     if (dateFrom) whereClause += ' AND r.BusyDate >= @dateFrom';
     if (dateTo)   whereClause += ' AND r.BusyDate <= @dateTo';
     if (status)   whereClause += ' AND r.Status = @status';
+    // A Workshop HOD only follows up on Workshop requisitions.
+    if (req.user.role === 'WorkshopHOD') whereClause += gateScopeSql('WorkshopHOD');
 
     const bindParams = (request) => {
       if (search)   request.input('search', sql.VarChar(60), `%${search.trim()}%`);
@@ -361,6 +371,9 @@ router.get('/:id', authenticate, authorize(...STATUS_VIEW_ROLES), async (req, re
         WHERE r.RequisitionId = @id
       `);
     if (!headerResult.recordset[0]) return res.status(404).json({ error: 'Requisition not found' });
+    if (req.user.role === 'WorkshopHOD' && !isWorkshopMatCenter(headerResult.recordset[0].MatCenter)) {
+      return res.status(403).json({ error: 'The Workshop HOD can only view Workshop requisitions' });
+    }
 
     const itemsResult = await pool.request()
       .input('id', sql.Int, id)
@@ -368,11 +381,19 @@ router.get('/:id', authenticate, authorize(...STATUS_VIEW_ROLES), async (req, re
         SELECT
           ri.RequisitionItemId, ri.ItemName, ri.ItemCode, ri.Qty, ri.BusyPrice, ri.BusyAmt, ri.Category,
           rs.LiveStock, rs.ReorderLevel, rs.NeedsReorder, rs.RequiredQty, rs.SyncedAt AS StockSyncedAt,
-          ia.Decision AS ItemDecision, ia.ApprovedQty AS ItemApprovedQty, ia.RejectionReason AS ItemRejectionReason
+          rs.AvgMonthlyConsumption, rs.LeadTimeDays, rs.MaxStockLevel, rs.UOM,
+          ia.Decision AS ItemDecision, ia.ApprovedQty AS ItemApprovedQty, ia.RejectionReason AS ItemRejectionReason,
+          COALESCE(ps.SupplierName, ri.PreferredSupplierName) AS PreferredSupplierName
         FROM dbo.RequisitionItems ri
-        LEFT JOIN dbo.ReorderStatus rs
-          ON UPPER(LTRIM(RTRIM(rs.ItemName))) = UPPER(LTRIM(RTRIM(ri.ItemName)))
+        -- One row per inventory store per item since 2026-11-11 — take Central
+        -- Stores' when the item is in both (F7-only items have just F7's).
+        OUTER APPLY (
+          SELECT TOP 1 rs2.* FROM dbo.ReorderStatus rs2
+          WHERE UPPER(LTRIM(RTRIM(rs2.ItemName))) = UPPER(LTRIM(RTRIM(ri.ItemName)))
+          ORDER BY CASE WHEN rs2.Store = 'CENTRAL STORES' THEN 0 ELSE 1 END
+        ) rs
         LEFT JOIN dbo.RequisitionItemApprovals ia ON ia.RequisitionItemId = ri.RequisitionItemId
+        LEFT JOIN dbo.Suppliers ps ON ps.SupplierId = ri.PreferredSupplierId
         WHERE ri.RequisitionId = @id
         ORDER BY ri.RequisitionItemId
       `);
@@ -396,7 +417,183 @@ router.get('/:id', authenticate, authorize(...STATUS_VIEW_ROLES), async (req, re
       ...headerResult.recordset[0],
       items: itemsResult.recordset,
       centralStoresDecisions: centralStoresDecisionsResult.recordset,
+      ...(await loadResubmitInfo(pool, id, headerResult.recordset[0])),
     });
+  } catch (err) { next(err); }
+});
+
+// ── Resubmitting the REJECTED items of a partly-approved requisition ─────────
+// (2026-10-26) When only some items were rejected, the approved ones carry
+// on to Procurement and the requisition itself can't go back. The clerk
+// resubmits the rejected ones instead: they go into a NEW follow-up
+// requisition (new REQ number, linked via ResubmittedFromRequisitionId)
+// that returns to whoever rejected them — Ops-/HOD-rejected items to that
+// gate (Central Stores already passed them), Central-Stores-rejected items
+// to Central Stores. Each rejected item can be resubmitted once.
+// A WHOLLY rejected requisition keeps the existing /resubmit and
+// /central-stores-resubmit (the same requisition goes back).
+const RESUBMIT_ROLES = ['FactoryReceiving', 'FactoryQA', 'StoreReceiving', 'Admin'];
+const FULLY_REJECTED = ['RejectedByOps', 'RejectedByCentralStores'];
+const STILL_IN_REVIEW = ['PendingCentralStoresApproval', 'PendingOpsApproval', 'OnHold'];
+
+async function loadResubmitInfo(pool, id, header) {
+  const rejected = [];
+  const resubmitted = [];
+  if (!FULLY_REJECTED.includes(header.Status) && !STILL_IN_REVIEW.includes(header.Status)) {
+    const ops = (await pool.request().input('id', sql.Int, id).query(`
+      SELECT ia.RequisitionItemApprovalId AS DecisionId, ri.ItemName, ri.Qty, ri.Unit, ia.RejectionReason, u.FullName AS DecidedBy,
+             ia.DecidedAt, ia.ResubmittedInRequisitionId, fr.BusyOrdNo AS ResubmittedInNo
+      FROM dbo.RequisitionItemApprovals ia
+      JOIN dbo.RequisitionItems ri ON ri.RequisitionItemId = ia.RequisitionItemId
+      LEFT JOIN dbo.Users u ON u.UserId = ia.DecidedByUserId
+      LEFT JOIN dbo.Requisitions fr ON fr.RequisitionId = ia.ResubmittedInRequisitionId
+      WHERE ri.RequisitionId = @id AND ia.Decision = 'Rejected'`)).recordset;
+    const cs = (await pool.request().input('id', sql.Int, id).query(`
+      SELECT cd.CentralStoresItemDecisionId AS DecisionId, cd.ItemName, cd.RequestedQty AS Qty, NULL AS Unit, cd.RejectionReason,
+             u.FullName AS DecidedBy, cd.DecidedAt, cd.ResubmittedInRequisitionId, fr.BusyOrdNo AS ResubmittedInNo
+      FROM dbo.CentralStoresItemDecisions cd
+      LEFT JOIN dbo.Users u ON u.UserId = cd.DecidedByUserId
+      LEFT JOIN dbo.Requisitions fr ON fr.RequisitionId = cd.ResubmittedInRequisitionId
+      WHERE cd.RequisitionId = @id AND cd.Decision = 'Rejected'`)).recordset;
+    const gate = isWorkshopMatCenter(header.MatCenter) ? 'Workshop HOD' : 'Ops Manager';
+    for (const [source, list, by] of [['ops', ops, gate], ['cs', cs, 'Central Stores']]) {
+      for (const r of list) {
+        const row = { source, decisionId: r.DecisionId, itemName: r.ItemName, qty: Math.abs(Number(r.Qty) || 0), unit: r.Unit,
+          reason: r.RejectionReason, rejectedBy: r.DecidedBy || by, rejectedAt: r.DecidedAt, stage: by };
+        if (r.ResubmittedInRequisitionId) resubmitted.push({ ...row, resubmittedInId: r.ResubmittedInRequisitionId, resubmittedInNo: r.ResubmittedInNo });
+        else rejected.push(row);
+      }
+    }
+  }
+  const from = header.ResubmittedFromRequisitionId
+    ? (await pool.request().input('f', sql.Int, header.ResubmittedFromRequisitionId).query('SELECT RequisitionId, BusyOrdNo FROM dbo.Requisitions WHERE RequisitionId = @f')).recordset[0] || null
+    : null;
+  return { rejectedForResubmit: rejected, resubmittedItems: resubmitted, resubmittedFrom: from };
+}
+
+// May this user resubmit for this Mat Centre? Clerks only for their own Mat Centre.
+async function canResubmitFor(pool, user, matCenter) {
+  if (user.role === 'Admin') return true;
+  const norm = (s) => String(s || '').trim().toUpperCase();
+  if (user.role === 'StoreReceiving') return norm(matCenter) === 'CENTRAL STORES';
+  const me = (await pool.request().input('u', sql.Int, user.userId).query('SELECT AssignedMatCenter FROM dbo.Users WHERE UserId = @u')).recordset[0];
+  return !!me && norm(me.AssignedMatCenter) === norm(matCenter);
+}
+
+// ── POST /api/procurement/requisition-approval/:id/resubmit-rejected-items ───
+// Body: { items: [{ source: 'ops' | 'cs', decisionId, qty }], note }
+router.post('/:id/resubmit-rejected-items', authenticate, authorize(...RESUBMIT_ROLES), async (req, res, next) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const note = String(req.body.note || '').trim();
+    const picked = Array.isArray(req.body.items) ? req.body.items : [];
+    if (!picked.length) return res.status(400).json({ error: 'Pick at least one rejected item to resubmit' });
+    if (note.length < 3) return res.status(400).json({ error: 'Say why these items are still needed (note)' });
+
+    const pool = await getPool();
+    const header = (await pool.request().input('id', sql.Int, id).query('SELECT * FROM dbo.Requisitions WHERE RequisitionId = @id')).recordset[0];
+    if (!header) return res.status(404).json({ error: 'Requisition not found' });
+    if (!(await canResubmitFor(pool, req.user, header.MatCenter))) {
+      return res.status(403).json({ error: `Only ${header.MatCenter}'s own clerk (or Admin) can resubmit these items` });
+    }
+    const { rejectedForResubmit } = await loadResubmitInfo(pool, id, header);
+    if (FULLY_REJECTED.includes(header.Status)) {
+      return res.status(400).json({ error: 'Every item was rejected — use "Resubmit" to send the whole requisition back' });
+    }
+    const byKey = new Map(rejectedForResubmit.map((r) => [`${r.source}:${r.decisionId}`, r]));
+    const chosen = [];
+    for (const p of picked) {
+      const r = byKey.get(`${p.source}:${parseInt(p.decisionId, 10)}`);
+      if (!r) return res.status(400).json({ error: 'One of the items is not a rejected item of this requisition, or was already resubmitted — reload and try again' });
+      const qty = Number(p.qty);
+      if (!(qty > 0)) return res.status(400).json({ error: `Enter a quantity above 0 for "${r.itemName}"` });
+      chosen.push({ ...r, qty });
+    }
+
+    // Item details to carry over (Ops-rejected rows still exist; Central Stores deletes the row it rejects).
+    const opsIds = chosen.filter((c) => c.source === 'ops').map((c) => c.decisionId);
+    const opsDetail = new Map();
+    if (opsIds.length) {
+      (await pool.request().query(`
+        SELECT ia.RequisitionItemApprovalId AS DecisionId, ri.* FROM dbo.RequisitionItemApprovals ia
+        JOIN dbo.RequisitionItems ri ON ri.RequisitionItemId = ia.RequisitionItemId
+        WHERE ia.RequisitionItemApprovalId IN (${opsIds.map((n) => parseInt(n, 10)).join(',')})`)).recordset
+        .forEach((r) => opsDetail.set(r.DecisionId, r));
+    }
+    const csNames = chosen.filter((c) => c.source === 'cs').map((c) => c.itemName);
+    const csCategory = csNames.length ? await resolveCategoryForItemNames(csNames) : new Map();
+
+    // Back to whoever rejected them: any Central-Stores-rejected item → Central Stores first;
+    // otherwise straight to the Ops Manager / Workshop HOD gate.
+    const anyCs = chosen.some((c) => c.source === 'cs');
+    const status = anyCs ? 'PendingCentralStoresApproval' : 'PendingOpsApproval';
+    const approver = anyCs ? 'Central Stores' : isWorkshopMatCenter(header.MatCenter) ? 'Workshop HOD' : 'Ops Manager';
+    const who = req.user.fullName || req.user.username || 'user';
+    const notes = `Resubmission of items rejected on ${header.BusyOrdNo} — by ${who}: ${note}`.slice(0, 1000);
+
+    // Required here, not at the top: requisition-create → procurement-sync → this file.
+    const { generateRequisitionNo } = require('./requisition-create.routes');
+    const transaction = new sql.Transaction(pool);
+    await transaction.begin();
+    let newId; let newNo;
+    try {
+      newNo = await generateRequisitionNo(transaction);
+      newId = (await new sql.Request(transaction)
+        .input('no', sql.VarChar(25), newNo)
+        .input('date', sql.DateTime, new Date())
+        .input('wh', sql.NVarChar(100), header.Warehouse || header.MatCenter)
+        .input('mc', sql.NVarChar(100), header.MatCenter)
+        .input('status', sql.VarChar(30), status)
+        .input('by', sql.Int, req.user.userId)
+        .input('notes', sql.NVarChar(1000), notes)
+        .input('from', sql.Int, id)
+        .input('csBy', sql.Int, anyCs ? null : header.CentralStoresApprovedByUserId)
+        .input('csAt', sql.DateTime2, anyCs ? null : header.CentralStoresApprovedAt)
+        .query(`
+          INSERT INTO dbo.Requisitions (BusyOrdNo, BusyDate, Warehouse, MatCenter, Status, Source, CreatedByUserId, Notes,
+                                        ResubmittedFromRequisitionId, CentralStoresApprovedByUserId, CentralStoresApprovedAt)
+          OUTPUT INSERTED.RequisitionId
+          VALUES (@no, @date, @wh, @mc, @status, 'Manual', @by, @notes, @from, @csBy, @csAt)`)).recordset[0].RequisitionId;
+
+      for (const c of chosen) {
+        const d = c.source === 'ops' ? opsDetail.get(c.decisionId) || {} : {};
+        await new sql.Request(transaction)
+          .input('rid', sql.Int, newId)
+          .input('name', sql.NVarChar(200), c.itemName)
+          .input('code', sql.NVarChar(50), d.ItemCode || null)
+          .input('qty', sql.Float, c.qty)
+          .input('unit', sql.NVarChar(20), d.Unit || c.unit || null)
+          .input('cat', sql.NVarChar(100), d.Category || csCategory.get(c.itemName) || null)
+          .input('supId', sql.Int, d.PreferredSupplierId || null)
+          .input('supName', sql.NVarChar(200), d.PreferredSupplierName || null)
+          .input('brand', sql.NVarChar(150), d.PreferredBrand || null)
+          .input('quality', sql.NVarChar(500), d.PreferredQuality || null)
+          .input('photo', sql.NVarChar(500), d.ReferencePhotoUrl || null)
+          .query(`
+            INSERT INTO dbo.RequisitionItems (RequisitionId, ItemName, ItemCode, Qty, Unit, Category,
+                                              PreferredSupplierId, PreferredSupplierName, PreferredBrand, PreferredQuality, ReferencePhotoUrl)
+            VALUES (@rid, @name, @code, @qty, @unit, @cat, @supId, @supName, @brand, @quality, @photo)`);
+        await new sql.Request(transaction).input('d', sql.Int, c.decisionId).input('rid', sql.Int, newId).query(c.source === 'ops'
+          ? 'UPDATE dbo.RequisitionItemApprovals SET ResubmittedInRequisitionId = @rid WHERE RequisitionItemApprovalId = @d AND ResubmittedInRequisitionId IS NULL'
+          : 'UPDATE dbo.CentralStoresItemDecisions SET ResubmittedInRequisitionId = @rid WHERE CentralStoresItemDecisionId = @d AND ResubmittedInRequisitionId IS NULL');
+      }
+      await transaction.commit();
+    } catch (trxErr) {
+      await transaction.rollback().catch(() => {});
+      throw trxErr;
+    }
+
+    const items = chosen.map((c) => ({ itemName: c.itemName, qty: c.qty, rejectedBy: c.stage, reason: c.reason }));
+    writeAuditLog({
+      entityType: 'Requisition', entityId: newId, action: 'Create', userId: req.user.userId,
+      newValues: { event: 'RejectedItemsResubmitted', from: header.BusyOrdNo, to: newNo, status, items, note },
+      ipAddress: req.ip, userAgent: req.get('User-Agent'),
+    });
+    writeStatusHistory({ entityType: 'Requisition', entityId: newId, fromStatus: null, toStatus: status, changedBy: req.user.userId,
+      remarks: `Resubmitted rejected items from ${header.BusyOrdNo}` });
+    if (status === 'PendingOpsApproval') sendApprovalEmailForRequisition(newId).catch(() => {});
+
+    res.status(201).json({ requisitionId: newId, busyOrdNo: newNo, status, approver, items: chosen.length });
   } catch (err) { next(err); }
 });
 
@@ -426,8 +623,13 @@ router.patch('/:id/decision', authenticate, authorize(...DECIDE_ROLES), async (r
     const pool = await getPool();
     const current = await pool.request()
       .input('id', sql.Int, id)
-      .query('SELECT Status FROM dbo.Requisitions WHERE RequisitionId = @id');
+      .query('SELECT Status, MatCenter FROM dbo.Requisitions WHERE RequisitionId = @id');
     if (!current.recordset[0]) return res.status(404).json({ error: 'Requisition not found' });
+    if (!canDecideFor(req.user.role, current.recordset[0].MatCenter)) {
+      return res.status(403).json({ error: isWorkshopMatCenter(current.recordset[0].MatCenter)
+        ? 'Workshop requisitions are decided by the Workshop HOD'
+        : 'Factory requisitions are decided by the Ops Manager' });
+    }
     if (!['PendingOpsApproval', 'OnHold'].includes(current.recordset[0].Status)) {
       return res.status(400).json({ error: `Requisition is already ${current.recordset[0].Status} — no further action possible` });
     }
@@ -567,8 +769,11 @@ router.patch('/:id/hold', authenticate, authorize(...DECIDE_ROLES), async (req, 
     const pool = await getPool();
     const current = await pool.request()
       .input('id', sql.Int, id)
-      .query('SELECT Status FROM dbo.Requisitions WHERE RequisitionId = @id');
+      .query('SELECT Status, MatCenter FROM dbo.Requisitions WHERE RequisitionId = @id');
     if (!current.recordset[0]) return res.status(404).json({ error: 'Requisition not found' });
+    if (!canDecideFor(req.user.role, current.recordset[0].MatCenter)) {
+      return res.status(403).json({ error: 'You are not the approver for this requisition' });
+    }
     if (current.recordset[0].Status !== 'PendingOpsApproval') {
       return res.status(400).json({ error: `Requisition is ${current.recordset[0].Status} — can only hold from PendingOpsApproval` });
     }
@@ -594,7 +799,7 @@ router.patch('/:id/hold', authenticate, authorize(...DECIDE_ROLES), async (req, 
 // permanently excluded from RFQ dispatch and there's no per-item ops-review
 // queue to put just one item back into; resubmitting only makes sense once
 // the whole requisition has dead-ended.
-router.patch('/:id/resubmit', authenticate, authorize('FactoryReceiving', 'Admin'), async (req, res, next) => {
+router.patch('/:id/resubmit', authenticate, authorize('FactoryReceiving', 'FactoryQA', 'Admin'), async (req, res, next) => {
   try {
     const id = parseInt(req.params.id, 10);
     const { note } = req.body;
@@ -668,7 +873,7 @@ router.patch('/:id/resubmit', authenticate, authorize('FactoryReceiving', 'Admin
 // empty item list on review. Note: the clerk's original preferred-
 // supplier/brand/quality suggestions are NOT preserved in that snapshot,
 // so they'd need to be re-entered if this requisition is resubmitted.
-router.patch('/:id/central-stores-resubmit', authenticate, authorize('FactoryReceiving', 'Admin'), async (req, res, next) => {
+router.patch('/:id/central-stores-resubmit', authenticate, authorize('FactoryReceiving', 'FactoryQA', 'Admin'), async (req, res, next) => {
   try {
     const id = parseInt(req.params.id, 10);
     const { note } = req.body;

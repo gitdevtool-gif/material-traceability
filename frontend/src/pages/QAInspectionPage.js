@@ -21,7 +21,13 @@ export default function QAInspectionPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [step, setStep] = useState('list'); // list | create | tests | decide | report | templates
+  const [step, setStep] = useState('list'); // list | create | tests | decide | report | templates | mine
+  // My Submissions (2026-11-11): the user's copies of the QA decisions they submitted
+  const [lastLogId, setLastLogId] = useState(null);
+  const [myLog, setMyLog] = useState({ data: [], total: 0 });
+  const [myLoading, setMyLoading] = useState(false);
+  const [myFilter, setMyFilter] = useState({ search: '', dateFrom: '', dateTo: '', decision: '', scope: 'mine' });
+  const [myPage, setMyPage] = useState(1);
   const [reportData, setReportData] = useState(null);
   const [reportLoading, setReportLoading] = useState(false);
   const [reportDateFrom, setReportDateFrom] = useState('');
@@ -41,7 +47,7 @@ export default function QAInspectionPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'Admin';
 
-  const canSeeAllFactories = ['Admin', 'Supervisor', 'QAManager', 'Viewer'].includes(user?.role);
+  const canSeeAllFactories = ['Admin', 'Supervisor', 'QAManager', 'Viewer', 'GrnReviewer'].includes(user?.role);
 
   // Extract factory identifier from user email (e.g. f1production@... → F1)
   const userFactory = (() => {
@@ -55,6 +61,15 @@ export default function QAInspectionPage() {
   // by their email, so this control isn't shown to them).
   const [listFactory, setListFactory] = useState('');
   const [listFactories, setListFactories] = useState([]);
+  // Search the waiting list by gate entry no. or supplier (also vehicle /
+  // consignment). Every word must match: "dominic 1017" finds Dominic's
+  // entry ENT-20261017-…
+  const [listSearch, setListSearch] = useState('');
+  const searchWords = listSearch.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const shownPending = searchWords.length === 0 ? pending : pending.filter((e) => {
+    const hay = [e.EntryNo, e.SupplierName, e.SupplierCode, e.VehicleRegNo, e.ConsignmentNo].join(' ').toLowerCase();
+    return searchWords.every((w) => hay.includes(w));
+  });
 
   const loadPending = (factory) => {
     const params = {};
@@ -98,6 +113,24 @@ export default function QAInspectionPage() {
       .finally(() => setReportLoading(false));
   };
 
+  const MY_PAGE_SIZE = 25;
+  const loadMyLog = (filter = myFilter, page = myPage) => {
+    setMyLoading(true);
+    const params = { page, limit: MY_PAGE_SIZE };
+    Object.entries(filter).forEach(([k, v]) => { if (v) params[k] = v; });
+    api.get('/qa/my-log', { params })
+      .then((r) => setMyLog(r.data))
+      .catch((err) => setError(err.response?.data?.error || 'Could not load your submissions'))
+      .finally(() => setMyLoading(false));
+  };
+  const showMine = () => {
+    setStep('mine');
+    setSelected(null); setInspection(null); setError('');
+    setMyPage(1);
+    loadMyLog(myFilter, 1);
+  };
+  const openCopy = (logId) => window.open(`/qa-copy/${logId}`, '_blank', 'noopener');
+
   const showReport = () => {
     setStep('report');
     setSelected(null); setInspection(null);
@@ -106,7 +139,7 @@ export default function QAInspectionPage() {
 
   const handleSelect = async (entry) => {
     setSelected(entry);
-    setError(''); setSuccess('');
+    setError(''); setSuccess(''); setLastLogId(null);
     try {
       const res = await api.get(`/entries/${entry.EntryNo}`);
       setEntryDetail(res.data);
@@ -216,7 +249,11 @@ export default function QAInspectionPage() {
         acceptedQty: decision.acceptedQty ? parseFloat(decision.acceptedQty) : null,
         rejectedQty: decision.rejectedQty ? parseFloat(decision.rejectedQty) : null,
         remarks: decision.remarks,
+        // kept on the inspector's copy of the decision
+        rejectionReason: decision.decision === 'Rejected' ? rejectionForm.rejectionReason : undefined,
+        rejectionNotes: decision.decision === 'Rejected' ? rejectionForm.notes : undefined,
       });
+      setLastLogId(res.data.logId || null);
 
       // Auto-create rejection note when decision is Rejected
       if (decision.decision === 'Rejected') {
@@ -247,7 +284,7 @@ export default function QAInspectionPage() {
     finally { setSaving(false); }
   };
 
-  const goBack = () => { setSelected(null); setInspection(null); setStep('list'); setError(''); setSuccess(''); };
+  const goBack = () => { setSelected(null); setInspection(null); setStep('list'); setError(''); setSuccess(''); setLastLogId(null); };
 
   const handleDeleteInspection = async (inspectionNo) => {
     if (!window.confirm(`Delete QA inspection ${inspectionNo}? This will remove all test results and rejection notes. The entry will be reset to WeighbridgeCompleted.`)) return;
@@ -332,12 +369,23 @@ export default function QAInspectionPage() {
         <h1>QA Inspection {userFactory && <span style={{ fontSize: 16, fontWeight: 400, color: 'var(--gray-500)' }}>— {userFactory}</span>}</h1>
         {step === 'list' && (
           <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn btn-outline" onClick={showMine} style={{ fontSize: 13 }}>📋 My Submissions</button>
             <button className="btn btn-outline" onClick={showTemplates} style={{ fontSize: 13 }}>⚙️ Configure Tests</button>
             <button className="btn btn-outline" onClick={showReport} style={{ fontSize: 13 }}>📊 Report Summary</button>
           </div>
         )}
       </div>
-      {success && <div className="card" style={{ color: 'var(--success)' }}>{success}</div>}
+      {success && (
+        <div className="card" style={{ color: 'var(--success)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <span>{success}</span>
+          {lastLogId && (
+            <span style={{ display: 'flex', gap: 8 }}>
+              <button className="btn btn-primary" style={{ padding: '4px 12px', fontSize: 13 }} onClick={() => openCopy(lastLogId)}>🖨 View / print my copy</button>
+              <button className="btn btn-outline" style={{ padding: '4px 12px', fontSize: 13 }} onClick={showMine}>📋 My Submissions</button>
+            </span>
+          )}
+        </div>
+      )}
       {error && <div className="card" style={{ color: 'var(--danger)' }}>{error}</div>}
 
       {/* STEP: REPORT SUMMARY */}
@@ -639,12 +687,127 @@ export default function QAInspectionPage() {
         </div>
       )}
 
+      {/* STEP: MY SUBMISSIONS — copies of the decisions this user submitted (2026-11-11) */}
+      {step === 'mine' && (
+        <div className="card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 12 }}>
+            <h3 style={{ margin: 0 }}>{myFilter.scope === 'all' ? 'All QA Decisions' : 'My QA Submissions'} ({myLog.total})</h3>
+            <button className="btn btn-outline" onClick={goBack}>← Back to Inspections</button>
+          </div>
+          <p style={{ fontSize: 13, color: 'var(--gray-600)', marginTop: 0 }}>
+            A copy of every QA decision you submitted or inspected, exactly as it was submitted. Open one to view or print it.
+          </p>
+          <form
+            onSubmit={(e) => { e.preventDefault(); setMyPage(1); loadMyLog(myFilter, 1); }}
+            style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 12 }}
+          >
+            <div className="form-group" style={{ margin: 0 }}>
+              <label>Search</label>
+              <input type="search" value={myFilter.search} onChange={(e) => setMyFilter({ ...myFilter, search: e.target.value })}
+                placeholder="Entry, QA no., supplier, vehicle" style={{ minWidth: 220 }} />
+            </div>
+            <div className="form-group" style={{ margin: 0 }}>
+              <label>From</label>
+              <input type="date" value={myFilter.dateFrom} onChange={(e) => setMyFilter({ ...myFilter, dateFrom: e.target.value })} />
+            </div>
+            <div className="form-group" style={{ margin: 0 }}>
+              <label>To</label>
+              <input type="date" value={myFilter.dateTo} onChange={(e) => setMyFilter({ ...myFilter, dateTo: e.target.value })} />
+            </div>
+            <div className="form-group" style={{ margin: 0 }}>
+              <label>Decision</label>
+              <select value={myFilter.decision} onChange={(e) => setMyFilter({ ...myFilter, decision: e.target.value })}>
+                <option value="">All</option>
+                <option value="Accepted">Accepted</option>
+                <option value="Conditional">Conditional</option>
+                <option value="Rejected">Rejected</option>
+                <option value="Quarantine">Quarantine</option>
+              </select>
+            </div>
+            {canSeeAllFactories && (
+              <div className="form-group" style={{ margin: 0 }}>
+                <label>Show</label>
+                <select value={myFilter.scope} onChange={(e) => setMyFilter({ ...myFilter, scope: e.target.value })}>
+                  <option value="mine">Mine</option>
+                  <option value="all">Everyone's</option>
+                </select>
+              </div>
+            )}
+            <button type="submit" className="btn btn-primary" disabled={myLoading}>{myLoading ? 'Loading…' : 'Search'}</button>
+          </form>
+          <div style={{ overflowX: 'auto' }}>
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Submitted</th><th>QA No</th><th>Entry No</th><th>Factory</th><th>Supplier</th><th>Material</th><th>Vehicle</th>
+                  <th>Tests</th><th>Decision</th><th style={{ textAlign: 'right' }}>Accepted</th><th style={{ textAlign: 'right' }}>Rejected</th>
+                  {myFilter.scope === 'all' && <th>By</th>}<th>Status now</th><th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {myLog.data.map((r) => (
+                  <tr key={r.LogId}>
+                    <td style={{ fontSize: 12, whiteSpace: 'nowrap' }}>{fmtDT(r.SubmittedAt)}</td>
+                    <td><strong>{r.InspectionNo}</strong></td>
+                    <td>{r.EntryNo}</td>
+                    <td>{r.Factory || '—'}</td>
+                    <td>{r.SupplierName}</td>
+                    <td style={{ fontSize: 12 }}>{r.Materials || '—'}</td>
+                    <td>{r.VehicleRegNo}</td>
+                    <td style={{ fontSize: 12, whiteSpace: 'nowrap' }}>
+                      {r.TestCount}{r.FailCount > 0 && <span style={{ color: 'var(--danger)' }}> · {r.FailCount} fail</span>}
+                    </td>
+                    <td>
+                      <span className={`badge badge-${r.Decision === 'Rejected' ? 'red' : r.Decision === 'Quarantine' ? 'yellow' : 'green'}`}>{r.Decision}</span>
+                    </td>
+                    <td style={{ textAlign: 'right' }}>{r.AcceptedQty ?? '—'}</td>
+                    <td style={{ textAlign: 'right' }}>{r.RejectedQty ?? '—'}</td>
+                    {myFilter.scope === 'all' && <td style={{ fontSize: 12 }}>{r.SubmittedByName}</td>}
+                    <td style={{ fontSize: 12 }}>{r.EntryStatusNow || '—'}</td>
+                    <td>
+                      <button className="btn btn-outline" style={{ padding: '4px 10px', fontSize: 12, whiteSpace: 'nowrap' }} onClick={() => openCopy(r.LogId)}>
+                        🖨 View copy
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {!myLoading && myLog.data.length === 0 && (
+                  <tr><td colSpan="14" className="text-center text-muted">No QA decisions found</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          {myLog.total > MY_PAGE_SIZE && (
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'flex-end', marginTop: 12, fontSize: 13 }}>
+              <button className="btn btn-outline" disabled={myPage <= 1 || myLoading}
+                onClick={() => { const p = myPage - 1; setMyPage(p); loadMyLog(myFilter, p); }}>‹ Prev</button>
+              <span>Page {myPage} of {Math.ceil(myLog.total / MY_PAGE_SIZE)}</span>
+              <button className="btn btn-outline" disabled={myPage >= Math.ceil(myLog.total / MY_PAGE_SIZE) || myLoading}
+                onClick={() => { const p = myPage + 1; setMyPage(p); loadMyLog(myFilter, p); }}>Next ›</button>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* STEP: LIST */}
       {step === 'list' && (
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 12 }}>
-            <h3 style={{ margin: 0 }}>Entries Awaiting QA ({pending.length})</h3>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <h3 style={{ margin: 0 }}>
+              Entries Awaiting QA ({searchWords.length ? `${shownPending.length} of ${pending.length}` : pending.length})
+            </h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <input
+                type="search"
+                value={listSearch}
+                onChange={e => setListSearch(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && shownPending.length === 1) handleSelect(shownPending[0]);
+                  if (e.key === 'Escape') setListSearch('');
+                }}
+                placeholder="Search gate entry no. or supplier…"
+                style={{ minWidth: 260, padding: '6px 10px', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius)' }}
+              />
               <label style={{ fontSize: 13, color: 'var(--gray-600)', margin: 0 }}>Factory</label>
               <select value={listFactory} onChange={e => setListFactory(e.target.value)} style={{ minWidth: 160 }}>
                 <option value="">All Factories</option>
@@ -657,7 +820,7 @@ export default function QAInspectionPage() {
               <tr><th>Entry No</th><th>Factory</th><th>Supplier</th><th>Consignment</th><th>Vehicle</th><th>Net Wt</th><th>Delivery Date</th><th>WB Completed</th><th>Status</th><th>QA Status</th><th></th></tr>
             </thead>
             <tbody>
-              {pending.map(e => (
+              {shownPending.map(e => (
                 <tr key={e.EntryId}>
                   <td><strong>{e.EntryNo}</strong></td>
                   <td>{e.FactoryName || '—'}</td>
@@ -683,7 +846,11 @@ export default function QAInspectionPage() {
                   </td>
                 </tr>
               ))}
-              {pending.length === 0 && <tr><td colSpan="10" className="text-center text-muted">No entries pending QA</td></tr>}
+              {shownPending.length === 0 && (
+                <tr><td colSpan="11" className="text-center text-muted">
+                  {searchWords.length ? 'No waiting entry matches — check the entry number or supplier name' : 'No entries pending QA'}
+                </td></tr>
+              )}
             </tbody>
           </table>
         </div>

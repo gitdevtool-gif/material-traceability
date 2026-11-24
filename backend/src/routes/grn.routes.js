@@ -149,6 +149,15 @@ router.post('/', authenticate, authorize('StoreReceiving', 'FactoryReceiving', '
 
       await transaction.commit();
 
+      // A Busy voucher number typed here must also set the entry's Busy link
+      // (BusyGRNVchCode), or the GRN approval trail and payments can't find
+      // this truck. Best effort — the GRN job retries every 10 minutes.
+      if (erpVchNo) {
+        const { backfillGrnNumberLinks } = require('../services/entry-grn-link.service');
+        getErpPool().then((erpPool) => backfillGrnNumberLinks(pool, erpPool))
+          .catch((err) => require('../logger').warn(`[GRN] Busy link for ${grnNo} deferred: ${err.message}`));
+      }
+
       // Audit
       writeAuditLog({
         entityType: 'GRN', entityId: grn.GRNId, action: 'Create',
@@ -267,7 +276,7 @@ router.get('/', authenticate, async (req, res, next) => {
 
     const result = await request.query(`
       SELECT g.GRNId, g.GRNNo, g.ReceivingDept, g.GRNStatus, g.ReceivedAt, g.Notes,
-             de.EntryNo, de.ConsignmentNo, de.VehicleRegNo,
+             de.EntryId, de.EntryNo, de.ConsignmentNo, de.VehicleRegNo, de.BusyGRNNo,
              s.SupplierName, s.SupplierCode,
              u.FullName AS ReceivedByName,
              sl.LocationName

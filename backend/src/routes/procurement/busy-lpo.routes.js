@@ -44,7 +44,8 @@ const { writeAuditLog } = require('../../services/audit.service');
 const config = require('../../config');
 const logger = require('../../logger');
 const busyBridge = require('../../services/busy-bridge.service');
-const { PO_VCHTYPE, buildPurchaseOrder, buildFuelPurchaseOrder, listFuelSuppliers, findExistingPushedPo, listBusyStores, markPendingApproval, resolveBusyUser, attributeToBusyUser } = require('../../services/busy-po.service');
+const { PO_VCHTYPE, TAX_TYPES, buildPurchaseOrder, buildFuelPurchaseOrder, buildDirectPurchaseOrder, buildAmendedPurchaseOrder, listFuelSuppliers, findExistingPushedPo, listBusyStores, markPendingApproval, makeEditableInBusy, resolveBusyUser, attributeToBusyUser } = require('../../services/busy-po.service');
+const directSupply = require('../../services/direct-supply.service');
 
 const router = express.Router();
 
@@ -319,7 +320,7 @@ router.get('/raised', authenticate, authorize(...VIEW_ROLES), async (req, res, n
     if (dateTo)   { where += ' AND rec.BusyDate <= @dateTo';   request.input('dateTo', sql.Date, dateTo); }
     if (search) {
       where += ` AND (rec.BusyPurOrdNo LIKE @search OR rec.BusySupplier LIKE @search
-                 OR rfq.RFQNumber LIKE @search OR reqAgg.BusyOrdNoList LIKE @search)`;
+                 OR rfq.RFQNumber LIKE @search OR reqAgg.BusyOrdNoList LIKE @search OR legacyReq.BusyOrdNo LIKE @search)`;
       request.input('search', sql.NVarChar(100), `%${String(search).trim()}%`);
     }
 
@@ -328,11 +329,16 @@ router.get('/raised', authenticate, authorize(...VIEW_ROLES), async (req, res, n
         rec.LPOReconciliationId, LTRIM(RTRIM(rec.BusyPurOrdNo)) AS BusyPurOrdNo, rec.BusySupplier, rec.BusyDate,
         rec.TotalQuotedAmt, rec.TotalActualAmt, rec.VarianceAmt, rec.Notes, rec.ReconciledAt,
         rec.RFQId, rfq.RFQNumber,
-        reqAgg.BusyOrdNoList AS RequisitionOrdNo,
+        -- Direct-supply and fuel POs hang off the requisition itself, not an RFQ
+        COALESCE(reqAgg.BusyOrdNoList, legacyReq.BusyOrdNo) AS RequisitionOrdNo,
         COALESCE(splitSup.SupplierName, s.SupplierName) AS AwardedSupplierName,
         u.FullName AS MarkedByName,
         CASE WHEN rec.ReconciledByUserId IS NULL THEN 'Auto-matched'
              WHEN rec.Notes LIKE 'Marked LPO raised in Busy%' THEN 'Marked raised'
+             WHEN rec.Notes LIKE 'Direct supply PO keyed in Busy by hand%' THEN 'Direct supply (keyed in Busy)'
+             WHEN rec.Notes LIKE 'Direct supply%' THEN 'Direct supply'
+             WHEN rec.Notes LIKE 'Fuel for%' THEN 'Fuel'
+             WHEN rec.Notes LIKE 'Raised in Busy%' THEN 'Raised from award'
              ELSE 'Manual reconciliation' END AS Source
       FROM dbo.LPOReconciliation rec
       LEFT JOIN dbo.Requisitions legacyReq ON legacyReq.RequisitionId = rec.RequisitionId
@@ -415,6 +421,36 @@ async function getRaisingBusyUser(pool, erpPool, userId) {
   return resolveBusyUser(erpPool, u.BusyUserName);
 }
 
+// The fixes every PO this system saves in Busy needs (pending approval,
+// editable in Busy, "Added by" the raiser). A retry that finds the PO Busy
+// already saved (e.g. the bridge timed out) gets them too — approval and
+// editability only if the PO is still exactly as the API left it.
+async function finishPushedPo(erpPool, { vchCode, vchNo, busyUser, fresh }) {
+  let approvalWarning = null;
+  let userWarning = null;
+  if (fresh) {
+    try {
+      await markPendingApproval(erpPool, vchCode);
+    } catch (err) {
+      approvalWarning = `${vchNo} was saved in Busy but could not be set to "pending approval" — it is already approved.`;
+      logger.error(`[BusyPush] Could not set ${vchNo} pending approval: ${err.message}`);
+    }
+    try {
+      await makeEditableInBusy(erpPool, vchCode);
+    } catch (err) {
+      approvalWarning = [approvalWarning, `${vchNo} may be locked for changes in Busy — tell Admin.`].filter(Boolean).join(' ');
+      logger.error(`[BusyPush] Could not make ${vchNo} editable in Busy: ${err.message}`);
+    }
+  }
+  try {
+    await attributeToBusyUser(erpPool, { vchCode, vchNo, busyUserName: busyUser });
+  } catch (err) {
+    userWarning = `${vchNo} shows as added by Supervisor in Busy — could not record who raised it.`;
+    logger.error(`[BusyPush] Could not set Busy "added by" on ${vchNo}: ${err.message}`);
+  }
+  return { approvalWarning, userWarning };
+}
+
 const BUSY_LINK_PROBLEM = 'Link your own Busy login first (your Busy user name and password) so Busy records you as the person who raised this PO.';
 
 // Awards currently being pushed — stops a double click raising two POs.
@@ -479,33 +515,20 @@ router.post('/push', authenticate, authorize(...MARK_ROLES), async (req, res, ne
 
     // A previous push may have saved in Busy and then failed on our side —
     // link that PO instead of raising a second one.
-    let vchNo = await findExistingPushedPo(erpPool, { rfqNumber: po.rfqNumber, partyCode: po.party.Code });
-    let reused = !!vchNo;
-    let approvalWarning = null;
-    let userWarning = null;
-    if (!vchNo) {
-      const saved = await busyBridge.addVoucher(PO_VCHTYPE, po.xml);
-      if (!saved.ok) {
-        logger.warn(`[BusyPush] Busy rejected PO for RFQ ${po.rfqNumber} / ${po.supplierName}: ${saved.error}`);
-        return res.status(502).json({ error: `Busy did not save the PO: ${saved.error}` });
+    const existing = await findExistingPushedPo(erpPool, { rfqNumber: po.rfqNumber, partyCode: po.party.Code });
+    const reused = !!existing;
+    let saved = existing;
+    if (!saved) {
+      const r = await busyBridge.addVoucher(PO_VCHTYPE, po.xml);
+      if (!r.ok) {
+        logger.warn(`[BusyPush] Busy rejected PO for RFQ ${po.rfqNumber} / ${po.supplierName}: ${r.error}`);
+        return res.status(502).json({ error: `Busy did not save the PO: ${r.error}` });
       }
-      vchNo = saved.vchNo;
-      logger.info(`[BusyPush] Busy saved ${vchNo} (VchCode ${saved.vchCode}) for RFQ ${po.rfqNumber} / ${po.supplierName}`);
-      try {
-        await markPendingApproval(erpPool, saved.vchCode);
-      } catch (err) {
-        approvalWarning = `${vchNo} was saved in Busy but could not be set to "pending approval" — it is already approved.`;
-        logger.error(`[BusyPush] Could not set ${vchNo} pending approval: ${err.message}`);
-      }
-      try {
-        const busyUser = await getRaisingBusyUser(pool, erpPool, req.user.userId);
-        if (busyUser) await attributeToBusyUser(erpPool, { vchCode: saved.vchCode, vchNo, busyUserName: busyUser });
-        else userWarning = `${vchNo} shows as added by Supervisor in Busy — ask an Admin to link your account to your Busy user in User Management.`;
-      } catch (err) {
-        userWarning = `${vchNo} shows as added by Supervisor in Busy — could not record who raised it.`;
-        logger.error(`[BusyPush] Could not set Busy "added by" on ${vchNo}: ${err.message}`);
-      }
+      saved = { vchNo: r.vchNo, vchCode: r.vchCode, untouched: true };
+      logger.info(`[BusyPush] Busy saved ${saved.vchNo} (VchCode ${saved.vchCode}) for RFQ ${po.rfqNumber} / ${po.supplierName}`);
     }
+    const vchNo = saved.vchNo;
+    const { approvalWarning, userWarning } = await finishPushedPo(erpPool, { ...saved, busyUser, fresh: saved.untouched });
 
     // Read the PO back from Busy — amounts stored come from Busy, never from us.
     const [lpo] = await fetchBusyLpos(erpPool, { vchNos: [vchNo], limit: 1 });
@@ -541,6 +564,141 @@ router.post('/push', authenticate, authorize(...MARK_ROLES), async (req, res, ne
     });
 
     res.status(201).json({ record: outcome.record, lpo, expectedTotal: po.total, reused, approvalWarning, totalWarning, userWarning });
+  } catch (err) {
+    next(err);
+  } finally {
+    if (locked) pushesInFlight.delete(lockKey);
+  }
+});
+
+// ── Amend a PO already pushed to Busy (2026-10-22) ──────────────────────────
+// The same Busy PO is changed in place — same Pur- number — while nothing has
+// been received against it. The amended PO goes back to "pending approval"
+// in Busy so the Director approves the change, Busy records the user's own
+// login as having modified it, and our linked record takes the new total.
+//   GET  /amend-preview?ordno=     the PO as it stands in Busy (edit form)
+//   POST /amend-preview            { ordno, lines, taxType } → re-checked, nothing saved
+//   POST /amend                    { ordno, lines, taxType, reason } → saved in Busy
+
+async function linkedPo(pool, erpPool, ordno) {
+  const no = String(ordno || '').trim();
+  if (!no) return { error: 'ordno is required', status: 400 };
+  const link = (await pool.request().input('no', sql.NVarChar(50), no).query(
+    'SELECT TOP 1 LPOReconciliationId, TotalQuotedAmt FROM dbo.LPOReconciliation WHERE LTRIM(RTRIM(BusyPurOrdNo)) = @no')).recordset[0];
+  if (!link) return { error: `${no} is not linked to an award or requisition in this system`, status: 404 };
+  const [lpo] = await fetchBusyLpos(erpPool, { vchNos: [no], limit: 1 });
+  if (!lpo) return { error: `${no} was not found in Busy`, status: 404 };
+  return { link, lpo };
+}
+
+const parseAmendLines = (lines) => (Array.isArray(lines) ? lines : []).slice(0, 100).map((l) => ({
+  itemName: String(l.itemName || '').trim(), qty: Number(l.qty), price: Number(l.price), store: String(l.store || '').trim(),
+}));
+
+router.get('/amend-preview', authenticate, authorize(...MARK_ROLES), async (req, res, next) => {
+  try {
+    const pool = await getPool();
+    const erpPool = await getErpPool();
+    const found = await linkedPo(pool, erpPool, req.query.ordno);
+    if (found.error) return res.status(found.status).json({ error: found.error });
+    const po = await buildAmendedPurchaseOrder(erpPool, { vchCode: found.lpo.vchCode });
+    delete po.xml;
+    const busyUser = await getRaisingBusyUser(pool, erpPool, req.user.userId);
+    res.json({ enabled: config.busyCom.enabled, ...po, stores: await listBusyStores(erpPool), busyUser, needsBusyLink: !busyUser });
+  } catch (err) { next(err); }
+});
+
+router.post('/amend-preview', authenticate, authorize(...MARK_ROLES), async (req, res, next) => {
+  try {
+    const pool = await getPool();
+    const erpPool = await getErpPool();
+    const found = await linkedPo(pool, erpPool, req.body.ordno);
+    if (found.error) return res.status(found.status).json({ error: found.error });
+    const po = await buildAmendedPurchaseOrder(erpPool, {
+      vchCode: found.lpo.vchCode, lines: parseAmendLines(req.body.lines), taxType: req.body.taxType ? String(req.body.taxType) : undefined,
+    });
+    delete po.xml;
+    res.json(po);
+  } catch (err) { next(err); }
+});
+
+router.post('/amend', authenticate, authorize(...MARK_ROLES), async (req, res, next) => {
+  const lockKey = `amend:${String(req.body.ordno || '').trim()}`;
+  let locked = false;
+  try {
+    if (!config.busyCom.enabled) return res.status(503).json({ error: 'Changing POs in Busy from this system is not switched on.' });
+    const reason = String(req.body.reason || '').trim();
+    if (reason.length < 3) return res.status(400).json({ error: 'Give the reason for the change' });
+    if (pushesInFlight.has(lockKey)) return res.status(409).json({ error: 'This PO is already being changed — wait a moment.' });
+    pushesInFlight.add(lockKey);
+    locked = true;
+
+    const pool = await getPool();
+    const erpPool = await getErpPool();
+    const busyUser = await getRaisingBusyUser(pool, erpPool, req.user.userId);
+    if (!busyUser) return res.status(403).json({ error: BUSY_LINK_PROBLEM, needsBusyLink: true });
+
+    const found = await linkedPo(pool, erpPool, req.body.ordno);
+    if (found.error) return res.status(found.status).json({ error: found.error });
+    const before = found.lpo;
+    const po = await buildAmendedPurchaseOrder(erpPool, {
+      vchCode: before.vchCode, lines: parseAmendLines(req.body.lines), taxType: req.body.taxType ? String(req.body.taxType) : undefined,
+    });
+    if (po.problems.length) return res.status(422).json({ error: po.problems[0], problems: po.problems });
+
+    const saved = await busyBridge.modifyVoucher(PO_VCHTYPE, before.vchCode, po.xml);
+    if (!saved.ok) {
+      logger.warn(`[BusyAmend] Busy refused the change to ${before.ordno}: ${saved.error}`);
+      return res.status(502).json({ error: `Busy did not save the change: ${saved.error}` });
+    }
+    logger.info(`[BusyAmend] ${before.ordno} (VchCode ${before.vchCode}) amended by user ${req.user.userId}`);
+
+    const warnings = [];
+    try {
+      await markPendingApproval(erpPool, before.vchCode);
+    } catch (err) {
+      warnings.push(`${before.ordno} was changed but could not be set back to "pending approval" in Busy.`);
+      logger.error(`[BusyAmend] Could not set ${before.ordno} pending approval: ${err.message}`);
+    }
+    try {
+      await makeEditableInBusy(erpPool, before.vchCode);
+    } catch (err) {
+      warnings.push(`${before.ordno} may be locked for changes in Busy — tell Admin.`);
+      logger.error(`[BusyAmend] Could not make ${before.ordno} editable in Busy: ${err.message}`);
+    }
+    try {
+      await attributeToBusyUser(erpPool, { vchCode: before.vchCode, vchNo: before.ordno, busyUserName: busyUser });
+    } catch (err) {
+      warnings.push(`${before.ordno} shows the change as made by Supervisor in Busy.`);
+      logger.error(`[BusyAmend] Could not set Busy user on ${before.ordno}: ${err.message}`);
+    }
+
+    // Read back from Busy — amounts stored come from Busy.
+    const [after] = await fetchBusyLpos(erpPool, { vchNos: [before.ordno], limit: 1 });
+    if (after && Math.abs(after.grandTotal - po.total) > 0.5) {
+      warnings.push(`Busy's total for ${before.ordno} is ${after.grandTotal}, expected ${po.total} — check it in Busy.`);
+    }
+    if (after && after.ordno !== before.ordno) warnings.push(`Busy changed the PO number to ${after.ordno}.`);
+    if (after) {
+      await pool.request()
+        .input('id', sql.Int, found.link.LPOReconciliationId)
+        .input('amt', sql.Decimal(14, 4), after.totalAmt)
+        .input('var', sql.Decimal(14, 4), found.link.TotalQuotedAmt != null ? after.totalAmt - Number(found.link.TotalQuotedAmt) : null)
+        .input('note', sql.NVarChar(400), `Amended in Busy ${new Date().toISOString().slice(0, 10)} by ${req.user.fullName || req.user.username || `user ${req.user.userId}`}: ${reason}`)
+        .query(`UPDATE dbo.LPOReconciliation
+                SET TotalActualAmt = @amt, VarianceAmt = @var,
+                    Notes = LEFT(CONCAT(NULLIF(Notes, '') + ' | ', @note), 1000)
+                WHERE LPOReconciliationId = @id`);
+    }
+
+    await writeAuditLog({
+      entityType: 'LPO', entityId: before.ordno, action: 'Update', userId: req.user.userId,
+      oldValues: { total: before.grandTotal, lines: before.items.map((i) => ({ item: i.itemName, qty: i.Qty, price: i.Price, store: i.MatCenter })) },
+      newValues: { event: 'AmendedInBusy', reason, total: after?.grandTotal ?? po.total, taxType: po.taxType, lines: po.lines.map((l) => ({ item: l.itemName, qty: l.qty, price: l.price, store: l.store })) },
+      ipAddress: req.ip, userAgent: req.get('User-Agent'),
+    });
+
+    res.json({ ordno: after?.ordno || before.ordno, lpo: after || null, previousTotal: before.grandTotal, expectedTotal: po.total, warnings });
   } catch (err) {
     next(err);
   } finally {
@@ -617,33 +775,20 @@ router.post('/fuel-push', authenticate, authorize(...MARK_ROLES), async (req, re
     const po = await buildFuelPurchaseOrder(pool, erpPool, { ...params, seriesName: config.busyCom.poSeriesName });
     if (po.problems.length > 0) return res.status(422).json({ error: po.problems[0], problems: po.problems });
 
-    let vchNo = await findExistingPushedPo(erpPool, { rfqNumber: po.requisitionNo, partyCode: po.party.Code });
-    const reused = !!vchNo;
-    let approvalWarning = null;
-    let userWarning = null;
-    if (!vchNo) {
-      const saved = await busyBridge.addVoucher(PO_VCHTYPE, po.xml);
-      if (!saved.ok) {
-        logger.warn(`[BusyPush] Busy rejected fuel PO for ${po.requisitionNo} / ${po.supplierName}: ${saved.error}`);
-        return res.status(502).json({ error: `Busy did not save the PO: ${saved.error}` });
+    const existing = await findExistingPushedPo(erpPool, { rfqNumber: po.requisitionNo, partyCode: po.party.Code });
+    const reused = !!existing;
+    let saved = existing;
+    if (!saved) {
+      const r = await busyBridge.addVoucher(PO_VCHTYPE, po.xml);
+      if (!r.ok) {
+        logger.warn(`[BusyPush] Busy rejected fuel PO for ${po.requisitionNo} / ${po.supplierName}: ${r.error}`);
+        return res.status(502).json({ error: `Busy did not save the PO: ${r.error}` });
       }
-      vchNo = saved.vchNo;
-      logger.info(`[BusyPush] Busy saved ${vchNo} (VchCode ${saved.vchCode}) for fuel ${po.requisitionNo} / ${po.vehicle} / ${po.supplierName}`);
-      try {
-        await markPendingApproval(erpPool, saved.vchCode);
-      } catch (err) {
-        approvalWarning = `${vchNo} was saved in Busy but could not be set to "pending approval" — it is already approved.`;
-        logger.error(`[BusyPush] Could not set ${vchNo} pending approval: ${err.message}`);
-      }
-      try {
-        const busyUser = await getRaisingBusyUser(pool, erpPool, req.user.userId);
-        if (busyUser) await attributeToBusyUser(erpPool, { vchCode: saved.vchCode, vchNo, busyUserName: busyUser });
-        else userWarning = `${vchNo} shows as added by Supervisor in Busy — ask an Admin to link your account to your Busy user in User Management.`;
-      } catch (err) {
-        userWarning = `${vchNo} shows as added by Supervisor in Busy — could not record who raised it.`;
-        logger.error(`[BusyPush] Could not set Busy "added by" on ${vchNo}: ${err.message}`);
-      }
+      saved = { vchNo: r.vchNo, vchCode: r.vchCode, untouched: true };
+      logger.info(`[BusyPush] Busy saved ${saved.vchNo} (VchCode ${saved.vchCode}) for fuel ${po.requisitionNo} / ${po.vehicle} / ${po.supplierName}`);
     }
+    const vchNo = saved.vchNo;
+    const { approvalWarning, userWarning } = await finishPushedPo(erpPool, { ...saved, busyUser, fresh: saved.untouched });
 
     const [lpo] = await fetchBusyLpos(erpPool, { vchNos: [vchNo], limit: 1 });
     if (!lpo) {
@@ -682,6 +827,325 @@ router.post('/fuel-push', authenticate, authorize(...MARK_ROLES), async (req, re
   } finally {
     if (locked) pushesInFlight.delete(lockKey);
   }
+});
+
+
+// ── Direct-supply orders (2026-11-24) ────────────────────────────────────────
+// Sawdust and offcuts for F8 (AppSettings 'directSupply.items'): standing
+// suppliers at their standing price, so no RFQ. Procurement shares each direct
+// line of the requisition across one or more suppliers; each supplier gets one
+// Busy PO for its share (as buyers do in Busy), priced from that supplier's
+// last PO for the item. Other lines on the same requisition (e.g. firewood)
+// carry on through the RFQ path. See services/direct-supply.service.js.
+// Same safeguards as /fuel-push.
+//   POST /direct-preview  { requisitionId, allocations? }  nothing saved
+//   POST /direct-push     { requisitionId, allocations, priceReason?, closeRest? }
+//   POST /direct-link     { requisitionId, ordnos, closeRest? }  POs keyed in Busy by hand
+//   allocations: [{ supplierId, itemName, qty, price?, taxType? }] — price /
+//   taxType only to depart from the standing ones (needs priceReason)
+//   closeRest: nothing more is to be ordered on the direct lines
+
+const QTY_TOLERANCE = 0.01;
+const r3 = (n) => Math.round((Number(n) + Number.EPSILON) * 1000) / 1000;
+
+function parseAllocations(list) {
+  return (Array.isArray(list) ? list : []).slice(0, 40).map((a) => ({
+    supplierId: parseInt(a.supplierId, 10) || null,
+    itemName: String(a.itemName || '').trim(),
+    qty: Number(a.qty),
+    price: a.price === '' || a.price == null ? null : Number(a.price),
+    taxType: a.taxType ? String(a.taxType) : null,
+  })).filter((a) => a.supplierId && a.itemName && Number(a.qty) > 0);
+}
+
+/**
+ * The direct-supply picture for a requisition (per direct item: asked,
+ * already ordered, left, standing suppliers) and, for each supplier in the
+ * allocations, the PO that would be raised. `problems` blocks the whole push.
+ */
+async function buildDirectPlan(pool, erpPool, requisitionId, allocations, priceReason) {
+  const problems = [];
+  const reqn = await directSupply.loadDirectRequisition(pool, requisitionId);
+  if (!reqn) return { notFound: true, problems: ['Requisition not found'] };
+  if (!reqn.isDirect) {
+    return { requisition: { RequisitionId: reqn.RequisitionId, BusyOrdNo: reqn.BusyOrdNo }, items: [], pos: [], problems: ['This requisition has no direct-supply items (e.g. SAW DUST IN TONNES).'] };
+  }
+  if (/^Rejected|Cancelled|OnHold/.test(reqn.Status) || /^Pending(Ops|CentralStores)/.test(reqn.Status)) {
+    problems.push(`This requisition is ${reqn.Status} — it is not with Procurement.`);
+  }
+
+  const busyItems = [];
+  for (const name of reqn.directItems) {
+    const it = await directSupply.resolveItem(erpPool, name);
+    if (!it) problems.push(`Item "${name}" does not exist in Busy.`);
+    else busyItems.push(it);
+  }
+  const pos = await directSupply.posForRequisition(pool, erpPool, reqn, busyItems);
+  if (pos.handRaised.length) {
+    problems.push(`Busy already has ${pos.handRaised.map((o) => `${o.ordno} (${o.party}: ${o.lines.map((l) => `${l.itemName} ${l.ordered}`).join(', ')})`).join('; ')} for ${reqn.BusyOrdNo}, keyed by hand. Link ${pos.handRaised.length === 1 ? 'it' : 'them'} first so nothing is ordered twice.`);
+  }
+
+  // Per item: asked (in the Busy unit), ordered so far, left, standing suppliers
+  const items = [];
+  for (const it of busyItems) {
+    const lines = reqn.lines.filter((l) => l.directItem && l.directItem.toLowerCase() === it.Name.toLowerCase());
+    const notes = [];
+    let requested = 0;
+    for (const l of lines) {
+      const c = directSupply.toBusyUnit(l.Qty, l.Unit || it.Unit, it.Unit);
+      requested += c.qty;
+      if (c.note) notes.push(c.note);
+    }
+    const ordered = pos.orderedByItem(it.Name);
+    const closed = lines.every((l) => l.DirectOrderedAt);
+    items.push({
+      code: it.Code, name: it.Name, unit: it.Unit, masterPrice: Number(it.MasterPrice) || 0,
+      requested: r3(requested), ordered: r3(ordered),
+      remaining: closed ? 0 : r3(Math.max(0, requested - ordered)),
+      closed, closedPos: [...new Set(lines.map((l) => l.DirectPurOrdNos).filter(Boolean))].join(', '),
+      unitNotes: notes,
+      suppliers: await directSupply.standingSuppliers(pool, erpPool, it),
+    });
+  }
+  const itemByName = new Map(items.map((i) => [i.name.toLowerCase(), i]));
+
+  // Group the allocations by supplier: one PO each.
+  const bySupplier = new Map();
+  for (const a of allocations) {
+    const item = itemByName.get(a.itemName.toLowerCase());
+    if (!item) { problems.push(`"${a.itemName}" is not a direct-supply item on this requisition.`); continue; }
+    const g = bySupplier.get(a.supplierId) || [];
+    if (g.some((x) => x.item === item)) { problems.push(`The same supplier is given ${item.name} twice — give it one quantity.`); continue; }
+    g.push({ ...a, item });
+    bySupplier.set(a.supplierId, g);
+  }
+
+  const linkedSupplierIds = new Set(pos.linked.map((l) => l.SupplierId).filter(Boolean));
+  const built = [];
+  let needsReason = false;
+  for (const [supplierId, allocs] of bySupplier) {
+    const s = (await pool.request().input('id', sql.Int, supplierId).query('SELECT SupplierCode FROM dbo.Suppliers WHERE SupplierId = @id')).recordset[0];
+    const partyCode = parseInt(String(s?.SupplierCode || '').trim(), 10);
+    const lineInfo = [];
+    for (const a of allocs) {
+      const standingRow = a.item.suppliers.find((x) => x.supplierId === supplierId);
+      let standing = standingRow ? { price: standingRow.standingPrice, taxType: standingRow.taxType, vchNo: standingRow.lastPoNo } : null;
+      if (!standing && Number.isFinite(partyCode) && partyCode > 0) standing = await directSupply.standingPriceFor(erpPool, a.item.code, partyCode);
+      const price = a.price != null && Number.isFinite(a.price) ? a.price : standing?.price ?? null;
+      const taxType = a.taxType || standing?.taxType || null;
+      const departs = !standing || (price != null && Math.abs(price - standing.price) > 0.001) || (taxType && taxType !== standing.taxType);
+      if (departs) needsReason = true;
+      lineInfo.push({ a, standing, price, taxType, departs, isStandingSupplier: !!standingRow });
+    }
+    const taxTypesUsed = [...new Set(lineInfo.map((l) => l.taxType).filter(Boolean))];
+    const po = await buildDirectPurchaseOrder(pool, erpPool, {
+      requisitionNo: reqn.BusyOrdNo, store: reqn.MatCenter, supplierId,
+      lines: lineInfo.map((l) => ({ itemName: l.a.item.name, qty: l.a.qty, price: l.price })),
+      taxType: taxTypesUsed.length === 1 ? taxTypesUsed[0] : null, seriesName: config.busyCom.poSeriesName,
+    });
+    if (taxTypesUsed.length > 1) {
+      po.problems.unshift(`${po.supplierName}'s standing tax types differ between items (${taxTypesUsed.join(' / ')}) — choose one tax type for its PO.`);
+    }
+    if (linkedSupplierIds.has(supplierId)) {
+      const l = pos.linked.find((x) => x.SupplierId === supplierId);
+      po.problems.unshift(`${po.supplierName} already has ${l.BusyPurOrdNo} for this requisition — raise any more in Busy or amend that PO.`);
+    }
+    po.lines.forEach((l, i) => {
+      l.standing = lineInfo[i].standing;
+      l.departsFromStanding = lineInfo[i].departs;
+      l.isStandingSupplier = lineInfo[i].isStandingSupplier;
+    });
+    po.departsFromStanding = lineInfo.some((l) => l.departs);
+    built.push(po);
+  }
+
+  for (const item of items) {
+    const allocated = r3(allocations.filter((a) => a.itemName.toLowerCase() === item.name.toLowerCase()).reduce((s, a) => s + a.qty, 0));
+    item.allocated = allocated;
+    if (allocated > item.remaining + QTY_TOLERANCE) {
+      problems.push(item.closed
+        ? `${item.name} on ${reqn.BusyOrdNo} is already closed.`
+        : `${item.name}: ${allocated} ${item.unit} is more than the ${item.remaining} ${item.unit} still to order.`);
+    }
+  }
+  if (needsReason && String(priceReason || '').trim().length < 3) {
+    problems.push('A price or tax type differs from the supplier\'s standing one (or the supplier has none for the item) — give the reason.');
+  }
+  for (const p of built) {
+    for (const x of p.problems) problems.push(p.supplierName && !x.includes(p.supplierName) ? `${p.supplierName}: ${x}` : x);
+  }
+
+  return {
+    requisition: {
+      RequisitionId: reqn.RequisitionId, BusyOrdNo: reqn.BusyOrdNo, MatCenter: reqn.MatCenter, Status: reqn.Status, BusyDate: reqn.BusyDate,
+      allDirect: reqn.allDirect,
+      lines: reqn.lines.map((l) => ({ ItemName: l.ItemName, Qty: l.Qty, Unit: l.Unit, direct: !!l.directItem, DirectOrderedAt: l.DirectOrderedAt, DirectPurOrdNos: l.DirectPurOrdNos, RFQId: l.RFQId })),
+    },
+    items, linked: pos.linked, handRaised: pos.handRaised,
+    pos: built, needsReason, taxTypes: TAX_TYPES,
+    problems: [...new Set(problems)],
+  };
+}
+
+/** After POs are raised/linked: close the direct lines that are now fully ordered (or all of them with closeRest). */
+async function closeFinishedLines(pool, requisitionId, items, addedByItem, ordnos, closeRest) {
+  const done = items.filter((it) => !it.closed && (closeRest || r3(it.remaining - (addedByItem.get(it.name.toLowerCase()) || 0)) <= QTY_TOLERANCE));
+  const requisitionDone = await directSupply.closeDirectLines(pool, requisitionId, done.map((i) => i.name), ordnos);
+  return { closedItems: done.map((i) => i.name), requisitionDone };
+}
+
+router.post('/direct-preview', authenticate, authorize(...MARK_ROLES), async (req, res, next) => {
+  try {
+    const requisitionId = parseInt(req.body.requisitionId, 10);
+    if (!requisitionId) return res.status(400).json({ error: 'requisitionId is required' });
+    const pool = await getPool();
+    const erpPool = await getErpPool();
+    const plan = await buildDirectPlan(pool, erpPool, requisitionId, parseAllocations(req.body.allocations), req.body.priceReason);
+    if (plan.notFound) return res.status(404).json({ error: 'Requisition not found' });
+    for (const p of plan.pos || []) delete p.xml;
+    const busyUser = await getRaisingBusyUser(pool, erpPool, req.user.userId);
+    if (!config.busyCom.enabled) plan.problems.unshift('Raising POs in Busy from this system is not switched on yet.');
+    if (!busyUser) plan.problems.push(BUSY_LINK_PROBLEM);
+    res.json({ enabled: config.busyCom.enabled, ...plan, busyUser, needsBusyLink: !busyUser });
+  } catch (err) { next(err); }
+});
+
+router.post('/direct-push', authenticate, authorize(...MARK_ROLES), async (req, res, next) => {
+  const requisitionId = parseInt(req.body.requisitionId, 10);
+  const lockKey = `req:${requisitionId}`;
+  let locked = false;
+  try {
+    if (!requisitionId) return res.status(400).json({ error: 'requisitionId is required' });
+    if (!config.busyCom.enabled) return res.status(503).json({ error: 'Raising POs in Busy from this system is not switched on yet.' });
+    const allocations = parseAllocations(req.body.allocations);
+    if (!allocations.length) return res.status(400).json({ error: 'Give at least one supplier and quantity.' });
+    if (pushesInFlight.has(lockKey)) return res.status(409).json({ error: 'POs for this requisition are already being raised in Busy — wait a moment.' });
+    pushesInFlight.add(lockKey);
+    locked = true;
+
+    const pool = await getPool();
+    const erpPool = await getErpPool();
+    const busyUser = await getRaisingBusyUser(pool, erpPool, req.user.userId);
+    if (!busyUser) return res.status(403).json({ error: BUSY_LINK_PROBLEM, needsBusyLink: true });
+
+    const priceReason = String(req.body.priceReason || '').trim();
+    const plan = await buildDirectPlan(pool, erpPool, requisitionId, allocations, priceReason);
+    if (plan.notFound) return res.status(404).json({ error: 'Requisition not found' });
+    if (plan.problems.length) return res.status(422).json({ error: plan.problems[0], problems: plan.problems });
+
+    // One Busy PO per supplier, one after the other. If Busy refuses one, stop:
+    // the ones already saved stay saved and linked, the rest can be retried.
+    const raised = [];
+    const addedByItem = new Map();
+    let failure = null;
+    for (const po of plan.pos) {
+      const existing = await findExistingPushedPo(erpPool, { rfqNumber: po.requisitionNo, partyCode: po.party.Code });
+      let saved = existing;
+      if (!saved) {
+        const r = await busyBridge.addVoucher(PO_VCHTYPE, po.xml);
+        if (!r.ok) {
+          logger.warn(`[BusyPush] Busy rejected direct PO for ${po.requisitionNo} / ${po.supplierName}: ${r.error}`);
+          failure = `Busy did not save the PO for ${po.supplierName}: ${r.error}`;
+          break;
+        }
+        saved = { vchNo: r.vchNo, vchCode: r.vchCode, untouched: true };
+        logger.info(`[BusyPush] Busy saved ${saved.vchNo} (VchCode ${saved.vchCode}) direct supply ${po.requisitionNo} / ${po.supplierName}: ${po.narration}`);
+      }
+      const warnings = Object.values(await finishPushedPo(erpPool, { ...saved, busyUser, fresh: saved.untouched })).filter(Boolean);
+      const [lpo] = await fetchBusyLpos(erpPool, { vchNos: [saved.vchNo], limit: 1 });
+      if (!lpo) {
+        failure = `Busy reported saving ${saved.vchNo} for ${po.supplierName} but it can't be read back. Check Busy before raising it again.`;
+        break;
+      }
+      if (!existing && Math.abs(lpo.grandTotal - po.total) > 0.5) {
+        warnings.push(`Busy's total for ${lpo.ordno} is ${lpo.grandTotal}, expected ${po.total}. Check it in Busy before approving.`);
+      }
+      const what = po.lines.map((l) => `${l.itemName} ${l.qty} @${l.price}${l.departsFromStanding ? (l.standing ? ` (standing ${l.standing.price} ${l.standing.taxType})` : ' (no standing price)') : ''}`).join('; ');
+      const outcome = await createReconciliation(pool, {
+        busyPurOrdNo: lpo.ordno,
+        requisitionId,
+        supplierId: po.supplierId,
+        busySupplier: lpo.supplier,
+        busyDate: lpo.date,
+        totalActualAmt: lpo.totalAmt,
+        notes: `Direct supply raised in Busy from Requisitions by ${req.user.fullName || req.user.username}: ${what}, ${po.taxType}.${po.departsFromStanding ? ` Reason: ${priceReason}.` : ''}`.slice(0, 1000),
+        reconciledByUserId: req.user.userId,
+        markRequisitionsReconciled: false,
+      });
+      if (!outcome.created) warnings.push(`${lpo.ordno} was saved in Busy but could not be linked: ${outcome.reason}.`);
+      for (const l of po.lines) addedByItem.set(l.itemName.toLowerCase(), r3((addedByItem.get(l.itemName.toLowerCase()) || 0) + l.qty));
+      await writeAuditLog({
+        entityType: 'Requisition', entityId: requisitionId, action: existing ? 'LinkPushedToBusy' : 'RaisedInBusy',
+        userId: req.user.userId,
+        newValues: {
+          orderType: 'DirectSupply', supplierId: po.supplierId, supplier: po.supplierName, taxType: po.taxType,
+          lines: po.lines.map((l) => ({ item: l.itemName, qty: l.qty, price: l.price, standing: l.standing })),
+          priceReason: po.departsFromStanding ? priceReason : undefined, busyOrdNo: lpo.ordno, busyGrandTotal: lpo.grandTotal,
+        },
+        ipAddress: req.ip, userAgent: req.get('User-Agent'),
+      });
+      raised.push({ supplierName: po.supplierName, lines: po.lines.map((l) => ({ itemName: l.itemName, qty: l.qty, unit: l.unitName })), lpo, reused: !!existing, warnings });
+    }
+
+    let closed = { closedItems: [], requisitionDone: false };
+    if (raised.length) {
+      closed = await closeFinishedLines(pool, requisitionId, plan.items, addedByItem, raised.map((r) => r.lpo.ordno), !failure && req.body.closeRest === true);
+    }
+    if (failure && raised.length === 0) return res.status(502).json({ error: failure });
+    res.status(failure ? 207 : 201).json({ raised, failure, ...closed });
+  } catch (err) {
+    next(err);
+  } finally {
+    if (locked) pushesInFlight.delete(lockKey);
+  }
+});
+
+// Link POs Busy users keyed by hand for this requisition (narration = the
+// requisition number) — so nothing is ordered twice and the lines close.
+router.post('/direct-link', authenticate, authorize(...MARK_ROLES), async (req, res, next) => {
+  try {
+    const requisitionId = parseInt(req.body.requisitionId, 10);
+    const wanted = new Set((Array.isArray(req.body.ordnos) ? req.body.ordnos : []).map((o) => String(o).trim()).filter(Boolean));
+    if (!requisitionId || !wanted.size) return res.status(400).json({ error: 'requisitionId and ordnos are required' });
+    const pool = await getPool();
+    const erpPool = await getErpPool();
+    const plan = await buildDirectPlan(pool, erpPool, requisitionId, [], '');
+    if (plan.notFound) return res.status(404).json({ error: 'Requisition not found' });
+    if (!plan.items.length) return res.status(422).json({ error: plan.problems[0] || 'This requisition has no direct-supply items.' });
+    const toLink = plan.handRaised.filter((o) => wanted.has(o.ordno));
+    if (toLink.length !== wanted.size) {
+      return res.status(422).json({ error: 'Only unlinked Busy POs naming this requisition in their narration can be linked here.' });
+    }
+    const linked = [];
+    for (const o of toLink) {
+      const sup = (await pool.request().input('c', sql.VarChar(20), String(o.partyCode)).query(
+        'SELECT TOP 1 SupplierId FROM dbo.Suppliers WHERE LTRIM(RTRIM(SupplierCode)) = @c ORDER BY IsActive DESC, SupplierId')).recordset[0];
+      const [lpo] = await fetchBusyLpos(erpPool, { vchNos: [o.ordno], limit: 1 });
+      const outcome = await createReconciliation(pool, {
+        busyPurOrdNo: o.ordno, requisitionId, supplierId: sup?.SupplierId || null,
+        busySupplier: o.party, busyDate: o.date,
+        totalActualAmt: lpo ? lpo.totalAmt : o.lines.reduce((s, l) => s + l.ordered * l.price, 0),
+        notes: `Direct supply PO keyed in Busy by hand; linked from Requisitions by ${req.user.fullName || req.user.username}.`,
+        reconciledByUserId: req.user.userId,
+        markRequisitionsReconciled: false,
+      });
+      if (outcome.created) {
+        linked.push(o.ordno);
+        await writeAuditLog({
+          entityType: 'Requisition', entityId: requisitionId, action: 'MarkRaisedInBusy', userId: req.user.userId,
+          newValues: { orderType: 'DirectSupply', busyOrdNo: o.ordno, supplier: o.party, lines: o.lines },
+          ipAddress: req.ip, userAgent: req.get('User-Agent'),
+        });
+      }
+    }
+    // Hand-raised quantities were already counted as ordered in the plan, so
+    // only the lines Busy now covers in full (or all, with closeRest) close.
+    const zero = new Map();
+    const closed = linked.length
+      ? await closeFinishedLines(pool, requisitionId, plan.items, zero, linked, req.body.closeRest === true)
+      : { closedItems: [], requisitionDone: false };
+    res.json({ linked, ...closed });
+  } catch (err) { next(err); }
 });
 
 module.exports = router;

@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
+import AmendPoModal from '../components/AmendPoModal';
 
 /**
  * LPOs Raised in Busy (2026-10-15) — every award linked to a Busy Purchase
@@ -19,6 +21,10 @@ const SOURCE_BADGE = {
   'Marked raised': 'badge-green',
   'Auto-matched': 'badge-blue',
   'Manual reconciliation': 'badge-gray',
+  'Raised from award': 'badge-green',
+  'Direct supply': 'badge-orange',          // sawdust/offcuts, no RFQ (2026-11-24)
+  'Direct supply (keyed in Busy)': 'badge-yellow',
+  Fuel: 'badge-purple',
 };
 
 export default function BusyLPOsRaisedPage() {
@@ -30,6 +36,9 @@ export default function BusyLPOsRaisedPage() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo]     = useState('');
   const [expanded, setExpanded] = useState(null);
+  const [amending, setAmending] = useState(null); // BusyPurOrdNo being amended
+  const { user } = useAuth();
+  const canAmend = ['Admin', 'Procurement'].includes(user?.role);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -114,7 +123,7 @@ export default function BusyLPOsRaisedPage() {
                     <td>{fmtDate(b ? b.date : r.BusyDate)}</td>
                     <td>{(b && b.supplier) || r.BusySupplier || r.AwardedSupplierName || '—'}</td>
                     <td style={{ fontSize: 12 }}>
-                      <div>{r.RFQNumber || '—'}</div>
+                      <div>{r.RFQNumber || (String(r.Source || '').startsWith('Direct supply') ? 'No RFQ — direct supply' : r.Source === 'Fuel' ? 'No RFQ — fuel' : '—')}</div>
                       <div style={{ color: '#6b7280' }}>{r.RequisitionOrdNo || ''}</div>
                     </td>
                     <td style={{ textAlign: 'right', fontFamily: 'monospace' }}>{fmtMoney(r.TotalQuotedAmt)}</td>
@@ -172,6 +181,13 @@ export default function BusyLPOsRaisedPage() {
                           <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 8 }}>No item lines available from Busy.</div>
                         )}
                         {r.Notes && <div style={{ fontSize: 12, color: '#374151' }}><strong>Notes:</strong> {r.Notes}</div>}
+                        {canAmend && b && (
+                          <button className="btn btn-outline btn-sm" style={{ marginTop: 8 }}
+                            onClick={(e) => { e.stopPropagation(); setAmending(r.BusyPurOrdNo); }}
+                            title="Change quantities, prices, stores or items on this PO in Busy — same PO number, while nothing has been received against it">
+                            ✏️ Amend in Busy
+                          </button>
+                        )}
                       </td>
                     </tr>
                   )}
@@ -181,6 +197,10 @@ export default function BusyLPOsRaisedPage() {
           </tbody>
         </table>
       </div>
+
+      {amending && (
+        <AmendPoModal ordno={amending} onClose={() => setAmending(null)} onAmended={() => load()} />
+      )}
     </div>
   );
 }

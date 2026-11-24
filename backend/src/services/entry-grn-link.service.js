@@ -25,6 +25,8 @@ const { getGrns, ensureMaterialForBusyItem } = require('./busy-receiving.service
 
 // Entries still somewhere in the gate → GRN pipeline.
 const CLOSED_STATUSES = ['GRNCreated', 'Cancelled', 'Rejected', 'Closed'];
+// Weighbridge ticket numbers come round again after ~30 days (weighbridge.routes.js).
+const TICKET_REUSE_DAYS = 30;
 
 const normVehicle = (s) => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 const normName = (s) => String(s || '').toUpperCase().replace(/[^A-Z0-9]+/g, ' ').trim();
@@ -62,11 +64,17 @@ async function loadOpenEntries(pool, { entryIds } = {}) {
   }
   const entries = (await req.query(`
     SELECT de.EntryId, de.EntryNo, de.Status, de.DeliveryDate, de.CreatedAt, de.VehicleRegNo, de.Destination,
-           de.PurchaseOrderNo, s.SupplierId, s.SupplierCode, s.SupplierName,
+           de.PurchaseOrderNo, s.SupplierId, s.SupplierName,
+           -- An entry logged against a gate-typed duplicate ("NCF-…") that was
+           -- later merged into the real Busy party matches as that party.
+           ${linkCols ? 'COALESCE(ms.SupplierCode, s.SupplierCode)' : 's.SupplierCode'} AS SupplierCode,
            wr.TicketNo, wr.NetWeight
     FROM dbo.DeliveryEntries de
     JOIN dbo.Suppliers s ON s.SupplierId = de.SupplierId
-    LEFT JOIN dbo.WeighbridgeRecords wr ON wr.EntryId = de.EntryId
+    ${linkCols ? 'LEFT JOIN dbo.Suppliers ms ON ms.SupplierId = s.MergedIntoSupplierId' : ''}
+    -- One row per entry: per-item weighing gives several WeighbridgeRecords.
+    OUTER APPLY (SELECT MAX(w.TicketNo) AS TicketNo, SUM(w.NetWeight) AS NetWeight
+                 FROM dbo.WeighbridgeRecords w WHERE w.EntryId = de.EntryId) wr
     WHERE ${where}
     ORDER BY de.DeliveryDate DESC, de.EntryId DESC`)).recordset;
   if (entries.length === 0) return [];
@@ -114,10 +122,16 @@ function scoreGrn(entry, grn) {
   const reasons = [];
   let score = 0;
   const lag = dayDiff(grn.date, entry.DeliveryDate || entry.CreatedAt);
-  if (lag < -1 || lag > 10) return null;
+  // Busy keeps the ticket in OF1 (older farm GRNs: in the narration).
+  const entryTicket = entry.TicketNo ? String(parseInt(String(entry.TicketNo).replace(/\D/g, ''), 10)) : null;
+  const grnTicketList = grn.tickets || ticketsIn(grn.narration);
+  const ticketMatch = !!entryTicket && entryTicket !== 'NaN' && grnTicketList.includes(entryTicket);
+  // Stores sometimes key the GRN weeks after the truck (sawdust/offcuts are
+  // batched). A same-party ticket match is trusted up to the 30 days after
+  // which ticket numbers can come round again; otherwise 10 days.
+  if (lag < -1 || lag > (ticketMatch ? TICKET_REUSE_DAYS : 10)) return null;
 
-  const ticketMatch = entry.TicketNo && ticketsIn(grn.narration).includes(String(entry.TicketNo).replace(/\D/g, ''));
-  if (ticketMatch) { score += 100; reasons.push(`weighbridge ticket ${entry.TicketNo} in Busy narration`); }
+  if (ticketMatch) { score += 100; reasons.push(`weighbridge ticket ${entry.TicketNo} on the Busy GRN`); }
 
   const vehicleMatch = grn.vehicle && normVehicle(grn.vehicle) === normVehicle(entry.VehicleRegNo) && normVehicle(grn.vehicle).length >= 4;
   if (vehicleMatch) { score += 60; reasons.push(`same vehicle ${grn.vehicle}`); }
@@ -132,7 +146,7 @@ function scoreGrn(entry, grn) {
 
   score += lag === 0 ? 20 : lag === 1 ? 15 : lag === 2 ? 10 : lag <= 5 ? 5 : 0;
   reasons.push(lag === 0 ? 'same day' : `${lag} day(s) ${lag < 0 ? 'before' : 'after'} the gate`);
-  return { score, lag, ticketMatch: !!ticketMatch, vehicleMatch: !!vehicleMatch, reasons };
+  return { score, lag, ticketMatch: !!ticketMatch, vehicleMatch: !!vehicleMatch, itemMatch: itemHits.length > 0, reasons };
 }
 
 /**
@@ -171,7 +185,8 @@ async function suggestLinks(pool, erpPool, { entryIds } = {}) {
       grnVchCode: s.grn.vchCode, grnNo: s.grn.grnNo, date: s.grn.date, party: s.grn.party,
       vehicle: s.grn.vehicle, narration: s.grn.narration, amount: s.grn.amount, poNos: s.grn.poNos,
       lines: s.grn.lines, score: s.score, confidence: s.confidence, reasons: s.reasons,
-      alreadyLinkedTo: s.alreadyLinkedTo,
+      alreadyLinkedTo: s.alreadyLinkedTo, ticketRef: s.grn.ticketRef,
+      ticketMatch: s.ticketMatch, itemMatch: s.itemMatch, lag: s.lag,
     }));
   }
 
@@ -323,6 +338,93 @@ function nameSimilarity(gateName, busyName) {
   return 0.75 * coverage(g, b) + 0.25 * coverage(b, g);
 }
 
+// ── Automatic reconciliation (2026-11-17) ───────────────────────────────────
+//
+// Stores often key the GRN straight into Busy instead of using "Receive in
+// Busy". Until 2026-11-17 such an entry only closed here if someone opened
+// /receiving/busy and linked it by hand, so trucks stayed "open" here (and
+// off the Director's GRN trail) though Busy had received them. This job does
+// what that person would do, for unambiguous matches only:
+//   same Busy party (merged duplicates included) + the entry's weighbridge
+//   ticket on the Busy GRN (OF1) + same item + top pick by a clear margin +
+//   that GRN not already linked to another entry.
+// Vehicle-only or item-mismatch matches stay on the review page.
+
+const AUTO_LINK_LOOKBACK_DAYS = parseInt(process.env.GRN_AUTO_LINK_LOOKBACK_DAYS, 10) || 120;
+
+async function systemUserId(pool) {
+  const fromEnv = parseInt(process.env.GRN_AUTO_LINK_USER_ID, 10);
+  if (fromEnv) return fromEnv;
+  const r = await pool.request().query(`SELECT TOP 1 UserId FROM dbo.Users WHERE Role = 'Admin' AND IsActive = 1 ORDER BY UserId`);
+  return r.recordset[0]?.UserId || null;
+}
+
+const isAutoLinkable = (s) => s && s.confidence === 'High' && s.ticketMatch && s.itemMatch && !s.alreadyLinkedTo?.length;
+
+/** Link open entries whose Busy GRN is certain (see above). dryRun returns the plan only. */
+async function autoLinkTicketMatches(pool, erpPool, { dryRun = false } = {}) {
+  if (!(await hasLinkColumns(pool))) return { linked: [], failed: [], skipped: MIGRATION_MISSING };
+  const ids = (await pool.request()
+    .input('days', sql.Int, AUTO_LINK_LOOKBACK_DAYS)
+    .query(`SELECT EntryId FROM dbo.DeliveryEntries
+            WHERE Status NOT IN (${CLOSED_STATUSES.map((s) => `'${s}'`).join(',')})
+              AND CreatedAt >= DATEADD(day, -@days, GETUTCDATE())`)).recordset.map((r) => r.EntryId);
+  const linked = [];
+  const failed = [];
+  if (ids.length === 0) return { linked, failed };
+  const userId = await systemUserId(pool);
+  if (!userId) return { linked, failed, skipped: 'No active Admin user to record the link under' };
+
+  const results = await suggestLinks(pool, erpPool, { entryIds: ids });
+  const taken = new Set();
+  for (const { entry, suggestions } of results) {
+    const top = suggestions[0];
+    if (!isAutoLinkable(top) || taken.has(top.grnVchCode)) continue;
+    taken.add(top.grnVchCode);
+    const plan = { entryNo: entry.EntryNo, grnNo: top.grnNo, ticket: entry.TicketNo, party: top.party };
+    if (dryRun) { linked.push(plan); continue; }
+    const outcome = await linkEntryToGrn(pool, erpPool, { entryId: entry.EntryId, grnVchCode: top.grnVchCode, method: 'AutoTicket', userId });
+    (outcome.ok ? linked : failed).push({ ...plan, error: outcome.error });
+  }
+  return { linked, failed };
+}
+
+/**
+ * Entries closed on the old GRN screen with the Busy voucher number typed in
+ * (GoodsReceiptNotes.GRNNo = "Njr-…") but no BusyGRNVchCode, so the Director's
+ * GRN trail and payments can't find them. Fill in the Busy link from Busy.
+ */
+async function backfillGrnNumberLinks(pool, erpPool, { dryRun = false } = {}) {
+  if (!(await hasLinkColumns(pool))) return { fixed: [] };
+  const rows = (await pool.request().query(`
+    SELECT de.EntryId, de.EntryNo, LTRIM(RTRIM(g.GRNNo)) AS GRNNo
+    FROM dbo.DeliveryEntries de
+    JOIN dbo.GoodsReceiptNotes g ON g.EntryId = de.EntryId AND g.GRNStatus <> 'Reversed'
+    WHERE de.BusyGRNVchCode IS NULL AND de.Status = 'GRNCreated' AND LTRIM(g.GRNNo) LIKE '%-%---%'`)).recordset;
+  if (rows.length === 0) return { fixed: [] };
+  const grns = await getGrns(erpPool, { grnNos: [...new Set(rows.map((r) => r.GRNNo))] });
+  const byNo = new Map(grns.map((g) => [g.grnNo, g]));
+  const alreadyLinked = new Set((await pool.request().query(
+    'SELECT BusyGRNVchCode FROM dbo.DeliveryEntries WHERE BusyGRNVchCode IS NOT NULL')).recordset.map((r) => r.BusyGRNVchCode));
+  const fixed = [];
+  const auditUserId = await systemUserId(pool); // AuditLogs.UserId is NOT NULL
+  for (const r of rows) {
+    const g = byNo.get(r.GRNNo);
+    if (!g || alreadyLinked.has(g.vchCode)) continue;
+    alreadyLinked.add(g.vchCode);
+    fixed.push({ entryNo: r.EntryNo, grnNo: g.grnNo });
+    if (dryRun) continue;
+    await pool.request()
+      .input('id', sql.Int, r.EntryId).input('v', sql.Int, g.vchCode).input('n', sql.NVarChar(40), g.grnNo)
+      .query(`UPDATE dbo.DeliveryEntries
+              SET BusyGRNVchCode = @v, BusyGRNNo = @n, BusyGRNLinkedAt = GETUTCDATE(), BusyGRNLinkMethod = 'GrnScreen'
+              WHERE EntryId = @id AND BusyGRNVchCode IS NULL`);
+    writeAuditLog({ entityType: 'DeliveryEntry', entityId: r.EntryId, action: 'LinkBusyGRN', userId: auditUserId,
+      newValues: { busyGrnNo: g.grnNo, busyGrnVchCode: g.vchCode, method: 'GrnScreen' } });
+  }
+  return { fixed };
+}
+
 module.exports = {
   CLOSED_STATUSES,
   MIGRATION_MISSING,
@@ -331,5 +433,8 @@ module.exports = {
   loadOpenEntries,
   suggestLinks,
   linkEntryToGrn,
+  systemUserId,
+  autoLinkTicketMatches,
+  backfillGrnNumberLinks,
   nameSimilarity,
 };

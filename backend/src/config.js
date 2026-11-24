@@ -57,6 +57,10 @@ module.exports = {
     compCode: process.env.BUSY_COM_COMPANY   || 'Comp0006',
     fy:       parseInt(process.env.BUSY_COM_FY, 10) || 2026,
     poSeriesName: process.env.BUSY_PO_SERIES || 'NCF',
+    // Receiving GRNs in Busy from this system (2026-10-21) — off until the
+    // first GRN saved through it has been checked in Busy.
+    grnEnabled: process.env.BUSY_GRN_PUSH_ENABLED === 'true',
+    grnSeriesName: process.env.BUSY_GRN_SERIES || 'GRN',
     timeoutMs: parseInt(process.env.BUSY_COM_TIMEOUT_MS, 10) || 120000,
   },
   jwt: {
@@ -78,6 +82,10 @@ module.exports = {
     // since Director can now decide these the same as the Ops Manager, both
     // in-app and via this email's one-click Approve All / Hold links.
     requisitionOpsManagerEmail: process.env.REQUISITION_OPS_MANAGER_EMAIL || 'devendra.mishra@njorocanning.co.ke, vipul.patel@njorocanning.co.ke',
+    // Workshop requisitions wait for the Workshop HOD instead. Set
+    // WORKSHOP_HOD_EMAIL to the HOD's address (comma-separated list ok);
+    // until then the Director, who can also decide them, is notified.
+    requisitionWorkshopHodEmail: process.env.WORKSHOP_HOD_EMAIL || 'vipul.patel@njorocanning.co.ke',
     // Directors notified when a supplier submits/updates an RFQ quotation,
     // so they know to log in and pick a winner. Comma-separated list.
     directorEmails: process.env.DIRECTOR_EMAILS || 'vipul.patel@njorocanning.co.ke, gilbert@njorocanning.co.ke',

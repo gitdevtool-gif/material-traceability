@@ -5,21 +5,34 @@ import { useAuth } from '../context/AuthContext';
 let logo;
 try { logo = require('../assets/images/NCF LOGO (1).png'); } catch { logo = null; }
 
+// Requisition Audit report — keep in sync with App.js and AUDIT_ROLES in reports.routes.js.
+export const AUDIT_ROLES = ['Admin', 'Auditor', 'Director', 'OpsManager', 'Procurement', 'Viewer'];
+
 const NAV_ITEMS = [
   // ── Operations pipeline ──────────────────────────────────
   { path: '/',            label: 'Dashboard',             icon: '📊', roles: null },
   { path: '/entries',     label: 'Gate Entries',          icon: '🚛', roles: null },
   { path: '/entries/new', label: 'New Entry',             icon: '➕', roles: ['GateSecurity', 'Admin'], noViewer: true },
   { path: '/weighbridge', label: 'Weighbridge',           icon: '⚖️', roles: ['Weighbridge', 'Admin'] },
+  // Who is due to deliver sawdust / offcuts today (2026-11-24)
+  { path: '/procurement/direct-supply', label: 'Expected Deliveries', icon: '🪵', roles: ['Weighbridge', 'GateSecurity', 'StoreReceiving', 'FactoryReceiving', 'FactoryQA', 'Supervisor'], noViewer: true },
   { path: '/qa',          label: 'QA Inspection',         icon: '🔬', roles: ['QAInspector', 'QAManager', 'FactoryQA', 'Admin'] },
   { path: '/ops-approval',label: 'Ops Approval',          icon: '✅', roles: ['OpsManager', 'Supervisor', 'Director', 'Admin'] },
-  { path: '/requisition-approval-status', label: 'Requisition Status', icon: '🔎', roles: ['FactoryReceiving', 'StoreReceiving', 'OpsManager', 'Director', 'Admin'] },
-  { path: '/procurement/requisitions/raise', label: 'Raise Order', icon: '🧾', roles: ['FactoryReceiving', 'StoreReceiving', 'Admin'], noViewer: true },
+  { path: '/workshop-approval', label: 'Workshop Approval', icon: '🛠️', roles: ['WorkshopHOD', 'Director', 'Admin'] },
+  { path: '/grn-approvals', label: 'GRN Approval',        icon: '🖊️', roles: ['Director', 'Admin', 'GrnReviewer', 'StoreReceiving', 'FactoryReceiving', 'FactoryQA', 'Supervisor', 'Accounts', 'Auditor'] },
+  { path: '/accounts/payments', label: 'GRN Payments',    icon: '💳', roles: ['Accounts', 'Director', 'Admin', 'Auditor'] },
+  { path: '/requisition-approval-status', label: 'Requisition Status', icon: '🔎', roles: ['FactoryReceiving', 'FactoryQA', 'StoreReceiving', 'OpsManager', 'WorkshopHOD', 'Director', 'Admin'] },
+  { path: '/procurement/requisitions/raise', label: 'Raise Order', icon: '🧾', roles: ['FactoryReceiving', 'FactoryQA', 'StoreReceiving', 'Admin'], noViewer: true },
   { path: '/central-stores/review', label: 'Central Stores Review', icon: '🏬', roles: ['StoreReceiving', 'Admin'] },
   { path: '/receiving',   label: 'Receiving / GRN',       icon: '📦', roles: ['StoreReceiving', 'FactoryReceiving', 'FactoryQA', 'Supervisor', 'ProductionClerk', 'Admin'] },
   { path: '/grn',         label: 'GRN List',              icon: '📋', roles: null },
   { path: '/receiving/busy', label: 'Receiving ↔ Busy',   icon: '🔗', roles: ['Admin', 'Supervisor', 'StoreReceiving', 'FactoryReceiving', 'Procurement', 'Director', 'OpsManager'] },
   { path: '/traceability',label: 'Traceability',          icon: '🔍', roles: null },
+  // ── Audit ────────────────────────────────────────────────
+  { divider: 'Audit', roles: AUDIT_ROLES },
+  { path: '/reports/requisition-audit', label: 'Requisition Audit', icon: '🕵️', roles: AUDIT_ROLES },
+  // Viewers already have Order Trace in the Procurement section.
+  { path: '/procurement/trace',     label: 'Order Trace',       icon: '🧭', roles: ['Auditor', 'OpsManager'], noViewer: true },
   // ── Procurement module ───────────────────────────────────
   { divider: 'Procurement', roles: ['Procurement', 'Director', 'Admin', 'OpsManager'] },
   { path: '/procurement/requisitions',   label: 'Requisitions',       icon: '📝', roles: ['Procurement', 'Admin', 'Director'] },
@@ -29,14 +42,17 @@ const NAV_ITEMS = [
   { path: '/procurement/held-items',     label: 'Held Items',         icon: '⏸️', roles: ['Procurement', 'Admin', 'Director'] },
   { path: '/procurement/pending-director-approval', label: 'Pending Director Approval', icon: '⏳', roles: ['Procurement', 'Admin', 'Director'] },
   { path: '/procurement/lpo-raised',     label: 'LPOs Raised in Busy', icon: '📑', roles: ['Procurement', 'Admin', 'Director'] },
+  { path: '/procurement/direct-supply',  label: 'Direct Supply Plan', icon: '🪵', roles: ['Procurement', 'Admin', 'Director'] },
   { path: '/procurement/trace',          label: 'Order Trace',        icon: '🧭', roles: ['Procurement', 'Admin', 'Director'] },
   { path: '/procurement/reconciliation', label: 'LPO Reconciliation', icon: '🔄', roles: ['Procurement', 'Admin'] },
-  { path: '/procurement/reorder',        label: 'Reorder Levels',     icon: '📉', roles: ['Procurement', 'Admin', 'Director', 'ProductionManager', 'OpsManager'] },
-  { path: '/procurement/fg-reorder',     label: 'FG Reorder Levels',  icon: '📦', roles: ['Procurement', 'Admin', 'Director', 'ProductionManager', 'OpsManager'] },
+  { path: '/procurement/reorder',        label: 'Reorder Levels',     icon: '📉', roles: ['Procurement', 'Admin', 'Director', 'ProductionManager', 'HeadOfProductionPlanning', 'OpsManager'] },
+  { path: '/procurement/fg-reorder',     label: 'FG Reorder Levels',  icon: '📦', roles: ['Procurement', 'Admin', 'Director', 'ProductionManager', 'HeadOfProductionPlanning', 'OpsManager'] },
   // ── Production module ────────────────────────────────────
-  { divider: 'Production', roles: ['Procurement', 'Director', 'Admin', 'ProductionClerk', 'ProductionManager', 'OpsManager'] },
-  { path: '/production/planning', label: 'Production Planning', icon: '🧮', roles: ['Procurement', 'Admin', 'Director', 'ProductionClerk', 'ProductionManager', 'OpsManager'] },
-  { path: '/production/aging-analysis', label: 'Aging Analysis', icon: '⏳', roles: ['Procurement', 'Admin', 'Director', 'ProductionClerk', 'ProductionManager', 'OpsManager'] },
+  { divider: 'Production', roles: ['Procurement', 'Director', 'Admin', 'ProductionClerk', 'ProductionManager', 'HeadOfProductionPlanning', 'OpsManager'] },
+  { path: '/production/planning', label: 'Production Planning', icon: '🧮', roles: ['Procurement', 'Admin', 'Director', 'ProductionClerk', 'ProductionManager', 'HeadOfProductionPlanning', 'OpsManager'] },
+  { path: '/production/aging-analysis', label: 'Aging Analysis', icon: '⏳', roles: ['Procurement', 'Admin', 'Director', 'ProductionClerk', 'ProductionManager', 'HeadOfProductionPlanning', 'OpsManager'] },
+  // Same page as the Procurement link — production plans who delivers each day (2026-11-24)
+  { path: '/procurement/direct-supply', label: 'Sawdust Deliveries', icon: '🪵', roles: ['ProductionClerk', 'ProductionManager', 'HeadOfProductionPlanning', 'OpsManager'], noViewer: true },
   // ── Admin & reporting ────────────────────────────────────
   { divider: 'Admin', roles: ['Admin', 'Procurement', 'Supervisor', 'Auditor', 'QAManager'] },
   { path: '/admin/suppliers',       label: 'Suppliers',         icon: '🏭', roles: ['Admin', 'Procurement'] },
@@ -44,6 +60,7 @@ const NAV_ITEMS = [
   { path: '/admin/item-code-lookup', label: 'Item Code Lookup', icon: '🔤', roles: ['Admin', 'Procurement'] },
   { path: '/erp',                   label: 'ERP Lookup',        icon: '🔗', roles: ['Admin', 'Supervisor', 'Auditor', 'QAManager', 'Procurement'] },
   { path: '/users',                 label: 'User Management',   icon: '👥', roles: ['Admin'], noViewer: true },
+  { path: '/admin/settings',        label: 'System Settings',   icon: '⚙️', roles: ['Admin'], noViewer: true },
 ];
 
 // System Viewer (read-only) sees every link except `noViewer` ones —
@@ -51,6 +68,8 @@ const NAV_ITEMS = [
 const canSee = (item, role) => {
   if (!item.roles) return true;
   if (role === 'Viewer') return !item.noViewer;
+  // GRN Reviewer: read-only on every page like a Viewer, plus GRN Approval (2026-11-23)
+  if (role === 'GrnReviewer') return item.roles.includes(role) || !item.noViewer;
   return item.roles.includes(role);
 };
 
@@ -121,6 +140,11 @@ export default function Layout() {
         {isViewer && (
           <div className="alert alert-info" style={{ margin: '12px 16px 0', fontSize: 13 }}>
             👁️ You are signed in as a <strong>System Viewer</strong> — read-only access. You can view every page, but changes are disabled.
+          </div>
+        )}
+        {user.role === 'GrnReviewer' && (
+          <div className="alert alert-info" style={{ margin: '12px 16px 0', fontSize: 13 }}>
+            👁️ You are signed in as the <strong>GRN Reviewer</strong> — you can view every page read-only, and give the reasons on GRN checks in <strong>GRN Approval</strong>.
           </div>
         )}
         <Outlet />

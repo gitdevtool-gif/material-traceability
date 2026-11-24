@@ -2,13 +2,19 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../services/api';
 import StockPicture from '../components/StockPicture';
+import { PreferredSupplierNote } from '../components/PreferredSupplier';
 import { useAuth } from '../context/AuthContext';
+import HeldItemsCleanup from '../components/HeldItemsCleanup';
 
 export default function DirectorEvaluationPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
-  const isDirector = ['Admin', 'Director'].includes(user?.role);
+  // Only the Director awards (2026-10-22): an award approved while signed in
+  // as Admin was recorded as approved by the admin account. Admin may still
+  // undo an approval to correct a mistake.
+  const isDirector = user?.role === 'Director';
+  const canUndo = ['Admin', 'Director'].includes(user?.role);
 
   const rfqIdParam = searchParams.get('rfqId');
 
@@ -201,6 +207,8 @@ export default function DirectorEvaluationPage() {
         ItemCode: item.ItemCode,
         RequiredQty: item.RequiredQty,
         Category: item.Category,
+        PreferredSupplierId: item.PreferredSupplierId,
+        PreferredSupplierName: item.PreferredSupplierName,
       });
     }
     // Defensive fallback: include any item referenced by a quotation line
@@ -418,6 +426,10 @@ export default function DirectorEvaluationPage() {
       {error   && <div className="alert alert-error"   style={{ marginBottom: 16 }}>{error}</div>}
       {success && <div className="alert alert-success" style={{ marginBottom: 16 }}>{success}</div>}
 
+      {canUndo && (
+        <HeldItemsCleanup onChanged={() => { loadPending(); if (selected) loadEval(selected); }} />
+      )}
+
       <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
         <div style={{ width: 280, flexShrink: 0 }}>
           <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10, color: '#374151' }}>
@@ -511,7 +523,7 @@ export default function DirectorEvaluationPage() {
                         )}
                         {evalData.EvalNotes && <div style={{ marginTop: 4, fontStyle: 'italic' }}>{evalData.EvalNotes}</div>}
                       </div>
-                      {isDirector && (
+                      {canUndo && (
                         <button className="btn btn-danger btn-sm" onClick={handleUndo} disabled={undoing} style={{ flexShrink: 0 }}>
                           {undoing ? 'Undoing…' : 'Undo Approval'}
                         </button>
@@ -748,7 +760,7 @@ export default function DirectorEvaluationPage() {
                         const isHeld = !locked && Object.prototype.hasOwnProperty.call(heldReasons, item.RequisitionItemId);
                         return (
                           <tr key={item.RequisitionItemId} style={isHeld ? { background: '#fffbeb' } : undefined}>
-                            <td>{item.ItemName}</td>
+                            <td>{item.ItemName}<PreferredSupplierNote item={item} /></td>
                             <td style={{ textAlign: 'center' }}>{Number(item.RequiredQty).toLocaleString()}</td>
                             {isDirector && !isFullyResolved && (
                               <td style={{ minWidth: 150 }}>
@@ -854,6 +866,11 @@ export default function DirectorEvaluationPage() {
               )}
 
               {/* Approval */}
+              {!isFullyResolved && !isDirector && evalData.quotations.length > 0 && (
+                <div className="card" style={{ fontSize: 13, color: '#6b7280' }}>
+                  Awaiting the Director's approval — only a Director account can approve awards.
+                </div>
+              )}
               {!isFullyResolved && isDirector && evalData.quotations.length > 0 && (
                 <div className="card">
                   <h3 style={{ margin: '0 0 12px', fontSize: 14 }}>Director Approval</h3>

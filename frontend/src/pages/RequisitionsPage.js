@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import RaiseFuelPoModal from '../components/RaiseFuelPoModal';
+import RaiseDirectPoModal from '../components/RaiseDirectPoModal';
 
 const STATUS_COLOR = {
   Pending:            'badge-yellow',
@@ -50,10 +51,13 @@ export default function RequisitionsPage() {
   const [quickRfqSearching, setQuickRfqSearching] = useState(false);
   const [quickRfqSubmitting, setQuickRfqSubmitting] = useState(false);
   const [quickRfqError, setQuickRfqError]     = useState('');
+  const [quickRfqPicked, setQuickRfqPicked]   = useState({}); // SupplierId -> name, suppliers ticked
 
   // Transport fuel orders (2026-10-19) are raised in Busy straight from here — no RFQ.
   const [fuelRow, setFuelRow] = useState(null);
   const [fuelMsg, setFuelMsg] = useState('');
+  // Direct-supply orders (sawdust/offcuts, 2026-11-24): standing suppliers, no RFQ.
+  const [directRow, setDirectRow] = useState(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -121,6 +125,7 @@ export default function RequisitionsPage() {
   const openQuickRfq = (row) => {
     setQuickRfqRow(row);
     setQuickRfqError('');
+    setQuickRfqPicked({});
     setQuickRfqSearch('');
     setQuickRfqSearchResults(null);
     setQuickRfqLoading(true);
@@ -146,12 +151,21 @@ export default function RequisitionsPage() {
       .finally(() => setQuickRfqSearching(false));
   };
 
-  const chooseQuickRfqSupplier = async (supplierId) => {
-    if (!quickRfqRow) return;
+  // Several suppliers can be picked (2026-10-22): one RFQ, one quote to capture per supplier.
+  const toggleQuickRfqSupplier = (s) => setQuickRfqPicked((prev) => {
+    const next = { ...prev };
+    if (next[s.SupplierId]) delete next[s.SupplierId];
+    else next[s.SupplierId] = s.SupplierName;
+    return next;
+  });
+  const quickPickedIds = Object.keys(quickRfqPicked).map(Number);
+
+  const chooseQuickRfqSupplier = async () => {
+    if (!quickRfqRow || !quickPickedIds.length) return;
     setQuickRfqSubmitting(true);
     setQuickRfqError('');
     try {
-      const res = await api.post(`/procurement/requisitions/${quickRfqRow.RequisitionId}/quick-rfq`, { supplierId });
+      const res = await api.post(`/procurement/requisitions/${quickRfqRow.RequisitionId}/quick-rfq`, { supplierIds: quickPickedIds });
       navigate(`/procurement/quotations?rfqId=${res.data.rfqId}&dispatchId=${res.data.dispatchId}`);
     } catch (e) {
       setQuickRfqError(e.response?.data?.error || 'Failed to create RFQ');
@@ -242,7 +256,7 @@ export default function RequisitionsPage() {
                 />
               </th>
               <th>Busy Ord No</th>
-              <th>Date</th>
+              <th title="Requisition date; below it, when the Ops Manager approved it">Date / Approved</th>
               <th>Warehouse</th>
               <th>Mat Centre</th>
               <th>Items</th>
@@ -272,12 +286,25 @@ export default function RequisitionsPage() {
                   />
                 </td>
                 <td><strong>{r.BusyOrdNo}</strong></td>
-                <td>{r.BusyDate ? new Date(r.BusyDate).toLocaleDateString('en-KE') : '—'}</td>
+                <td style={{ whiteSpace: 'nowrap' }}>
+                  {r.BusyDate ? new Date(r.BusyDate).toLocaleDateString('en-KE') : '—'}
+                  {r.OpsApprovedAt && (
+                    <div style={{ fontSize: 11, color: '#047857' }} title="Approved by the Ops Manager — the list is newest-approved first">
+                      ✓ Ops {new Date(r.OpsApprovedAt).toLocaleString('en-KE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                  )}
+                </td>
                 <td>{r.Warehouse || '—'}</td>
                 <td>
                   {r.MatCenter || '—'}
                   {r.OrderType === 'Fuel' && <span className="badge badge-orange" style={{ marginLeft: 6 }}>⛽ Fuel</span>}
                   {r.Vehicle && r.Vehicle !== r.MatCenter && <div style={{ fontSize: 11, color: '#6b7280' }}>Vehicle {r.Vehicle}</div>}
+                  {r.DirectLineCount > 0 && (
+                    <span className={`badge ${r.DirectOpenCount > 0 ? 'badge-orange' : 'badge-teal'}`} style={{ marginLeft: 6 }}
+                      title={r.DirectOpenCount > 0 ? 'Direct supply — standing suppliers, no RFQ' : 'Direct-supply lines ordered'}>
+                      🪵 Direct{r.DirectLineCount < r.ItemCount ? ` ${r.DirectLineCount}/${r.ItemCount}` : ''}{r.DirectOpenCount === 0 ? ' ✓' : ''}
+                    </span>
+                  )}
                 </td>
                 <td style={{ textAlign: 'center' }}>{r.ItemCount}</td>
                 <td style={{ textAlign: 'center' }}>{r.QuotationCount ?? '—'}</td>
@@ -297,6 +324,15 @@ export default function RequisitionsPage() {
                       title="Fuel order — raise the PO in Busy directly, no RFQ."
                       onClick={() => { setFuelMsg(''); setFuelRow(r); }}>
                       ⛽ Raise PO in Busy
+                    </button>
+                  )}
+                  {r.DirectOpenCount > 0 && !/^(Rejected|Cancelled|OnHold|PendingOps|PendingCentralStores)/.test(r.Status) && (
+                    <button
+                      className="btn btn-primary"
+                      style={{ padding: '4px 12px', fontSize: 12 }}
+                      title="Sawdust / offcuts — raise POs to the standing suppliers at their standing price, no RFQ."
+                      onClick={() => { setFuelMsg(''); setDirectRow(r); }}>
+                      🪵 Raise direct POs
                     </button>
                   )}
                   {r.OrderType !== 'Fuel' && !!r.AvailableItemCount && r.Status !== 'Cancelled' && (
@@ -382,14 +418,19 @@ export default function RequisitionsPage() {
                     <button
                       key={s.SupplierId}
                       disabled={quickRfqSubmitting}
-                      onClick={() => chooseQuickRfqSupplier(s.SupplierId)}
+                      onClick={() => toggleQuickRfqSupplier(s)}
                       style={{
                         display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12,
-                        padding: '10px 14px', border: '1px solid #e5e7eb', borderRadius: 6,
-                        background: '#fff', cursor: quickRfqSubmitting ? 'default' : 'pointer', textAlign: 'left', width: '100%',
+                        padding: '10px 14px', borderRadius: 6,
+                        border: `1px solid ${quickRfqPicked[s.SupplierId] ? '#1a73e8' : '#e5e7eb'}`,
+                        background: quickRfqPicked[s.SupplierId] ? '#e8f0fe' : '#fff',
+                        cursor: quickRfqSubmitting ? 'default' : 'pointer', textAlign: 'left', width: '100%',
                       }}>
                       <div>
-                        <div style={{ fontWeight: 600, fontSize: 14 }}>{s.SupplierName}</div>
+                        <div style={{ fontWeight: 600, fontSize: 14 }}>
+                          <input type="checkbox" readOnly checked={!!quickRfqPicked[s.SupplierId]} style={{ marginRight: 8 }} />
+                          {s.SupplierName}
+                        </div>
                         <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>{s.SupplierCategories || '—'}</div>
                       </div>
                       <div style={{ fontSize: 12, color: '#6b7280', whiteSpace: 'nowrap' }}>{s.Phone || s.Email || '—'}</div>
@@ -419,13 +460,18 @@ export default function RequisitionsPage() {
                         <button
                           key={s.SupplierId}
                           disabled={quickRfqSubmitting}
-                          onClick={() => chooseQuickRfqSupplier(s.SupplierId)}
+                          onClick={() => toggleQuickRfqSupplier(s)}
                           style={{
                             display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12,
-                            padding: '10px 14px', border: '1px solid #e5e7eb', borderRadius: 6,
-                            background: '#fff', cursor: quickRfqSubmitting ? 'default' : 'pointer', textAlign: 'left', width: '100%',
+                            padding: '10px 14px', borderRadius: 6,
+                            border: `1px solid ${quickRfqPicked[s.SupplierId] ? '#1a73e8' : '#e5e7eb'}`,
+                            background: quickRfqPicked[s.SupplierId] ? '#e8f0fe' : '#fff',
+                            cursor: quickRfqSubmitting ? 'default' : 'pointer', textAlign: 'left', width: '100%',
                           }}>
-                          <div style={{ fontWeight: 600, fontSize: 14 }}>{s.SupplierName}</div>
+                          <div style={{ fontWeight: 600, fontSize: 14 }}>
+                            <input type="checkbox" readOnly checked={!!quickRfqPicked[s.SupplierId]} style={{ marginRight: 8 }} />
+                            {s.SupplierName}
+                          </div>
                           <div style={{ fontSize: 12, color: '#6b7280', whiteSpace: 'nowrap' }}>{s.Phone || s.Email || '—'}</div>
                         </button>
                       ))}
@@ -434,12 +480,35 @@ export default function RequisitionsPage() {
                 )}
               </div>
 
-              {quickRfqSubmitting && (
-                <p style={{ fontSize: 13, color: '#6b7280', marginTop: 16 }}>Creating RFQ…</p>
-              )}
+              {/* Ticked suppliers — one RFQ, then capture each one's quote */}
+              <div style={{ borderTop: '1px solid #e5e7eb', marginTop: 16, paddingTop: 12, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <div style={{ flex: 1, fontSize: 12, color: '#374151' }}>
+                  {quickPickedIds.length
+                    ? <>Selected: {Object.values(quickRfqPicked).join(', ')}</>
+                    : <span style={{ color: '#6b7280' }}>Tick one or more suppliers whose quote you have.</span>}
+                </div>
+                <button className="btn btn-primary" disabled={quickRfqSubmitting || !quickPickedIds.length} onClick={chooseQuickRfqSupplier}>
+                  {quickRfqSubmitting ? 'Creating RFQ…' : `Feed ${quickPickedIds.length || ''} quote${quickPickedIds.length === 1 ? '' : 's'} →`}
+                </button>
+              </div>
             </div>
           </div>
         </div>
+      )}
+
+      {directRow && (
+        <RaiseDirectPoModal
+          requisition={directRow}
+          onClose={() => { setDirectRow(null); load(); }}
+          onDone={(result) => {
+            const nos = (result.raised || []).map((x) => x.lpo.ordno).concat(result.linked || []);
+            setDirectRow(null);
+            if (nos.length) {
+              setFuelMsg(`${directRow.BusyOrdNo}: ${nos.join(', ')} ${result.raised?.length ? 'raised in Busy' : 'linked'}.${result.requisitionDone ? ' Requisition fully ordered.' : ''}`);
+            }
+            load();
+          }}
+        />
       )}
 
       {fuelRow && (

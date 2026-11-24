@@ -46,20 +46,27 @@ const express = require('express');
 const { getPool, sql } = require('../db');
 const { getErpPool } = require('../erpDb');
 const { authenticate, authorize } = require('../middleware/auth');
-const { syncReorderStatus } = require('../services/reorder-sync.service');
+const { syncReorderStatus, buildReorderRow, getBusyCriticalLevels } = require('../services/reorder-sync.service');
 const stockService = require('../services/stock.service');
 
 const router = express.Router();
-const REORDER_ROLES = ['Admin', 'Procurement', 'Director', 'ProductionManager', 'OpsManager'];
+const REORDER_ROLES = ['Admin', 'Procurement', 'Director', 'ProductionManager', 'HeadOfProductionPlanning', 'OpsManager'];
 
 // ── GET /api/procurement/reorder ──────────────────────────────────────────────
 router.get('/', authenticate, authorize(...REORDER_ROLES), async (req, res, next) => {
   try {
-    const { itemgrp, needsReorder, overstocked, acknowledged, search, page = 1, limit = 50 } = req.query;
+    const { itemgrp, needsReorder, overstocked, acknowledged, search, inventory, page = 1 } = req.query;
+    // up to 10,000 rows in one go for the Excel export
+    const limit = Math.min(10000, Math.max(1, parseInt(req.query.limit, 10) || 50));
     const pool = await getPool();
     const request = pool.request();
     let where = '1=1';
 
+    // One inventory store (2026-11-11): Central Stores and F7 each have their own rows.
+    if (inventory) {
+      where += ' AND Store = @inventory';
+      request.input('inventory', sql.NVarChar(80), inventory);
+    }
     if (itemgrp) {
       where += ' AND ItemGroup = @itemgrp';
       request.input('itemgrp', sql.NVarChar(80), itemgrp);
@@ -88,6 +95,7 @@ router.get('/', authenticate, authorize(...REORDER_ROLES), async (req, res, next
     request.input('limit',  sql.Int, parseInt(limit));
 
     const countReq = pool.request();
+    if (inventory) countReq.input('inventory',     sql.NVarChar(80),  inventory);
     if (itemgrp)   countReq.input('itemgrp',       sql.NVarChar(80),  itemgrp);
     if (needsReorder !== undefined) countReq.input('needsReorder', sql.Bit, needsReorder === 'true' ? 1 : 0);
     if (search)    countReq.input('search',        sql.NVarChar(100), `%${search}%`);
@@ -103,7 +111,8 @@ router.get('/', authenticate, authorize(...REORDER_ROLES), async (req, res, next
         WHERE ${where}
         ORDER BY
           r.NeedsReorder DESC,
-          (r.ReorderLevel - r.LiveStock) DESC
+          (r.ReorderLevel - r.LiveStock) DESC,
+          r.ReorderStatusId
         OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY
       `),
     ]);
@@ -112,9 +121,9 @@ router.get('/', authenticate, authorize(...REORDER_ROLES), async (req, res, next
     res.json({
       data: dataResult.recordset,
       page: parseInt(page),
-      limit: parseInt(limit),
+      limit,
       total,
-      totalPages: Math.ceil(total / parseInt(limit)),
+      totalPages: Math.ceil(total / limit),
     });
   } catch (err) { next(err); }
 });
@@ -124,7 +133,9 @@ router.get('/', authenticate, authorize(...REORDER_ROLES), async (req, res, next
 router.get('/summary', authenticate, authorize(...REORDER_ROLES), async (req, res, next) => {
   try {
     const pool = await getPool();
-    const result = await pool.request().query(`
+    const sreq = pool.request();
+    if (req.query.inventory) sreq.input('inventory', sql.NVarChar(80), req.query.inventory);
+    const result = await sreq.query(`
       SELECT
         COUNT(*) AS TotalItems,
         SUM(CASE WHEN NeedsReorder = 1 THEN 1 ELSE 0 END) AS NeedsReorderCount,
@@ -134,8 +145,20 @@ router.get('/summary', authenticate, authorize(...REORDER_ROLES), async (req, re
         SUM(ISNULL(StockValue, 0)) AS TotalStockValue,
         MAX(SyncedAt) AS LastSyncedAt
       FROM dbo.ReorderStatus
+      ${req.query.inventory ? 'WHERE Store = @inventory' : ''}
     `);
     res.json(result.recordset[0]);
+  } catch (err) { next(err); }
+});
+
+// ── GET /api/procurement/reorder/inventories — the inventory stores synced here ──
+router.get('/inventories', authenticate, authorize(...REORDER_ROLES), async (req, res, next) => {
+  try {
+    const r = await (await getPool()).request().query(`
+      SELECT Store, COUNT(*) AS Items, SUM(CASE WHEN NeedsReorder = 1 THEN 1 ELSE 0 END) AS NeedsReorder
+      FROM dbo.ReorderStatus GROUP BY Store
+      ORDER BY CASE WHEN Store = 'CENTRAL STORES' THEN 0 ELSE 1 END, Store`);
+    res.json(r.recordset);
   } catch (err) { next(err); }
 });
 
@@ -199,7 +222,105 @@ router.get('/batches', authenticate, authorize(...REORDER_ROLES), async (req, re
 });
 
 // ── POST /api/procurement/reorder/sync ────────────────────────────────────────
-router.post('/sync', authenticate, authorize('Admin', 'Procurement'), async (req, res, next) => {
+// ── Mat Centre (store) view (2026-10-23) ──────────────────────────────────────
+// Like Busy's Reorder report filtered by Material Centre: one store's own
+// stock against levels worked out from that store's own use (production,
+// issues and transfers out). Computed live from Busy, cached 5 minutes per
+// store; the list above stays the company-wide view.
+//   GET /stores                 Mat Centres that hold or move stock
+//   GET /store-view?store=&search=&itemgrp=&needsReorder=&overstocked=&page=&limit=
+const storeCache = new Map();
+const STORE_CACHE_MS = 5 * 60_000;
+let storesList = null;
+
+router.get('/stores', authenticate, authorize(...REORDER_ROLES), async (req, res, next) => {
+  try {
+    if (!storesList || storesList.expires < Date.now()) {
+      storesList = { value: await stockService.listStockStores(await getErpPool()), expires: Date.now() + 30 * 60_000 };
+    }
+    res.json(storesList.value);
+  } catch (err) { next(err); }
+});
+
+async function storeRows(storeName) {
+  const key = String(storeName).trim().toUpperCase();
+  const hit = storeCache.get(key);
+  if (hit && hit.expires > Date.now()) return hit.value;
+
+  const erpPool = await getErpPool();
+  const s = await stockService.getStoreStockAndUse(erpPool, storeName);
+  if (!s) return null;
+  const items = await stockService.resolveItems(erpPool, { itemCodes: [...new Set([...s.stock.keys(), ...s.use.keys()])] });
+  const codes = items.map((i) => i.itemCode);
+  const fgCodes = items.filter((i) => stockService.FG_GROUPS.has(String(i.group || '').toUpperCase())).map((i) => i.itemCode);
+  const [eoq, price, last, busyLevels, company, boughtInputs] = await Promise.all([
+    stockService.getEoq(erpPool, codes),
+    stockService.getAvgInwardPrice(erpPool, codes),
+    stockService.getLastPurchase(erpPool, codes),
+    getBusyCriticalLevels(erpPool, codes),
+    // Central Stores' figures from the last sync, shown next to the store's own
+    // (rows are per inventory store; Central Stores' row wins — it is ordered last).
+    (await getPool()).request().query(`SELECT UPPER(LTRIM(RTRIM(ItemName))) AS K, LiveStock, ReorderLevel FROM dbo.ReorderStatus
+      ORDER BY CASE WHEN Store = 'CENTRAL STORES' THEN 1 ELSE 0 END`)
+      .then((r) => new Map(r.recordset.map((x) => [x.K, x]))),
+    stockService.getBoughtInputs(erpPool, fgCodes),
+  ]);
+  const rows = [];
+  for (const it of items) {
+    const row = buildReorderRow(it, s.stock.get(it.itemCode) ?? 0, s.use.get(it.itemCode) || null, { eoq, price, last, busyLevels, boughtInputs });
+    if (!row) continue;
+    const co = company.get(String(it.itemName).toUpperCase());
+    rows.push({
+      ...row,
+      ReorderStatusId: `${s.storeCode}-${it.itemCode}`,
+      Store: s.storeName,
+      CompanyStock: co ? co.LiveStock : null,
+      CompanyReorderLevel: co ? co.ReorderLevel : null,
+    });
+  }
+  // Items needing reorder first, furthest below their level first — but negative-stock lines last:
+  // in Busy those are mostly costs booked as items (firewood & fuel, power, bulk water) that would
+  // otherwise top every store's list.
+  rows.sort((a, b) => ((a.LiveStock < 0) - (b.LiveStock < 0)) || (b.NeedsReorder - a.NeedsReorder)
+    || ((b.ReorderLevel - b.LiveStock) - (a.ReorderLevel - a.LiveStock)));
+  const value = { store: s.storeName, rows, asOf: new Date().toISOString() };
+  storeCache.set(key, { value, expires: Date.now() + STORE_CACHE_MS });
+  if (storeCache.size > 50) storeCache.delete(storeCache.keys().next().value);
+  return value;
+}
+
+router.get('/store-view', authenticate, authorize(...REORDER_ROLES), async (req, res, next) => {
+  try {
+    const { store, itemgrp, needsReorder, overstocked, search, page = 1, limit = 50 } = req.query;
+    if (!store) return res.status(400).json({ error: 'store is required' });
+    const data = await storeRows(store);
+    if (!data) return res.status(404).json({ error: `Mat Centre "${store}" not found in Busy` });
+
+    const q = String(search || '').trim().toUpperCase();
+    const rows = data.rows.filter((r) => (!itemgrp || r.ItemGroup === itemgrp)
+      && (needsReorder === undefined || r.NeedsReorder === (needsReorder === 'true' ? 1 : 0))
+      && (overstocked !== 'true' || (r.Overstocked || 0) > 0)
+      && (!q || String(r.ItemName).toUpperCase().includes(q)));
+    const lim = Math.min(10000, Math.max(1, parseInt(limit, 10) || 50));
+    const pg = Math.max(1, parseInt(page, 10) || 1);
+    res.json({
+      store: data.store,
+      asOf: data.asOf,
+      data: rows.slice((pg - 1) * lim, pg * lim),
+      page: pg, limit: lim, total: rows.length, totalPages: Math.max(1, Math.ceil(rows.length / lim)),
+      summary: {
+        TotalItems: data.rows.length,
+        NeedsReorderCount: data.rows.filter((r) => r.NeedsReorder === 1).length,
+        OverstockedCount: data.rows.filter((r) => (r.Overstocked || 0) > 0).length,
+        TotalOverstockedQty: data.rows.reduce((s, r) => s + (r.Overstocked || 0), 0),
+        TotalStockValue: data.rows.reduce((s, r) => s + (r.StockValue || 0), 0),
+        LastSyncedAt: data.asOf,
+      },
+    });
+  } catch (err) { next(err); }
+});
+
+router.post('/sync', authenticate, authorize('Admin', 'Procurement', 'HeadOfProductionPlanning'), async (req, res, next) => {
   try {
     const result = await syncReorderStatus();
     res.json(result);

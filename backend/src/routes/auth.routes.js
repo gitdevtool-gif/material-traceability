@@ -111,7 +111,14 @@ router.get('/me', authenticate, async (req, res, next) => {
 // their Busy password. Busy checks it (COM ValidUserPassword through the
 // bridge); only the user name and when it was verified are stored — the
 // password never is, and is never logged.
-const BUSY_LINK_ROLES = ['Admin', 'Procurement'];
+// Anyone who may work in Busy through this system can prove their own Busy
+// login (it only records the Busy user name; Busy checks the password).
+// Procurement raise POs, Stores receive GRNs; Ops / Production / QA users
+// link from their pages too (2026-10-21). Viewers can't (read-only role).
+const BUSY_LINK_ROLES = [
+  'Admin', 'Procurement', 'StoreReceiving', 'FactoryReceiving', 'FactoryQA', 'Supervisor',
+  'OpsManager', 'ProductionManager', 'HeadOfProductionPlanning', 'ProductionClerk', 'QAManager', 'QAInspector', 'Director',
+];
 const BUSY_LINK_MAX_FAILS = 5;
 const BUSY_LINK_WINDOW_MS = 15 * 60 * 1000;
 const busyLinkFails = new Map(); // userId -> [timestamps of failed tries]

@@ -152,39 +152,56 @@ async function generateConsignmentNo(pool, transaction) {
 }
 
 // ──── POST /api/entries — Create gate entry ────
+// One truck can carry goods from several suppliers (e.g. a transport company
+// collecting from more than one, 2026-10-22). Body may then carry
+//   suppliers: [{ supplierId, items }]
+// and the gate creates ONE ENTRY PER SUPPLIER, all sharing the truck's
+// consignment number — so each supplier's goods go through weighbridge, QA
+// and their own Busy GRN (Busy receives per supplier) exactly as before, and
+// the weighbridge can use one ticket for the whole truck. The single-supplier
+// body { supplierId, items } still works.
 router.post('/', authenticate, authorize('GateSecurity', 'Admin'), async (req, res, next) => {
   try {
     const {
-      supplierId, consignmentNo, deliveryDate, deliveryTime,
+      consignmentNo, deliveryDate, deliveryTime,
       driverName, driverIdNo, driverPhone,
-      purchaseOrderNo, nonPOReason, notes, items
+      purchaseOrderNo, nonPOReason, notes,
     } = req.body;
     const vehicleRegNo = cleanVehicleReg(req.body.vehicleRegNo);
+    const groups = Array.isArray(req.body.suppliers) && req.body.suppliers.length
+      ? req.body.suppliers.slice(0, 20).map((g) => ({ supplierId: parseInt(g.supplierId, 10), items: g.items || [] }))
+      : [{ supplierId: parseInt(req.body.supplierId, 10), items: req.body.items || [] }];
 
     // Validation
-    if (!supplierId || !deliveryDate || !deliveryTime || !vehicleRegNo) {
-      return res.status(400).json({ error: 'supplierId, deliveryDate, deliveryTime, vehicleRegNo are required' });
+    if (groups.some((g) => !g.supplierId) || !deliveryDate || !deliveryTime || !vehicleRegNo) {
+      return res.status(400).json({ error: 'Supplier, delivery date, delivery time and vehicle are required' });
+    }
+    if (new Set(groups.map((g) => g.supplierId)).size !== groups.length) {
+      return res.status(400).json({ error: 'The same supplier is listed twice — put all their materials under one supplier' });
     }
 
     const pool = await getPool();
 
     // Busy-linked gate entry (once the migration has run): Busy supplier and
-    // Busy items. The PO is linked at the weighbridge.
+    // Busy items, no quantities. The PO and the weight are the weighbridge's.
     const busyMode = await hasLinkColumns(pool);
-    let busy = { items: [], problems: [] };
-    if (busyMode) {
-      const sup = (await pool.request().input('id', sql.Int, supplierId)
+    for (const g of groups) {
+      g.busy = { items: [], problems: [] };
+      if (!busyMode) continue;
+      const sup = (await pool.request().input('id', sql.Int, g.supplierId)
         .query('SELECT SupplierCode, SupplierName FROM dbo.Suppliers WHERE SupplierId = @id')).recordset[0];
       if (!sup) return res.status(400).json({ error: 'Supplier not found' });
       if (!busyPartyCode(sup.SupplierCode)) {
         return res.status(400).json({ error: `"${sup.SupplierName}" is not a Busy supplier — pick the supplier's Busy account (refresh suppliers from Busy if it was just created there).` });
       }
-      if (!items || items.length === 0) return res.status(400).json({ error: 'Add at least one material that is on the truck' });
-      if (items.some((it) => !it.busyItemCode)) {
+      if (!g.items.length) return res.status(400).json({ error: `Add at least one material for ${sup.SupplierName}` });
+      if (g.items.some((it) => !it.busyItemCode)) {
         return res.status(400).json({ error: 'Pick every material from Busy\'s item list' });
       }
-      busy = await resolveBusyItems(items);
-      if (busy.problems.length) return res.status(400).json({ error: busy.problems[0], problems: busy.problems });
+      // The gate never records quantities — the weighbridge does.
+      g.busy = await resolveBusyItems(g.items.map((it) => ({ ...it, quantity: null })));
+      if (g.busy.problems.length) return res.status(400).json({ error: `${sup.SupplierName}: ${g.busy.problems[0]}`, problems: g.busy.problems });
+      g.supplierName = sup.SupplierName;
     }
     // Busy mode: PO and non-PO reason are the weighbridge's to record.
     const poNoForEntry = busyMode ? null : (purchaseOrderNo || null);
@@ -194,56 +211,60 @@ router.post('/', authenticate, authorize('GateSecurity', 'Admin'), async (req, r
     await transaction.begin();
 
     try {
-      const entryNo = await generateEntryNo(pool, transaction);
+      // One consignment number for the truck, shared by every supplier's entry.
       const consignmentNoGen = consignmentNo || await generateConsignmentNo(pool, transaction);
-
-      const insertReq = new sql.Request(transaction);
-      const result = await insertReq
-        .input('entryNo', sql.VarChar(20), entryNo)
-        .input('supplierId', sql.Int, supplierId)
-        .input('consignmentNo', sql.VarChar(50), consignmentNoGen)
-        .input('deliveryDate', sql.Date, deliveryDate)
-        .input('deliveryTime', sql.VarChar(8), deliveryTime)
-        .input('vehicleRegNo', sql.VarChar(20), vehicleRegNo)
-        .input('driverName', sql.NVarChar(100), driverName || null)
-        .input('driverIdNo', sql.VarChar(30), driverIdNo || null)
-        .input('driverPhone', sql.VarChar(20), driverPhone || null)
-        .input('purchaseOrderNo', sql.VarChar(30), poNoForEntry)
-        .input('nonPOReason', sql.NVarChar(300), nonPOReasonForEntry)
-        .input('notes', sql.NVarChar(500), notes || null)
-        .input('createdBy', sql.Int, req.user.userId)
-        .query(`INSERT INTO dbo.DeliveryEntries
-          (EntryNo, SupplierId, ConsignmentNo, DeliveryDate, DeliveryTime,
-           VehicleRegNo, DriverName, DriverIdNo, DriverPhone,
-           PurchaseOrderNo, NonPOReason, Notes, Status, CreatedBy)
-          OUTPUT INSERTED.EntryId, INSERTED.EntryNo, INSERTED.Status, INSERTED.CreatedAt
-          VALUES (@entryNo, @supplierId, @consignmentNo, @deliveryDate, @deliveryTime,
-                  @vehicleRegNo, @driverName, @driverIdNo, @driverPhone,
-                  @purchaseOrderNo, @nonPOReason, @notes, 'GateReceived', @createdBy)`);
-
-      const entry = result.recordset[0];
-
-      // Insert line items if provided
-      if (busyMode) {
-        for (const it of busy.items) await insertBusyEntryItem(transaction, entry.EntryId, it);
-      } else if (items && items.length > 0) {
-        for (const item of items) await insertLegacyEntryItem(transaction, entry.EntryId, item);
+      const created = [];
+      for (const g of groups) {
+        const entryNo = await generateEntryNo(pool, transaction);
+        const result = await new sql.Request(transaction)
+          .input('entryNo', sql.VarChar(20), entryNo)
+          .input('supplierId', sql.Int, g.supplierId)
+          .input('consignmentNo', sql.VarChar(50), consignmentNoGen)
+          .input('deliveryDate', sql.Date, deliveryDate)
+          .input('deliveryTime', sql.VarChar(8), deliveryTime)
+          .input('vehicleRegNo', sql.VarChar(20), vehicleRegNo)
+          .input('driverName', sql.NVarChar(100), driverName || null)
+          .input('driverIdNo', sql.VarChar(30), driverIdNo || null)
+          .input('driverPhone', sql.VarChar(20), driverPhone || null)
+          .input('purchaseOrderNo', sql.VarChar(30), poNoForEntry)
+          .input('nonPOReason', sql.NVarChar(300), nonPOReasonForEntry)
+          .input('notes', sql.NVarChar(500), notes || null)
+          .input('createdBy', sql.Int, req.user.userId)
+          .query(`INSERT INTO dbo.DeliveryEntries
+            (EntryNo, SupplierId, ConsignmentNo, DeliveryDate, DeliveryTime,
+             VehicleRegNo, DriverName, DriverIdNo, DriverPhone,
+             PurchaseOrderNo, NonPOReason, Notes, Status, CreatedBy)
+            OUTPUT INSERTED.EntryId, INSERTED.EntryNo, INSERTED.Status, INSERTED.CreatedAt
+            VALUES (@entryNo, @supplierId, @consignmentNo, @deliveryDate, @deliveryTime,
+                    @vehicleRegNo, @driverName, @driverIdNo, @driverPhone,
+                    @purchaseOrderNo, @nonPOReason, @notes, 'GateReceived', @createdBy)`);
+        const entry = result.recordset[0];
+        if (busyMode) {
+          for (const it of g.busy.items) await insertBusyEntryItem(transaction, entry.EntryId, it);
+        } else {
+          for (const item of g.items) await insertLegacyEntryItem(transaction, entry.EntryId, { ...item, quantity: null });
+        }
+        created.push({ ...entry, supplierId: g.supplierId, supplierName: g.supplierName || null });
       }
 
       await transaction.commit();
 
       // Audit (outside transaction — non-blocking)
-      writeAuditLog({
-        entityType: 'DeliveryEntry', entityId: entry.EntryId, action: 'Create',
-        userId: req.user.userId, newValues: { entryNo, supplierId, consignmentNo, vehicleRegNo },
-        ipAddress: req.ip, userAgent: req.get('User-Agent'),
-      });
-      writeStatusHistory({
-        entityType: 'DeliveryEntry', entityId: entry.EntryId,
-        fromStatus: null, toStatus: 'GateReceived', changedBy: req.user.userId,
-      });
+      for (const entry of created) {
+        writeAuditLog({
+          entityType: 'DeliveryEntry', entityId: entry.EntryId, action: 'Create',
+          userId: req.user.userId,
+          newValues: { entryNo: entry.EntryNo, supplierId: entry.supplierId, consignmentNo: consignmentNoGen, vehicleRegNo, sameTruck: created.length > 1 ? created.map((c) => c.EntryNo) : undefined },
+          ipAddress: req.ip, userAgent: req.get('User-Agent'),
+        });
+        writeStatusHistory({
+          entityType: 'DeliveryEntry', entityId: entry.EntryId,
+          fromStatus: null, toStatus: 'GateReceived', changedBy: req.user.userId,
+        });
+      }
 
-      res.status(201).json(entry);
+      // First entry's fields at the top level keep the old single-entry response shape.
+      res.status(201).json({ ...created[0], consignmentNo: consignmentNoGen, entries: created });
     } catch (err) {
       await transaction.rollback();
       throw err;
@@ -287,6 +308,23 @@ router.get('/', authenticate, async (req, res, next) => {
                             WHERE si.EntryId = de.EntryId AND sm.MaterialName LIKE @search))`;
       request.input('search', sql.NVarChar(100), `%${search}%`);
     }
+    // Factory = the location the weighbridge routed the delivery to (F2, F3, CENTRAL STORES…).
+    const factoryWhere = (name, param) =>
+      ` AND (sl.LocationName = @${param} OR sl.LocationName LIKE @${param} + '-%')`;
+    let myFactory = null;
+    if (req.query.mine === '1' || req.query.mine === 'true') {
+      // Factory receiving clerks only see deliveries for their own factory
+      // (their mat centre F2P / F1w → factory F2 / F1). Everyone else sees all.
+      const me = (await pool.request().input('id', sql.Int, req.user.userId)
+        .query('SELECT Role, AssignedMatCenter FROM dbo.Users WHERE UserId = @id')).recordset[0];
+      const m = String(me?.AssignedMatCenter || '').trim().match(/^F(\d+)/i);
+      if (m && ['FactoryReceiving', 'FactoryQA'].includes(me.Role)) myFactory = `F${m[1]}`;
+    }
+    const factory = myFactory || (req.query.factory ? String(req.query.factory).trim() : null);
+    if (factory) {
+      where += factoryWhere(factory, 'factory');
+      request.input('factory', sql.NVarChar(80), factory);
+    }
 
     const offset = (parseInt(page) - 1) * parseInt(limit);
     request.input('offset', sql.Int, offset);
@@ -296,12 +334,13 @@ router.get('/', authenticate, async (req, res, next) => {
       SELECT de.EntryId, de.EntryNo, de.ConsignmentNo, de.DeliveryDate, de.DeliveryTime,
              de.VehicleRegNo, de.DriverName, de.DriverIdNo, de.DriverPhone,
              de.FirstWeight, de.SecondWeight, de.NetWeight,
-             de.PurchaseOrderNo, de.Status, de.CreatedAt,
+             de.PurchaseOrderNo, de.Status, de.CreatedAt, de.Destination, de.BusyGRNNo,
              s.SupplierId, s.SupplierCode, s.SupplierName,
-             u.FullName AS CreatedByName
+             u.FullName AS CreatedByName, sl.LocationName
       FROM dbo.DeliveryEntries de
       JOIN dbo.Suppliers s ON s.SupplierId = de.SupplierId
       JOIN dbo.Users u ON u.UserId = de.CreatedBy
+      LEFT JOIN dbo.StockLocations sl ON sl.LocationId = de.LocationId
       WHERE ${where}
       ORDER BY de.CreatedAt DESC
       OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY
@@ -314,9 +353,11 @@ router.get('/', authenticate, async (req, res, next) => {
     if (dateFrom) { countReq.input('dateFrom', sql.Date, dateFrom); }
     if (dateTo) { countReq.input('dateTo', sql.Date, dateTo); }
     if (search) { countReq.input('search', sql.NVarChar(100), `%${search}%`); }
+    if (factory) { countReq.input('factory', sql.NVarChar(80), factory); }
     const countResult = await countReq.query(
       `SELECT COUNT(*) as total FROM dbo.DeliveryEntries de
        JOIN dbo.Suppliers s ON s.SupplierId = de.SupplierId
+       LEFT JOIN dbo.StockLocations sl ON sl.LocationId = de.LocationId
        WHERE ${where}`
     );
 
@@ -325,6 +366,7 @@ router.get('/', authenticate, async (req, res, next) => {
       total: countResult.recordset[0].total,
       page: parseInt(page),
       limit: parseInt(limit),
+      myFactory, // set when the list is limited to the user's own factory
     });
   } catch (err) {
     next(err);
