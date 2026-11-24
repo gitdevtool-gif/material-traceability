@@ -37,6 +37,9 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+# Runtime data that lives under backend\src but is not in git (supplier quote
+# photos, item reference photos) - never copied over or deleted by a deploy.
+$LiveOnlyDirs = @('uploads')
 $env:Path += ';C:\Program Files\nodejs;C:\Program Files\Git\cmd'
 $logDir = Join-Path $LiveDir 'logs'
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null
@@ -51,6 +54,8 @@ function Log([string]$m) {
 
 # Runs a native command; stderr is not treated as an error, only the exit code.
 function Run([string]$Exe, [string[]]$ArgList, [string]$Dir) {
+  # The task runs as SYSTEM: don't let git refuse a clone made by another account
+  if ($Exe -eq 'git') { $ArgList = @('-c', 'safe.directory=*') + $ArgList }
   $old = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
   if ($Dir) { Push-Location $Dir }
   try { $out = & $Exe @ArgList 2>&1 | ForEach-Object { "$_" }; $code = $LASTEXITCODE }
@@ -60,9 +65,11 @@ function Run([string]$Exe, [string[]]$ArgList, [string]$Dir) {
 }
 
 # robocopy: 0-7 = success
-function Mirror([string]$From, [string]$To) {
+function Mirror([string]$From, [string]$To, [string[]]$ExcludeDirs = @()) {
   if (-not (Test-Path $From)) { return }
-  & robocopy $From $To /MIR /NFL /NDL /NJH /NJS /NP /R:2 /W:2 | Out-Null
+  # /XD dirs are neither copied nor purged at the destination
+  $xd = if ($ExcludeDirs.Count) { @('/XD') + $ExcludeDirs } else { @() }
+  & robocopy $From $To /MIR /NFL /NDL /NJH /NJS /NP /R:2 /W:2 @xd | Out-Null
   if ($LASTEXITCODE -ge 8) { throw "robocopy $From -> $To failed ($LASTEXITCODE)" }
 }
 
@@ -128,6 +135,8 @@ try {
   }
   Log 'Building frontend...'
   $env:REACT_APP_API_URL = '/api'; $env:GENERATE_SOURCEMAP = 'false'; $env:CI = 'false'
+  # as build.bat: the eslint-plugin-react-hooks peer clash fails CRA's lint pass
+  $env:DISABLE_ESLINT_PLUGIN = 'true'
   Run 'npm.cmd' @('run', 'build') $feDir | Out-Null
 
   # ---- back up what is live, for rollback ----
@@ -144,7 +153,7 @@ try {
   SetServices 'stop'
   $healthy = $false
   try {
-    Mirror (Join-Path $SrcDir 'backend\src') (Join-Path $liveBackend 'src')
+    Mirror (Join-Path $SrcDir 'backend\src') (Join-Path $liveBackend 'src') $LiveOnlyDirs
     Mirror (Join-Path $feDir 'build') (Join-Path $liveBackend 'public')
     Mirror (Join-Path $SrcDir 'backend\busy-bridge') (Join-Path $liveBackend 'busy-bridge')
     foreach ($f in 'package.json', 'package-lock.json') {
@@ -172,7 +181,7 @@ try {
   if (-not $healthy) {
     Log 'Health check FAILED - rolling back to the previous version.'
     SetServices 'stop'
-    foreach ($d in 'src', 'public', 'busy-bridge') { Mirror (Join-Path $backup $d) (Join-Path $liveBackend $d) }
+    foreach ($d in 'src', 'public', 'busy-bridge') { Mirror (Join-Path $backup $d) (Join-Path $liveBackend $d) $LiveOnlyDirs }
     foreach ($f in 'package.json', 'package-lock.json') {
       if (Test-Path (Join-Path $backup $f)) { Copy-Item (Join-Path $backup $f) $liveBackend -Force }
     }
